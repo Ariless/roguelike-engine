@@ -1,0 +1,2860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roguelike Engine — Combat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #0d0d1a;
+      --panel:     #17172a;
+      --panel2:    #1e1e35;
+      --border:    rgba(255,255,255,0.07);
+      --text:      #f0e6d3;
+      --text-dim:  rgba(240,230,211,0.45);
+      --gold:      #c9a84c;
+      --hp-red:    #b83a3a;
+      --energy:    #e67e22;
+      --defend:    #5c8df6;
+      --bleed:     #c0392b;
+      --vulnerable:#8f5be8;
+      --stun:      #f0c040;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Crimson Text', serif;
+      min-height: 100vh;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    @media (max-height: 700px) {
+      body { height: auto; overflow-y: auto; }
+    }
+
+    /* ── Top bar ──────────────────────────────────────────────── */
+
+    .top-bar {
+      height: clamp(40px, 6vh, 56px);
+      background: rgba(10,10,20,0.9);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      flex-shrink: 0;
+    }
+
+    .seed-control {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: 'Cinzel', serif;
+      font-size: 11px;
+      letter-spacing: 1px;
+      color: var(--text-dim);
+    }
+
+    .seed-control input {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 4px;
+      padding: 3px 8px;
+      font-family: 'Cinzel', serif;
+      font-size: 11px;
+      color: var(--text);
+      width: 70px;
+    }
+
+    .seed-control input:focus { outline: none; border-color: var(--gold); }
+
+    .enemy-selector, .hero-selector {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .selector-label {
+      font-family: 'Cinzel', serif;
+      font-size: 9px;
+      letter-spacing: 1px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      margin-right: 2px;
+    }
+
+    .enemy-btn, .hero-btn {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 4px;
+      padding: 3px 10px;
+      font-family: 'Cinzel', serif;
+      font-size: 9px;
+      letter-spacing: 1px;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.15s;
+      text-transform: uppercase;
+    }
+
+    .enemy-btn:hover, .hero-btn:hover { border-color: rgba(255,255,255,0.3); color: var(--text); }
+
+    .enemy-btn.active {
+      border-color: rgba(180,50,50,0.6);
+      color: #e08080;
+      background: rgba(180,50,50,0.1);
+    }
+
+    .hero-btn.active {
+      border-color: rgba(201,168,76,0.6);
+      color: var(--gold);
+      background: rgba(201,168,76,0.1);
+    }
+
+    .turn-display {
+      font-family: 'Cinzel', serif;
+      font-size: 13px;
+      letter-spacing: 3px;
+      color: var(--text);
+    }
+
+    .stability-label {
+      font-family: 'Cinzel', serif;
+      font-size: 10px;
+      letter-spacing: 2px;
+      padding: 3px 10px;
+      border-radius: 4px;
+      border: 1px solid;
+    }
+
+    .stability-label.stable {
+      color: #4caf6e;
+      border-color: rgba(76,175,110,0.4);
+      background: rgba(76,175,110,0.08);
+    }
+
+    .stability-label.corrupted {
+      color: #e05050;
+      border-color: rgba(220,80,80,0.4);
+      background: rgba(220,80,80,0.1);
+    }
+
+    /* ── Battle area ──────────────────────────────────────────── */
+
+    .battle-area {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: clamp(20px, 4vw, 60px);
+      padding: clamp(6px, 1vh, 16px) 40px clamp(4px, 1vh, 12px);
+      min-height: 0;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* ── Enemies area ────────────────────────────────────────── */
+
+    #enemiesArea {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+
+    /* ── Entity panel ─────────────────────────────────────────── */
+
+    .entity-panel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      width: 220px;
+    }
+
+    .entity-panel.multi {
+      width: 165px;
+    }
+
+    .entity-panel.multi .portrait-frame {
+      width: 145px;
+    }
+
+    .portrait-frame {
+      width: 190px;
+      height: clamp(160px, 26vh, 240px);
+      border-radius: 10px;
+      border: 1.5px solid;
+      overflow: hidden;
+      position: relative;
+      flex-shrink: 0;
+      transition: box-shadow 0.3s;
+    }
+
+    .portrait-frame img {
+      width: 100%;
+      height: 115%;
+      object-fit: cover;
+      object-position: center 15%;
+    }
+
+    .portrait-frame.hero-frame   { border-color: var(--gold); box-shadow: 0 0 20px rgba(201,168,76,0.2); }
+    .portrait-frame.enemy-frame  { border-color: rgba(180,50,50,0.6); box-shadow: 0 0 20px rgba(180,50,50,0.2); }
+    /* Hero death's door — blood/pain */
+    .portrait-frame.death-door   { border-color: #e05050 !important; border-width: 3px !important; animation: pulse-red 1.8s ease-in-out infinite; }
+
+    /* Enemy death's door — archiving/scanning */
+    .portrait-frame.death-door-archive {
+      border-color: rgba(201,168,76,0.9) !important;
+      border-width: 2px !important;
+      animation: scan-archive 2.4s ease-in-out infinite;
+      filter: saturate(0.4) brightness(0.85);
+      overflow: hidden;
+    }
+
+    .portrait-frame.death-door-archive::after {
+      content: '';
+      position: absolute;
+      left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, rgba(201,168,76,0.8), transparent);
+      animation: scan-line 2.4s linear infinite;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    @keyframes scan-archive {
+      0%, 100% { box-shadow: 0 0 12px rgba(201,168,76,0.3); }
+      50%       { box-shadow: 0 0 28px rgba(201,168,76,0.7); }
+    }
+
+    @keyframes scan-line {
+      0%   { top: -4px; opacity: 0; }
+      10%  { opacity: 1; }
+      90%  { opacity: 1; }
+      100% { top: 100%; opacity: 0; }
+    }
+    .portrait-frame.dead {
+      border-color: #333 !important;
+      box-shadow: none !important;
+      animation: entity-die 0.6s ease forwards;
+    }
+
+    @keyframes entity-die {
+      0%   { filter: grayscale(0) brightness(1); }
+      30%  { filter: grayscale(0) brightness(2); }
+      100% { filter: grayscale(1) brightness(0.35); }
+    }
+
+    .archived-badge {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: 'Cinzel', serif;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      color: rgba(240,230,211,0.7);
+      background: rgba(10,10,18,0.88);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 3px;
+      padding: 5px 14px;
+      white-space: nowrap;
+      text-transform: uppercase;
+      animation: archived-appear 0.5s ease 0.4s both;
+      pointer-events: none;
+    }
+
+    @keyframes archived-appear {
+      from { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+      to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    }
+    .portrait-frame.targetable   { cursor: pointer; }
+
+    /* Hit flash */
+    .portrait-frame.hit-flash-hero {
+      animation: hit-hero 0.35s ease forwards !important;
+    }
+    .portrait-frame.hit-flash-enemy {
+      animation: hit-enemy 0.35s ease forwards !important;
+    }
+
+    @keyframes hit-hero {
+      0%   { filter: brightness(1); }
+      20%  { filter: brightness(2.5) saturate(0.2); }
+      100% { filter: brightness(1); }
+    }
+
+    @keyframes hit-enemy {
+      0%   { filter: brightness(1); }
+      20%  { filter: brightness(3) saturate(0); }
+      100% { filter: brightness(1); }
+    }
+
+    @keyframes pulse-red {
+      0%, 100% { box-shadow: 0 0 20px rgba(220,0,0,0.4); filter: brightness(0.95); }
+      50%       { box-shadow: 0 0 50px rgba(255,0,0,0.8); filter: brightness(1.05); }
+    }
+
+    .entity-info {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .entity-name {
+      font-family: 'Cinzel', serif;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      color: var(--text);
+      text-transform: uppercase;
+      text-align: center;
+    }
+
+    .hp-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hp-bar-track {
+      flex: 1;
+      height: 8px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .hp-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #b83a3a, #e05050);
+      border-radius: 4px;
+      transition: width 0.4s ease;
+    }
+
+    .hp-bar-fill.death-door-fill { background: #e05050; animation: pulse-bar 1.2s ease-in-out infinite; }
+
+    @keyframes pulse-bar {
+      0%, 100% { opacity: 0.7; } 50% { opacity: 1; }
+    }
+
+    .hp-text {
+      font-family: 'Cinzel', serif;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    .status-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      justify-content: center;
+      min-height: 0;
+    }
+
+    .chip {
+      font-family: 'Cinzel', serif;
+      font-size: 10px;
+      letter-spacing: 0.4px;
+      padding: 3px 8px;
+      border-radius: 3px;
+      border: 1px solid;
+    }
+
+    .chip-bleed     { color: #e05050; border-color: rgba(220,80,80,0.5); background: rgba(220,80,80,0.15); }
+    .chip-stun      { color: #f0c040; border-color: rgba(240,192,64,0.5); background: rgba(240,192,64,0.15); }
+    .chip-defend    { color: var(--defend); border-color: rgba(92,141,246,0.5); background: rgba(92,141,246,0.15); }
+    .chip-vulnerable{ color: var(--vulnerable); border-color: rgba(143,91,232,0.5); background: rgba(143,91,232,0.15); }
+
+    .intent-badge {
+      text-align: center;
+      font-family: 'Cinzel', serif;
+      font-size: 14px;
+      letter-spacing: 1px;
+      color: var(--text);
+      background: rgba(180,50,50,0.15);
+      border: 1px solid rgba(180,50,50,0.3);
+      border-radius: 6px;
+      padding: 5px 12px;
+    }
+
+    .hero-resources {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+    }
+
+    .resource-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'Cinzel', serif;
+      font-size: 11px;
+      letter-spacing: 1px;
+      color: rgba(240,230,211,0.7);
+    }
+
+    .energy-pips, .charge-pips { display: flex; gap: 4px; }
+
+    .pip {
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      border: 2px solid;
+    }
+
+    .pip.energy-pip.filled  { background: var(--energy); border-color: var(--energy); }
+    .pip.energy-pip.empty   { background: transparent; border-color: rgba(230,126,34,0.3); }
+    .pip.charge-pip.filled  { background: var(--gold); border-color: var(--gold); box-shadow: 0 0 5px rgba(201,168,76,0.6); }
+    .pip.charge-pip.empty   { background: transparent; border-color: rgba(201,168,76,0.2); }
+
+    /* ── Combat log ───────────────────────────────────────────── */
+
+    .combat-log {
+      height: clamp(56px, 8vh, 80px);
+      margin: 0 auto;
+      width: 560px;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 8px 0;
+      gap: 3px;
+      flex-shrink: 0;
+    }
+
+    .log-entry {
+      font-family: 'Crimson Text', serif;
+      font-size: 15px;
+      padding: 0 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-align: center;
+      transition: opacity 0.3s;
+    }
+
+    /* Newest at bottom — brightest; older entries fade */
+    .log-entry[data-age="0"] { color: var(--text);                    animation: logSlideIn 0.3s ease; }
+    .log-entry[data-age="1"] { color: rgba(240,230,211,0.65); }
+    .log-entry[data-age="2"] { color: rgba(240,230,211,0.42); }
+    .log-entry[data-age="3"] { color: rgba(240,230,211,0.26); }
+    .log-entry[data-age="4"] { color: rgba(240,230,211,0.14); }
+
+    @keyframes logSlideIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Hand area ────────────────────────────────────────────── */
+
+    .hand-area {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 14px;
+      padding: clamp(6px, 1vh, 14px) 40px clamp(10px, 2vh, 20px);
+      flex-shrink: 0;
+      overflow: visible;
+    }
+
+    /* Card in hand */
+    .hand-card {
+      width: clamp(120px, 12vw, 160px);
+      height: clamp(150px, 22vh, 200px);
+      border-radius: 6px;
+      border: 1.5px solid rgba(201,168,76,0.4);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+      flex-shrink: 0;
+    }
+
+    .hand-card:hover:not(.disabled) {
+      transform: translateY(-12px);
+      box-shadow: 0 12px 32px rgba(201,168,76,0.35);
+      border-color: var(--gold);
+    }
+
+    .hand-card.selected {
+      transform: translateY(-16px);
+      box-shadow: 0 16px 40px rgba(201,168,76,0.6);
+      border-color: var(--gold);
+    }
+
+    .hand-card.disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    /* Charge ready — Righteous Strike glows gold */
+    .hand-card.charge-ready {
+      border-color: var(--gold) !important;
+      box-shadow: 0 0 20px rgba(201,168,76,0.5), 0 0 40px rgba(201,168,76,0.2) !important;
+      animation: charge-pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes charge-pulse {
+      0%, 100% { box-shadow: 0 0 16px rgba(201,168,76,0.4), 0 0 32px rgba(201,168,76,0.15); }
+      50%       { box-shadow: 0 0 28px rgba(201,168,76,0.7), 0 0 56px rgba(201,168,76,0.3); }
+    }
+
+    .charge-ready-badge {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      background: var(--gold);
+      color: #0d0d1a;
+      font-family: 'Cinzel', serif;
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      padding: 2px 5px;
+      border-radius: 3px;
+      z-index: 6;
+    }
+
+    /* ── Card tooltip — global, outside overflow:hidden ─────── */
+
+    #cardTooltip {
+      position: fixed;
+      width: 210px;
+      background: rgba(13,13,26,0.98);
+      border: 1px solid rgba(201,168,76,0.35);
+      border-radius: 6px;
+      padding: 12px 14px;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+      z-index: 300;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.8);
+    }
+
+    #cardTooltip.visible { opacity: 1; }
+
+    .tooltip-name {
+      font-family: 'Cinzel', serif;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      color: var(--gold);
+      margin-bottom: 7px;
+      text-transform: uppercase;
+    }
+
+    .tooltip-axes {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 9px;
+      flex-wrap: wrap;
+    }
+
+    .tooltip-axis {
+      font-family: 'Cinzel', serif;
+      font-size: 7.5px;
+      letter-spacing: 0.5px;
+      padding: 2px 6px;
+      border-radius: 2px;
+      border: 1px solid;
+      text-transform: uppercase;
+    }
+
+    .tooltip-rules {
+      font-family: 'Crimson Text', serif;
+      font-size: 13px;
+      color: rgba(240,230,211,0.88);
+      line-height: 1.45;
+    }
+
+    .tooltip-narrative {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255,255,255,0.07);
+      font-family: 'Crimson Text', serif;
+      font-style: italic;
+      font-size: 11px;
+      color: rgba(240,230,211,0.4);
+    }
+
+    .hand-card.bloodmage {
+      border-color: rgba(168,50,50,0.4);
+    }
+    .hand-card.bloodmage:hover:not(.disabled),
+    .hand-card.bloodmage.selected {
+      border-color: #a83232;
+      box-shadow: 0 16px 40px rgba(168,50,50,0.5);
+    }
+    .hand-card.berserker {
+      border-color: rgba(184,115,51,0.4);
+    }
+    .hand-card.berserker:hover:not(.disabled),
+    .hand-card.berserker.selected {
+      border-color: #b87333;
+      box-shadow: 0 16px 40px rgba(184,115,51,0.5);
+    }
+    .hand-card.werewolf {
+      border-color: rgba(160,55,55,0.5);
+    }
+    .hand-card.werewolf:hover:not(.disabled),
+    .hand-card.werewolf.selected {
+      border-color: #a03737;
+      box-shadow: 0 16px 40px rgba(160,55,55,0.55);
+    }
+
+    .form-badge {
+      position: absolute;
+      bottom: 6px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Cinzel', serif;
+      font-size: 8px;
+      letter-spacing: 1.5px;
+      padding: 2px 7px;
+      border-radius: 3px;
+      border: 1px solid currentColor;
+      background: rgba(13,13,26,0.85);
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    .rage-pip.filled { background: #c05040; border-color: #c05040; }
+    .rage-pip.empty  { background: transparent; border-color: rgba(192,80,64,0.3); }
+
+    .hand-card-energy {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      width: 20px;
+      height: 20px;
+      background: var(--energy);
+      border: 1.5px solid rgba(240,230,211,0.7);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Cinzel', serif;
+      font-size: 11px;
+      font-weight: 700;
+      color: #fff;
+      z-index: 5;
+    }
+
+    .hand-card-art {
+      flex: 1;
+      background-size: cover;
+      background-position: center top;
+      position: relative;
+    }
+
+    .hand-card-art::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 50%;
+      background: linear-gradient(to bottom, transparent, rgba(23,23,42,0.95));
+    }
+
+    .hand-card-name {
+      background: rgba(13,13,26,0.97);
+      padding: 6px 7px;
+      font-family: 'Cinzel', serif;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.4px;
+      color: var(--text);
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* End Turn button */
+    .end-turn-btn {
+      width: clamp(90px, 9vw, 120px);
+      height: clamp(40px, 7vh, 64px);
+      background: rgba(201,168,76,0.1);
+      border: 1.5px solid var(--gold);
+      border-radius: 6px;
+      color: var(--gold);
+      font-family: 'Cinzel', serif;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.2s, box-shadow 0.2s;
+      flex-shrink: 0;
+    }
+
+    .end-turn-btn:hover {
+      background: rgba(201,168,76,0.2);
+      box-shadow: 0 0 20px rgba(201,168,76,0.3);
+    }
+
+    .end-turn-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    /* ── Death's Door overlay ─────────────────────────────────── */
+
+    .overlay-deathdoor {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 50;
+      opacity: 0;
+      transition: opacity 0.6s ease;
+      background: radial-gradient(ellipse at center, transparent 30%, rgba(180,0,0,0.35) 100%);
+      box-shadow: inset 0 0 120px rgba(220,0,0,0.4);
+    }
+
+    .overlay-deathdoor.active {
+      opacity: 1;
+      animation: deathdoor-pulse 1.8s ease-in-out infinite;
+    }
+
+    @keyframes deathdoor-pulse {
+      0%, 100% {
+        background: radial-gradient(ellipse at center, transparent 30%, rgba(160,0,0,0.3) 100%);
+        box-shadow: inset 0 0 100px rgba(200,0,0,0.35);
+      }
+      50% {
+        background: radial-gradient(ellipse at center, transparent 20%, rgba(200,0,0,0.5) 100%);
+        box-shadow: inset 0 0 160px rgba(240,0,0,0.55);
+      }
+    }
+
+    /* Death's Door badge on portrait */
+    .deathdoor-badge {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: 'Cinzel', serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: #fff;
+      background: rgba(180,0,0,0.85);
+      border: 1.5px solid rgba(255,80,80,0.7);
+      border-radius: 4px;
+      padding: 5px 12px;
+      white-space: nowrap;
+      animation: badge-pulse 1.8s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    @keyframes badge-pulse {
+      0%, 100% { opacity: 0.85; box-shadow: 0 0 10px rgba(220,0,0,0.4); }
+      50%       { opacity: 1;    box-shadow: 0 0 20px rgba(255,0,0,0.7); }
+    }
+
+    /* ── Timeline Corrupted overlay ───────────────────────────── */
+
+    .overlay-corrupted {
+      position: fixed;
+      inset: 0;
+      background: #030008;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      overflow: hidden;
+    }
+
+    /* Scanlines */
+    .overlay-corrupted::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 3px,
+        rgba(0,0,0,0.18) 3px,
+        rgba(0,0,0,0.18) 4px
+      );
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* Background flicker */
+    .overlay-corrupted::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(120,0,0,0);
+      animation: bg-flicker 4s ease-in-out infinite;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    @keyframes bg-flicker {
+      0%, 90%, 100% { background: rgba(120,0,0,0); }
+      92%           { background: rgba(120,0,0,0.08); }
+      94%           { background: rgba(120,0,0,0); }
+      96%           { background: rgba(120,0,0,0.05); }
+    }
+
+    .corrupted-content {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      max-width: 600px;
+      width: 100%;
+      padding: 0 40px;
+    }
+
+    .corrupted-label {
+      font-family: 'Cinzel', serif;
+      font-size: 0.7rem;
+      letter-spacing: 4px;
+      color: rgba(220,80,80,0.6);
+      margin-bottom: 16px;
+      text-transform: uppercase;
+    }
+
+    .corrupted-title {
+      font-family: 'Cinzel', serif;
+      font-size: 1.8rem;
+      font-weight: 700;
+      letter-spacing: 5px;
+      color: #e05050;
+      text-align: center;
+      margin-bottom: 32px;
+      text-shadow: 0 0 30px rgba(220,0,0,0.5);
+      animation: glitch-title 5s ease-in-out infinite;
+    }
+
+    @keyframes glitch-title {
+      0%, 82%, 100% {
+        text-shadow: 0 0 30px rgba(220,0,0,0.5);
+        transform: none;
+        clip-path: none;
+      }
+      84% {
+        text-shadow: -4px 0 rgba(0,255,200,0.6), 4px 0 rgba(255,0,0,0.6);
+        transform: skewX(-3deg) translateX(2px);
+      }
+      86% {
+        text-shadow: 4px 0 rgba(0,255,200,0.6), -4px 0 rgba(255,0,0,0.6);
+        transform: skewX(2deg) translateX(-2px);
+      }
+      88% {
+        text-shadow: 0 0 30px rgba(220,0,0,0.5);
+        transform: none;
+      }
+    }
+
+    .corrupted-report {
+      width: 100%;
+      border: 1px solid rgba(180,30,30,0.4);
+      border-radius: 4px;
+      background: rgba(10,0,0,0.6);
+      padding: 24px 28px;
+      margin-bottom: 28px;
+      font-family: 'Courier New', monospace;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .report-row {
+      display: flex;
+      gap: 12px;
+      align-items: baseline;
+    }
+
+    .report-key {
+      font-size: 0.65rem;
+      letter-spacing: 2px;
+      color: rgba(200,60,60,0.7);
+      text-transform: uppercase;
+      white-space: nowrap;
+      min-width: 90px;
+    }
+
+    .report-val {
+      font-size: 0.85rem;
+      color: rgba(240,220,220,0.85);
+      letter-spacing: 0.5px;
+    }
+
+    .report-divider {
+      border: none;
+      border-top: 1px solid rgba(180,30,30,0.25);
+      margin: 2px 0;
+    }
+
+    .report-violation {
+      font-size: 1rem;
+      color: #f0d0d0;
+      letter-spacing: 0.3px;
+      font-family: 'Crimson Text', serif;
+      font-style: italic;
+    }
+
+    .corrupted-footer {
+      font-family: 'Cinzel', serif;
+      font-size: 0.7rem;
+      letter-spacing: 2px;
+      color: rgba(240,200,200,0.3);
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .corrupted-ack {
+      background: transparent;
+      border: 1px solid rgba(180,50,50,0.5);
+      border-radius: 4px;
+      color: rgba(220,80,80,0.7);
+      font-family: 'Cinzel', serif;
+      font-size: 0.7rem;
+      letter-spacing: 3px;
+      padding: 10px 28px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+    }
+
+    .corrupted-ack:hover {
+      background: rgba(180,30,30,0.2);
+      border-color: rgba(220,80,80,0.8);
+      color: #e05050;
+    }
+
+    /* ── Game over overlay ────────────────────────────────────── */
+
+    .overlay-gameover {
+      position: fixed;
+      inset: 0;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 90;
+      animation: gameover-fade 0.8s ease forwards;
+    }
+
+    .overlay-gameover.victory-bg {
+      background: radial-gradient(ellipse at center, rgba(30,24,8,0.97) 0%, rgba(5,4,0,0.99) 100%);
+    }
+
+    .overlay-gameover.defeat-bg {
+      background: radial-gradient(ellipse at center, rgba(20,4,4,0.97) 0%, rgba(3,0,0,0.99) 100%);
+    }
+
+    @keyframes gameover-fade {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    .gameover-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      max-width: 520px;
+      width: 100%;
+      padding: 0 40px;
+      animation: gameover-rise 0.9s ease forwards;
+    }
+
+    @keyframes gameover-rise {
+      from { transform: translateY(20px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+
+    .gameover-label {
+      font-family: 'Cinzel', serif;
+      font-size: 0.65rem;
+      letter-spacing: 4px;
+      color: var(--text-dim);
+      margin-bottom: 14px;
+      text-transform: uppercase;
+    }
+
+    .gameover-title {
+      font-family: 'Cinzel', serif;
+      font-size: 1.9rem;
+      font-weight: 700;
+      letter-spacing: 5px;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    .gameover-title.victory {
+      color: var(--gold);
+      text-shadow: 0 0 40px rgba(201,168,76,0.5), 0 0 80px rgba(201,168,76,0.2);
+    }
+
+    .gameover-title.defeat {
+      color: #c04040;
+      text-shadow: 0 0 40px rgba(200,50,50,0.5);
+    }
+
+    .gameover-quote {
+      font-family: 'Crimson Text', serif;
+      font-style: italic;
+      font-size: 1rem;
+      color: var(--text-dim);
+      text-align: center;
+      margin-bottom: 28px;
+      letter-spacing: 0.3px;
+    }
+
+    .gameover-stats {
+      width: 100%;
+      border: 1px solid;
+      border-radius: 4px;
+      padding: 18px 22px;
+      margin-bottom: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font-family: 'Courier New', monospace;
+    }
+
+    .gameover-stats.victory-stats {
+      border-color: rgba(201,168,76,0.3);
+      background: rgba(20,16,4,0.6);
+    }
+
+    .gameover-stats.defeat-stats {
+      border-color: rgba(180,40,40,0.3);
+      background: rgba(12,4,4,0.6);
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .stat-key {
+      font-size: 0.65rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .stat-key.victory-key { color: rgba(201,168,76,0.5); }
+    .stat-key.defeat-key  { color: rgba(180,50,50,0.5); }
+
+    .stat-val {
+      font-size: 0.85rem;
+      color: rgba(240,220,200,0.8);
+      letter-spacing: 0.5px;
+    }
+
+    .gameover-archivist {
+      font-family: 'Cinzel', serif;
+      font-size: 0.65rem;
+      letter-spacing: 2px;
+      color: rgba(240,220,200,0.25);
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .restart-btn {
+      background: transparent;
+      border: 1.5px solid;
+      border-radius: 4px;
+      font-family: 'Cinzel', serif;
+      font-size: 0.7rem;
+      letter-spacing: 3px;
+      padding: 10px 32px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+    }
+
+    .restart-btn.victory-btn {
+      border-color: rgba(201,168,76,0.5);
+      color: var(--gold);
+    }
+    .restart-btn.victory-btn:hover {
+      background: rgba(201,168,76,0.12);
+      border-color: var(--gold);
+    }
+
+    .restart-btn.defeat-btn {
+      border-color: rgba(180,50,50,0.4);
+      color: rgba(200,80,80,0.8);
+    }
+    .restart-btn.defeat-btn:hover {
+      background: rgba(180,30,30,0.15);
+      border-color: rgba(220,60,60,0.7);
+    }
+
+    /* ── Target highlight ─────────────────────────────────────── */
+
+    .portrait-frame.targetable {
+      cursor: pointer;
+      border-color: rgba(220,50,50,0.4) !important;
+      box-shadow: 0 0 10px rgba(220,50,50,0.2) !important;
+      opacity: 0.75;
+      transition: opacity 0.15s, box-shadow 0.15s;
+    }
+    .portrait-frame.targetable:hover {
+      opacity: 1;
+      border-color: #e05050 !important;
+      box-shadow: 0 0 36px rgba(220,50,50,0.75) !important;
+      animation: pulse-target 0.8s ease-in-out infinite;
+    }
+
+    .will-attack-badge {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      font-size: 14px;
+      animation: pulse-attack 1.2s ease-in-out infinite;
+      pointer-events: none;
+      z-index: 4;
+    }
+
+    @keyframes pulse-attack {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.5; transform: scale(0.85); }
+    }
+
+    .portrait-frame.attacking-now {
+      border-color: #e05050 !important;
+      box-shadow: 0 0 50px rgba(220,50,50,0.9) !important;
+      animation: flash-attack 0.3s ease-out !important;
+    }
+
+    @keyframes flash-attack {
+      0%   { box-shadow: 0 0 60px rgba(220,50,50,1); }
+      100% { box-shadow: 0 0 20px rgba(220,50,50,0.5); }
+    }
+
+    @keyframes pulse-target {
+      0%, 100% { box-shadow: 0 0 24px rgba(220,50,50,0.4); }
+      50%       { box-shadow: 0 0 40px rgba(220,50,50,0.7); }
+    }
+
+    .cancel-hint {
+      position: absolute;
+      bottom: 4px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Cinzel', serif;
+      font-size: 9px;
+      letter-spacing: 1.5px;
+      color: rgba(240,230,211,0.25);
+      pointer-events: none;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Global card tooltip -->
+<div id="cardTooltip"></div>
+
+<!-- Overlays -->
+<div class="overlay-deathdoor" id="overlayDeathdoor"></div>
+<div class="overlay-corrupted" id="overlayCorrupted">
+  <div class="corrupted-content">
+    <div class="corrupted-label">The Archivist · Anomaly Report</div>
+    <div class="corrupted-title">TIMELINE CORRUPTION DETECTED</div>
+    <div class="corrupted-report">
+      <div class="report-row">
+        <span class="report-key">Timeline ID</span>
+        <span class="report-val" id="corruptedSeed">—</span>
+      </div>
+      <div class="report-row">
+        <span class="report-key">Segment</span>
+        <span class="report-val" id="corruptedTurn">—</span>
+      </div>
+      <hr class="report-divider">
+      <div class="report-row">
+        <span class="report-key">Invariant</span>
+        <span class="report-val" id="corruptedInvariant">—</span>
+      </div>
+      <div class="report-row">
+        <span class="report-key">Violation</span>
+        <span class="report-violation" id="corruptedDetail">—</span>
+      </div>
+    </div>
+    <div class="corrupted-footer">The Archivist has preserved this timeline for analysis.</div>
+    <button class="corrupted-ack" onclick="acknowledgeCorruption()">Acknowledge</button>
+  </div>
+</div>
+<div class="overlay-gameover" id="overlayGameover">
+  <div class="gameover-content">
+    <div class="gameover-label" id="gameoverLabel">Archive Record</div>
+    <div class="gameover-title" id="gameoverTitle"></div>
+    <div class="gameover-quote" id="gameoverQuote"></div>
+    <div class="gameover-stats" id="gameoverStats">
+      <div class="stat-row">
+        <span class="stat-key" id="statKey1">Timeline</span>
+        <span class="stat-val" id="statVal1">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-key" id="statKey2">Duration</span>
+        <span class="stat-val" id="statVal2">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-key" id="statKey3">Opponent</span>
+        <span class="stat-val" id="statVal3">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-key" id="statKey4">Status</span>
+        <span class="stat-val" id="statVal4">—</span>
+      </div>
+    </div>
+    <div class="gameover-archivist">The Archivist has recorded this timeline.</div>
+    <button class="restart-btn" id="restartBtn" onclick="initGame()">Restore Timeline</button>
+  </div>
+</div>
+
+<!-- Top bar -->
+<div class="top-bar">
+  <div class="seed-control">
+    SEED
+    <input type="number" id="seedInput" value="42" min="1" max="999999">
+    <button onclick="initGame()" style="background:transparent;border:1px solid rgba(255,255,255,0.15);border-radius:4px;padding:3px 10px;color:var(--text-dim);font-family:Cinzel,serif;font-size:10px;letter-spacing:1px;cursor:pointer;">NEW</button>
+  </div>
+  <div class="hero-selector" id="heroSelector">
+    <span class="selector-label">Hero:</span>
+    <button class="hero-btn" data-hero="bloodmage"  onclick="selectHero('bloodmage')">Blood Mage</button>
+    <button class="hero-btn" data-hero="paladin"    onclick="selectHero('paladin')">Paladin</button>
+    <button class="hero-btn" data-hero="berserker"  onclick="selectHero('berserker')">Berserker</button>
+    <button class="hero-btn" data-hero="werewolf"   onclick="selectHero('werewolf')">Werewolf</button>
+  </div>
+  <div class="turn-display" id="turnDisplay">TURN 1</div>
+  <div id="encounterDisplay" style="font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;color:var(--text-dim);"></div>
+  <div class="stability-label stable" id="stabilityLabel">SIMULATION STABLE</div>
+  <button onclick="triggerCorruption('dead-cannot-act','Dead entity attempted to act. State machine corrupted.')" style="background:transparent;border:1px solid rgba(180,30,30,0.4);border-radius:4px;padding:3px 10px;color:rgba(200,60,60,0.6);font-family:Cinzel,serif;font-size:9px;letter-spacing:1px;cursor:pointer;" title="Demo: trigger TIMELINE CORRUPTED">⚠ CORRUPT</button>
+</div>
+
+<!-- Battle area -->
+<div class="battle-area">
+
+  <!-- Hero panel -->
+  <div class="entity-panel" id="heroPanel">
+    <div class="portrait-frame hero-frame" id="heroPortrait">
+      <img src="assets/hero-paladin.jpg" alt="Paladin">
+    </div>
+    <div class="entity-info">
+      <div class="entity-name" id="heroName">The Paladin</div>
+      <div class="hp-row">
+        <div class="hp-bar-track">
+          <div class="hp-bar-fill hero-fill" id="heroHpBar" style="width:100%"></div>
+        </div>
+        <span class="hp-text" id="heroHpText">30/30</span>
+      </div>
+      <div class="status-chips" id="heroStatuses"></div>
+      <div class="hero-resources">
+        <div class="resource-item">
+          <span>NRG</span>
+          <div class="energy-pips" id="energyPips"></div>
+        </div>
+        <div class="resource-item" id="resource2">
+          <span id="resource2Label">CHG</span>
+          <div class="charge-pips" id="chargePips"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VS -->
+  <div style="font-family:Cinzel,serif;font-size:1.8rem;color:rgba(240,230,211,0.1);letter-spacing:4px;">VS</div>
+
+  <!-- Enemy panel -->
+  <div id="enemiesArea"></div>
+  <div class="cancel-hint" id="cancelHint" style="display:none">ESC — CANCEL</div>
+
+</div>
+
+<!-- Combat log -->
+<div class="combat-log" id="combatLog"></div>
+
+<!-- Hand -->
+<div class="hand-area" id="handArea">
+  <!-- cards rendered by JS -->
+  <button class="end-turn-btn" id="endTurnBtn" onclick="endTurn()">END<br>TURN</button>
+</div>
+
+<script>
+// ─── Card definitions ──────────────────────────────────────────────────────
+
+const AXIS_COLORS = {
+  Tempo:      { color: '#5c8df6', border: 'rgba(92,141,246,0.4)',  bg: 'rgba(92,141,246,0.1)' },
+  Pressure:   { color: '#e05050', border: 'rgba(224,80,80,0.4)',   bg: 'rgba(224,80,80,0.1)' },
+  Stability:  { color: '#4caf6e', border: 'rgba(76,175,110,0.4)',  bg: 'rgba(76,175,110,0.1)' },
+  Conversion: { color: '#c9a84c', border: 'rgba(201,168,76,0.4)', bg: 'rgba(201,168,76,0.1)' },
+}
+
+const ALL_CARDS = {
+  // ─── Paladin ───────────────────────────────────────────────────────────────
+  righteous_strike: {
+    id: 'righteous_strike', heroClass: 'paladin',
+    name: 'Righteous Strike', energyCost: 1,
+    axes: ['Tempo', 'Conversion'],
+    rulesText: 'Deal 5 damage. If target vulnerable, gain 1 charge.',
+    narrativeLine: null,
+    target: 'enemy',
+    effect(gs, tid) {
+      const t = getEntity(gs, tid)
+      const isVulnerable = t ? hasStatus(t, 'vulnerable') : false
+      const dmg = gs.hero.chargeStacks >= 3 ? 10 : 5
+      gs = dealDamage(gs, tid, dmg)
+      if (gs.hero.chargeStacks >= 3) {
+        gs.hero.chargeStacks = 0
+        addLog(gs, '✨ Charge discharged — double damage!')
+      }
+      if (isVulnerable) {
+        gs.hero.chargeStacks = Math.min((gs.hero.chargeStacks || 0) + 1, 3)
+        addLog(gs, `⚡ Charge gained (${gs.hero.chargeStacks}/3)`)
+      }
+      return gs
+    }
+  },
+  stubborn_recovery: {
+    id: 'stubborn_recovery', heroClass: 'paladin',
+    name: 'Stubborn Recovery', energyCost: 1,
+    axes: ['Stability', 'Conversion'],
+    rulesText: 'Heal self for 6 HP.',
+    narrativeLine: 'Not healing — refusing to die.',
+    target: 'self',
+    effect(gs) { return healHero(gs, 6) }
+  },
+  divine_charge: {
+    id: 'divine_charge', heroClass: 'paladin',
+    name: 'Divine Charge', energyCost: 1,
+    axes: ['Tempo', 'Conversion'],
+    rulesText: 'Gain 1 charge (max 3). At 3 charges next attack deals double damage.',
+    narrativeLine: null,
+    target: 'self',
+    effect(gs) {
+      gs = deepClone(gs)
+      gs.hero.chargeStacks = Math.min((gs.hero.chargeStacks || 0) + 1, 3)
+      addLog(gs, `⚡ Charge: ${gs.hero.chargeStacks}/3`)
+      return gs
+    }
+  },
+
+  // ─── Blood Mage ────────────────────────────────────────────────────────────
+  open_the_wound: {
+    id: 'open_the_wound', heroClass: 'bloodmage',
+    name: 'Open the Wound', energyCost: 1,
+    axes: ['Pressure', 'Stability'],
+    rulesText: 'Apply 3 bleed. If target already bleeding, also apply vulnerable.',
+    narrativeLine: 'Deliberate. Not an accident.',
+    target: 'enemy',
+    effect(gs, tid) {
+      const t = getEntity(gs, tid)
+      const wasBleeding = t ? hasStatus(t, 'bleed') : false
+      gs = deepClone(gs)
+      const e = gs.enemies.find(e => e.id === tid)
+      if (!e) return gs
+      addStatus(e, 'bleed', 3)
+      addLog(gs, `🩸 ${e.name} bleeding (${getStatus(e, 'bleed').stacks} stacks)`)
+      if (wasBleeding) {
+        addStatus(e, 'vulnerable', 1)
+        addLog(gs, `💜 ${e.name} is vulnerable`)
+      }
+      return gs
+    }
+  },
+  bloodrite: {
+    id: 'bloodrite', heroClass: 'bloodmage',
+    name: 'Bloodrite', energyCost: 2,
+    axes: ['Conversion', 'Pressure'],
+    rulesText: 'Deal 8 damage. Take 3 self-damage.',
+    narrativeLine: 'You pay in blood for power.',
+    target: 'enemy',
+    effect(gs, tid) {
+      gs = dealDamage(gs, tid, 8)
+      const newHp = Math.max(0, gs.hero.hp - 3)
+      gs = deepClone(gs)
+      gs.hero.hp = newHp
+      if (newHp === 0 && gs.hero.state === 'alive') gs.hero.state = 'death_door'
+      else if (newHp === 0 && gs.hero.state === 'death_door') gs.hero.state = 'dead'
+      addLog(gs, `🩸 ${gs.hero.name} pays 3 HP (${gs.hero.hp}/${gs.hero.maxHp})`)
+      return checkWin(gs)
+    }
+  },
+  chaos_bolt: {
+    id: 'chaos_bolt', heroClass: 'bloodmage',
+    name: 'Chaos Bolt', energyCost: 1,
+    axes: ['Tempo', 'Pressure'],
+    rulesText: 'Deal 5 damage to a random target.',
+    narrativeLine: 'Reality fractures at the point of impact.',
+    target: 'random',  // resolved in selectCard
+    effect(gs, tid) { return dealDamage(gs, tid, 5) }
+  },
+
+  // ─── Berserker ─────────────────────────────────────────────────────────────
+  savage_lunge: {
+    id: 'savage_lunge', heroClass: 'berserker',
+    name: 'Savage Lunge', energyCost: 1,
+    axes: ['Tempo', 'Stability'],
+    rulesText: 'Deal 6 damage. Push target to back row.',
+    narrativeLine: 'The world narrows to a single point of impact.',
+    target: 'enemy',
+    effect(gs, tid) {
+      const dmg = berserkerScaledDmg(gs, 6)
+      gs = dealDamage(gs, tid, dmg)
+      const e = gs.enemies.find(e => e.id === tid)
+      if (e) addLog(gs, `💨 ${e.name} pushed to back row`)
+      return gs
+    }
+  },
+  primal_fury: {
+    id: 'primal_fury', heroClass: 'berserker',
+    name: 'Primal Fury', energyCost: 1,
+    axes: ['Conversion', 'Tempo'],
+    rulesText: 'Deal 4 damage. Gain 1 rage stack.',
+    narrativeLine: 'Every blow feeds the fire.',
+    target: 'enemy',
+    effect(gs, tid) {
+      const dmg = berserkerScaledDmg(gs, 4)
+      gs = dealDamage(gs, tid, dmg)
+      gs.hero.rageStacks = Math.min((gs.hero.rageStacks || 0) + 1, 5)
+      addLog(gs, `🔥 Rage: ${gs.hero.rageStacks}/5`)
+      return gs
+    }
+  },
+  primal_dodge: {
+    id: 'primal_dodge', heroClass: 'berserker',
+    name: 'Primal Dodge', energyCost: 1,
+    axes: ['Stability', 'Conversion'],
+    rulesText: 'Gain 4 defend. In Rage, gain 1 energy.',
+    narrativeLine: 'Pain sharpens reflex.',
+    target: 'self',
+    effect(gs) {
+      gs = deepClone(gs)
+      addStatus(gs.hero, 'defend', 4)
+      addLog(gs, `🛡 ${gs.hero.name} gains 4 defend`)
+      if (gs.hero.hp <= Math.floor(gs.hero.maxHp * 0.25)) {
+        gs.hero.energy += 1
+        addLog(gs, `⚡ Rage — +1 energy`)
+      }
+      return gs
+    }
+  },
+
+  // ─── Werewolf — wolf form ──────────────────────────────────────────────────
+  rend: {
+    id: 'rend', heroClass: 'werewolf',
+    name: 'Rend', energyCost: 1,
+    axes: ['Pressure', 'Tempo'],
+    rulesText: 'Deal 8 damage. Apply 2 bleed.',
+    narrativeLine: 'The wound opens. It does not close.',
+    target: 'enemy',
+    effect(gs, tid) {
+      const dmg = berserkerScaledDmg(gs, 8)
+      gs = dealDamage(gs, tid, dmg)
+      const e = gs.enemies.find(e => e.id === tid)
+      if (e && e.state !== 'dead') {
+        addStatus(e, 'bleed', 2)
+        addLog(gs, `🩸 ${e.name} bleeding (${getStatus(e, 'bleed').stacks} stacks)`)
+      }
+      return gs
+    }
+  },
+  rampage: {
+    id: 'rampage', heroClass: 'werewolf',
+    name: 'Rampage', energyCost: 2,
+    axes: ['Tempo', 'Pressure'],
+    rulesText: 'Deal 4 damage to all enemies.',
+    narrativeLine: 'Nothing escapes.',
+    target: 'aoe',  // hits all enemies
+    effect(gs) {
+      const dmg = berserkerScaledDmg(gs, 4)
+      gs = deepClone(gs)
+      gs.enemies.forEach(e => {
+        if (e.state !== 'dead') {
+          const d = calcDamage(e, dmg)
+          applyDamageToEntity(e, d)
+          if (e.state === 'death_door') e.state = 'dead'
+          addLog(gs, `⚔ Rampage hits ${e.name} for ${d}`)
+        }
+      })
+      return checkWin(gs)
+    }
+  },
+  reality_crack: {
+    id: 'reality_crack', heroClass: 'werewolf',
+    name: 'Reality Crack', energyCost: 1,
+    axes: ['Pressure', 'Conversion'],
+    rulesText: 'Apply vulnerable to all enemies.',
+    narrativeLine: 'In wolf form, the world around you breaks.',
+    target: 'aoe',
+    effect(gs) {
+      gs = deepClone(gs)
+      gs.enemies.forEach(e => {
+        if (e.state !== 'dead') {
+          addStatus(e, 'vulnerable', 1)
+          addLog(gs, `💜 ${e.name} is vulnerable`)
+        }
+      })
+      return gs
+    }
+  },
+
+  // ─── Werewolf — human form ─────────────────────────────────────────────────
+  lunar_strike: {
+    id: 'lunar_strike', heroClass: 'werewolf',
+    name: 'Lunar Strike', energyCost: 1,
+    axes: ['Tempo', 'Pressure'],
+    rulesText: 'Deal 5 damage. If HP ≤ 50%, deal 8 instead.',
+    narrativeLine: 'The moon sharpens every instinct.',
+    target: 'enemy',
+    effect(gs, tid) {
+      const hpPct = gs.hero.hp / gs.hero.maxHp
+      return dealDamage(gs, tid, hpPct <= 0.5 ? 8 : 5)
+    }
+  },
+  pack_sense: {
+    id: 'pack_sense', heroClass: 'werewolf',
+    name: 'Pack Sense', energyCost: 1,
+    axes: ['Pressure', 'Stability'],
+    rulesText: 'Apply vulnerable to target. Gain 2 defend.',
+    narrativeLine: 'Weakness is a scent.',
+    target: 'enemy',
+    effect(gs, tid) {
+      gs = deepClone(gs)
+      const e = gs.enemies.find(e => e.id === tid)
+      if (e) { addStatus(e, 'vulnerable', 1); addLog(gs, `💜 ${e.name} is vulnerable`) }
+      addStatus(gs.hero, 'defend', 2)
+      addLog(gs, `🛡 ${gs.hero.name} gains 2 defend`)
+      return gs
+    }
+  },
+  stalk: {
+    id: 'stalk', heroClass: 'werewolf',
+    name: 'Stalk', energyCost: 1,
+    axes: ['Stability', 'Conversion'],
+    rulesText: 'Gain 5 defend. Apply 1 bleed to target.',
+    narrativeLine: 'Patience is predatory.',
+    target: 'enemy',
+    effect(gs, tid) {
+      gs = deepClone(gs)
+      addStatus(gs.hero, 'defend', 5)
+      addLog(gs, `🛡 ${gs.hero.name} gains 5 defend`)
+      const e = gs.enemies.find(e => e.id === tid)
+      if (e) { addStatus(e, 'bleed', 1); addLog(gs, `🩸 ${e.name} bleeding (${getStatus(e, 'bleed').stacks} stacks)`) }
+      return gs
+    }
+  },
+}
+
+// ─── Enemy definitions ─────────────────────────────────────────────────────
+
+const ENEMY_DEFS = {
+  goblin: {
+    name: 'Goblin', hp: 20, maxHp: 20,
+    portrait: 'assets/enemy-goblin.jpg',
+    intents: [
+      { icon: '⚔', label: '6', type: 'attack', value: 6 },
+      { icon: '⚔', label: '6', type: 'attack', value: 6 },
+      { icon: '⚔', label: '6', type: 'attack', value: 6 },
+    ]
+  },
+  guardian: {
+    name: 'Guardian', hp: 35, maxHp: 35,
+    portrait: 'assets/enemy-guardian.jpg',
+    intents: [
+      { icon: '🛡', label: 'Shield', type: 'defend', value: 8 },
+      { icon: '⚡', label: 'Stun',  type: 'stun',   value: 1 },
+      { icon: '⚔', label: '10',    type: 'attack',  value: 10 },
+    ]
+  },
+  vampire: {
+    name: 'Vampire', hp: 30, maxHp: 30,
+    portrait: 'assets/enemy-vampire.jpg',
+    intents: [
+      { icon: '⚔', label: '6 ♥',  type: 'attack',  value: 6, lifesteal: true },
+      { icon: '🩸', label: 'Wound', type: 'bleed',   value: 2 },
+      { icon: '⚔', label: '12',   type: 'attack',  value: 12 },
+    ]
+  },
+  necromancer: {
+    name: 'Necromancer', hp: 25, maxHp: 25,
+    portrait: 'assets/enemy-necromancer.jpg',
+    intents: [
+      { icon: '🩸', label: 'Wither', type: 'bleed',   value: 3 },
+      { icon: '💀', label: 'Raise',  type: 'raise',   value: 0 },
+      { icon: '✨', label: 'Empower',type: 'empower', value: 3 },
+    ]
+  },
+  skeleton: {
+    name: 'Skeleton', hp: 10, maxHp: 10,
+    portrait: 'assets/enemy-skeleton.jpg',
+    intents: [
+      { icon: '⚔', label: '4', type: 'attack', value: 4 },
+      { icon: '⚔', label: '4', type: 'attack', value: 4 },
+      { icon: '⚔', label: '4', type: 'attack', value: 4 },
+    ]
+  },
+  archivist: {
+    name: 'The Archivist', hp: 60, maxHp: 60,
+    portrait: 'assets/boss-archivist.jpg',
+    intents: [
+      { icon: '💾', label: 'Archive',   type: 'bleed',   value: 2 },
+      { icon: '⚠',  label: 'Corrupt',  type: 'attack',  value: 8 },
+      { icon: '🔄', label: 'Rewrite',  type: 'attack',  value: 6 },
+      { icon: '💀', label: 'Breach',   type: 'attack',  value: 12 },
+    ]
+  },
+}
+
+// ─── Game state ────────────────────────────────────────────────────────────
+
+const HERO_DEFS = {
+  bloodmage: {
+    heroClass: 'bloodmage',
+    name: 'Blood Mage',
+    portrait: 'assets/hero-bloodmage.jpg',
+    hp: 25,
+    hand: ['open_the_wound', 'bloodrite', 'chaos_bolt'],
+  },
+  paladin: {
+    heroClass: 'paladin',
+    name: 'Paladin',
+    portrait: 'assets/hero-paladin.jpg',
+    hp: 30,
+    hand: ['righteous_strike', 'stubborn_recovery', 'divine_charge'],
+    chargeStacks: 0,
+  },
+  berserker: {
+    heroClass: 'berserker',
+    name: 'Berserker',
+    portrait: 'assets/hero-berserker.jpg',
+    hp: 28,
+    formState: 'human',
+    rageStacks: 0,
+    hand: ['savage_lunge', 'primal_fury', 'primal_dodge'],
+  },
+  werewolf: {
+    heroClass: 'werewolf',
+    name: 'Werewolf',
+    portrait: 'assets/hero-werewolf-human.jpg',
+    hp: 28,
+    formState: 'human',
+    werewolfTurnsLeft: 0,
+    humanHand:   ['lunar_strike', 'pack_sense', 'stalk'],
+    werewolfHand: ['rend', 'rampage', 'reality_crack'],
+    hand: ['lunar_strike', 'pack_sense', 'stalk'],
+  },
+}
+
+// ─── Encounter definitions ─────────────────────────────────────────────────
+
+const ENCOUNTER_DEFS = {
+  'goblin':       [{ key: 'goblin',      id: 'e0' }],
+  'goblin×2':     [{ key: 'goblin', id: 'e0' }, { key: 'goblin', id: 'e1', portrait: 'assets/enemy-goblin2.jpg' }],
+  'guardian':     [{ key: 'guardian',    id: 'e0' }],
+  'vampire':      [{ key: 'vampire',     id: 'e0' }],
+  'necromancer':  [{ key: 'necromancer', id: 'e0' }],
+  'goblin+necro': [{ key: 'goblin',      id: 'e0' }, { key: 'necromancer', id: 'e1' }],
+  'archivist':    [{ key: 'archivist',   id: 'e0' }],
+}
+
+// ─── Game state ────────────────────────────────────────────────────────────
+
+let gs = null
+let selectedCardId = null
+let selectedEnemyId = null
+let forcedHero = 'bloodmage'
+
+function pickEncounter(seed) {
+  const keys = Object.keys(ENCOUNTER_DEFS)
+  return keys[seed % keys.length]
+}
+
+function makeGameState(seed) {
+  const encounterKey = pickEncounter(seed)
+  const encounter = ENCOUNTER_DEFS[encounterKey]
+  return {
+    seed,
+    turn: 1,
+    hero: {
+      ...HERO_DEFS[forcedHero],
+      maxHp: HERO_DEFS[forcedHero].hp,
+      state: 'alive',
+      statuses: [],
+      energy: 3, maxEnergy: 3,
+    },
+    enemies: encounter.map(def => {
+      const d = ENEMY_DEFS[def.key]
+      return {
+        id: def.id,
+        key: def.key,
+        name: d.name,
+        hp: d.hp, maxHp: d.hp,
+        state: 'alive',
+        statuses: [],
+        intentIndex: 0,
+        intents: d.intents,
+        portrait: def.portrait ?? d.portrait,
+      }
+    }),
+    log: [],
+    isOver: false,
+    winner: null,
+    // Boss phase tracking
+    archivistPhases: {
+      phase1Fired: false, phase2Fired: false,
+      phase3Fired: false, phase4Fired: false,
+      memorySuppression: 0, timelineInversion: false,
+    },
+  }
+}
+
+function selectHero(key) {
+  forcedHero = key
+  document.querySelectorAll('.hero-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.hero === key)
+  })
+  initGame()
+}
+
+
+// ─── Engine helpers ────────────────────────────────────────────────────────
+
+function hasStatus(entity, name) {
+  return entity.statuses.some(s => s.name === name)
+}
+
+function getStatus(entity, name) {
+  return entity.statuses.find(s => s.name === name)
+}
+
+function addStatus(entity, name, stacks) {
+  const existing = getStatus(entity, name)
+  if (name === 'stun') {
+    if (!existing) entity.statuses.push({ name, stacks: 1 })
+    return
+  }
+  if (existing) {
+    existing.stacks = Math.min(existing.stacks + stacks, name === 'bleed' ? 10 : 99)
+  } else {
+    entity.statuses.push({ name, stacks })
+  }
+}
+
+function removeStatus(entity, name) {
+  entity.statuses = entity.statuses.filter(s => s.name !== name)
+}
+
+function addLog(gs, msg) {
+  gs.log.unshift(msg)
+  if (gs.log.length > 6) gs.log.pop()
+}
+
+function calcDamage(target, baseDmg) {
+  let dmg = baseDmg
+  if (hasStatus(target, 'vulnerable')) dmg = Math.floor(dmg * 1.5)
+  const defend = getStatus(target, 'defend')
+  if (defend) {
+    const absorbed = Math.min(defend.stacks, dmg)
+    defend.stacks -= absorbed
+    if (defend.stacks <= 0) removeStatus(target, 'defend')
+    dmg -= absorbed
+  }
+  return Math.max(0, dmg)
+}
+
+// ─── Berserker helpers ─────────────────────────────────────────────────────
+
+function berserkerScaledDmg(gs, base) {
+  const missing = gs.hero.maxHp - gs.hero.hp
+  return Math.floor(base * (1 + missing / gs.hero.maxHp))
+}
+
+// Called at start of each new turn. Mutates gs directly (endTurn already cloned it).
+// ─── Archivist phase logic ─────────────────────────────────────────────────
+
+function checkArchivistPhases() {
+  const archivist = gs.enemies.find(e => e.key === 'archivist')
+  if (!archivist || !gs.archivistPhases) return
+
+  const hp = archivist.hp
+  const maxHp = archivist.maxHp
+  const hpPct = maxHp > 0 ? hp / maxHp : 1
+  const p = gs.archivistPhases
+
+  // Phase 1 — Memory Suppression (HP < 75%)
+  if (!p.phase1Fired && hpPct < 0.75) {
+    p.phase1Fired = true
+    p.memorySuppression = 2
+    addLog(gs, '⚠ PHASE 1: Memory Suppression — healing reduced for 2 turns')
+    triggerCorruption('memory-suppression', 'The Archivist removes the ability to recover.')
+    return
+  }
+
+  // Phase 2 — Timeline Inversion (HP < 50%)
+  if (!p.phase2Fired && hpPct < 0.50) {
+    p.phase2Fired = true
+    p.timelineInversion = true
+    addLog(gs, '⚠ PHASE 2: Timeline Inversion — causality reversed this turn')
+  }
+
+  // Phase 3 — State Reset (HP < 25%)
+  if (!p.phase3Fired && hpPct < 0.25) {
+    p.phase3Fired = true
+    // Clear all statuses
+    gs.hero.statuses = []
+    gs.enemies.forEach(e => { e.statuses = [] })
+    addLog(gs, '⚠ PHASE 3: State Reset — all statuses erased')
+  }
+
+  // Phase 4 — Invariant Breach (HP = 0)
+  if (!p.phase4Fired && hp === 0) {
+    p.phase4Fired = true
+    addLog(gs, '⚠ PHASE 4: Invariant Breach — The Archivist attempts the impossible')
+    // Corrupt state: dead entity with non-zero HP
+    const dead = gs.enemies.find(e => e.state === 'dead')
+    if (dead) {
+      dead.hp = dead.maxHp
+      addLog(gs, '💀 Dead entity received HP — invariant violated')
+    }
+    // assertValidGameState equivalent → trigger TIMELINE CORRUPTED
+    triggerCorruption('invariant-breach',
+      'Dead entity attempted to act. State machine corrupted.\nThe Archivist has been archived.')
+  }
+}
+
+function checkBerserkerTransformGame() {
+  if (gs.hero.heroClass !== 'werewolf') return
+  const hpPct = gs.hero.hp / gs.hero.maxHp
+
+  if (gs.hero.formState === 'human') {
+    if (hpPct <= 0.5 && gs.hero.state !== 'dead') {
+      gs.hero.formState = 'werewolf'
+      gs.hero.werewolfTurnsLeft = 3
+      gs.hero.hand = HERO_DEFS.werewolf.werewolfHand.slice()
+      gs.hero.portrait = 'assets/hero-werewolf-wolf.jpg'
+      snd.transform()
+      addLog(gs, '🐺 Werewolf transforms!')
+    }
+  } else {
+    const newTurnsLeft = (gs.hero.werewolfTurnsLeft || 0) - 1
+    if (newTurnsLeft <= 0 || hpPct > 0.5) {
+      gs.hero.formState = 'human'
+      gs.hero.werewolfTurnsLeft = 0
+      gs.hero.hand = HERO_DEFS.werewolf.humanHand.slice()
+      gs.hero.portrait = 'assets/hero-berserker-human.jpg'
+      addLog(gs, '🐺 Werewolf reverts to human form')
+    } else {
+      gs.hero.werewolfTurnsLeft = newTurnsLeft
+    }
+  }
+}
+
+function applyDamageToEntity(entity, dmg) {
+  if (entity.state === 'dead') return
+  entity.hp = Math.max(0, entity.hp - dmg)
+  if (entity.hp === 0) {
+    if (entity.state === 'death_door') {
+      entity.state = 'dead'
+    } else {
+      entity.state = 'death_door'
+    }
+  }
+}
+
+// targetId: 'hero' or enemy id ('e0', 'e1')
+function getEntity(gs, targetId) {
+  if (targetId === 'hero') return gs.hero
+  return gs.enemies.find(e => e.id === targetId)
+}
+
+function dealDamage(gs, targetId, baseDmg) {
+  gs = deepClone(gs)
+  const isHero = targetId === 'hero'
+  const entity = isHero ? gs.hero : gs.enemies.find(e => e.id === targetId)
+  if (!entity) return gs
+  const dmg = calcDamage(entity, baseDmg)
+  const prevHp = entity.hp
+  applyDamageToEntity(entity, dmg)
+
+  // Enemy at death_door → kill immediately; hero keeps death_door (can be healed)
+  if (!isHero && entity.state === 'death_door') entity.state = 'dead'
+
+  if (dmg > 0) {
+    if (entity.state === 'dead') snd.enemyDead()
+    else snd.strike()
+  }
+  if (dmg > 0) setTimeout(() => flashHit(isHero ? 'hero' : targetId), 50)
+
+  const attackerName = isHero ? gs.enemies[0]?.name ?? 'Enemy' : gs.hero.name
+  const defenderName = entity.name
+  let msg = `⚔ ${isHero ? attackerName : gs.hero.name} strikes ${isHero ? gs.hero.name : defenderName} for ${dmg}`
+
+  if (entity.state === 'death_door') msg += " — Death's Door"
+  if (entity.state === 'dead') msg += ' — DEAD'
+  if (dmg === 0 && prevHp === entity.hp) msg += ' (blocked)'
+
+  addLog(gs, msg)
+  return checkWin(gs)
+}
+
+function healHero(gs, amount) {
+  gs = deepClone(gs)
+  // Phase 1: Memory Suppression — healing reduced to 0
+  if (gs.archivistPhases?.memorySuppression > 0) {
+    addLog(gs, `💾 Memory Suppression — heal blocked (${gs.archivistPhases.memorySuppression} turns remaining)`)
+    return gs
+  }
+  const prev = gs.hero.hp
+  gs.hero.hp = Math.min(gs.hero.maxHp, gs.hero.hp + amount)
+  if (gs.hero.state === 'death_door' && gs.hero.hp > 0) gs.hero.state = 'alive'
+  const healed = gs.hero.hp - prev
+  if (healed > 0) snd.heal()
+  addLog(gs, `💚 ${gs.hero.name} recovers ${healed} HP (${gs.hero.hp}/${gs.hero.maxHp})`)
+  return gs
+}
+
+function checkWin(gs) {
+  if (gs.enemies.every(e => e.state === 'dead') && !gs.isOver) {
+    gs.isOver = true
+    gs.winner = 'hero'
+    snd.victory()
+    addLog(gs, '✦ All enemies archived.')
+  }
+  if (gs.hero.state === 'dead' && !gs.isOver) {
+    gs.isOver = true
+    gs.winner = 'enemies'
+    snd.defeat()
+    addLog(gs, `✦ Timeline collapsed. ${gs.hero.name} is gone.`)
+  }
+  return gs
+}
+
+function deepClone(obj) {
+  return JSON.parse(JSON.stringify(obj))
+}
+
+// ─── Player actions ────────────────────────────────────────────────────────
+
+function selectCard(cardId) {
+  if (gs.isOver) return
+  if (hasStatus(gs.hero, 'stun')) return
+
+  const card = ALL_CARDS[cardId]
+  if (!card) return
+  if (gs.hero.energy < card.energyCost) return
+
+  if (selectedCardId === cardId) {
+    selectedCardId = null
+    selectedEnemyId = null
+    render()
+    return
+  }
+
+  selectedCardId = cardId
+  selectedEnemyId = null
+
+  if (card.target === 'self') {
+    playCard(cardId, null)
+    return
+  }
+
+  if (card.target === 'aoe') {
+    playCard(cardId, null)
+    return
+  }
+
+  if (card.target === 'random') {
+    // Pick random living enemy
+    const living = gs.enemies.filter(e => e.state !== 'dead')
+    if (!living.length) return
+    const target = living[Math.floor(Math.random() * living.length)]
+    playCard(cardId, target.id)
+    return
+  }
+
+  // target === 'enemy': wait for player to click an enemy panel
+  if (gs.enemies.every(e => e.state === 'dead')) return
+  render()
+}
+
+function playCard(cardId, targetId) {
+  const card = ALL_CARDS[cardId]
+  if (!card) return
+
+  snd.cardPlay()
+  gs = deepClone(gs)
+  gs.hero.energy -= card.energyCost
+  addLog(gs, `▶ ${card.name}`)
+  gs = card.effect(gs, targetId)
+  selectedCardId = null
+  selectedEnemyId = null
+
+  if (!assertValidGameState(gs)) return
+  render()
+}
+
+function clickEnemyPanel(enemyId) {
+  if (!selectedCardId) return
+  const card = ALL_CARDS[selectedCardId]
+  if (!card || card.target !== 'enemy') return
+  const enemy = gs.enemies.find(e => e.id === enemyId)
+  if (!enemy || enemy.state === 'dead') return
+  playCard(selectedCardId, enemyId)
+}
+
+function endTurn() {
+  if (gs.isOver) return
+
+  snd.endTurnSfx()
+  gs = deepClone(gs)
+  addLog(gs, '── End of turn ──')
+
+  // Death resolution: enemies at death_door die before acting
+  gs.enemies.forEach(e => { if (e.state === 'death_door') e.state = 'dead' })
+  gs = checkWin(gs)
+  if (gs.isOver) { render(); return }
+
+  // Hero stun expires
+  if (hasStatus(gs.hero, 'stun')) {
+    removeStatus(gs.hero, 'stun')
+    addLog(gs, '⚡ Stun cleared')
+  }
+
+  // Status ticks on hero
+  tickStatuses(gs, 'hero')
+  if (gs.isOver) { render(); return }
+
+  // Each living enemy acts
+  for (const enemy of gs.enemies) {
+    if (enemy.state === 'dead') continue
+    if (hasStatus(enemy, 'stun')) {
+      addLog(gs, `⚡ ${enemy.name} is stunned — skips turn`)
+      removeStatus(enemy, 'stun')
+      continue
+    }
+    const intent = enemy.intents[enemy.intentIndex % enemy.intents.length]
+    executeEnemyIntent(gs, enemy, intent)
+    if (gs.isOver) { render(); return }
+  }
+
+  if (gs.isOver) { render(); return }
+
+  // Status ticks on each enemy
+  for (const enemy of gs.enemies) {
+    if (enemy.state !== 'dead') tickStatuses(gs, enemy.id)
+  }
+  gs = checkWin(gs)
+
+  // Advance intent index for each enemy and restore turn
+  gs.enemies.forEach(e => {
+    e.intentIndex = (e.intentIndex + 1) % e.intents.length
+  })
+  gs.turn += 1
+  checkBerserkerTransformGame()
+  checkArchivistPhases()
+  if (gs.archivistPhases) {
+    if (gs.archivistPhases.memorySuppression > 0) gs.archivistPhases.memorySuppression--
+    gs.archivistPhases.timelineInversion = false
+  }
+  gs.hero.energy = gs.hero.maxEnergy
+  selectedCardId = null
+  selectedEnemyId = null
+
+  if (!assertValidGameState(gs)) return
+  render()
+}
+
+function flashAttacker(enemyId) {
+  const frame = document.getElementById(`enemy-portrait-${enemyId}`)
+  if (!frame) return
+  frame.classList.remove('attacking-now')
+  void frame.offsetWidth
+  frame.classList.add('attacking-now')
+  setTimeout(() => frame.classList.remove('attacking-now'), 400)
+}
+
+function executeEnemyIntent(gs, enemy, intent) {
+  switch (intent.type) {
+    case 'attack': {
+      // Flash runs after render() so the class isn't wiped by renderEnemies
+      const _eid = enemy.id
+      setTimeout(() => flashAttacker(_eid), 50)
+      const prevHpPct = gs.hero.hp / gs.hero.maxHp
+      // Apply empowerment bonus (Necromancer empower) then consume it
+      const empowerBonus = enemy.empowered || 0
+      if (empowerBonus > 0) enemy.empowered = 0
+      const dmg = calcDamage(gs.hero, intent.value + empowerBonus)
+      applyDamageToEntity(gs.hero, dmg)
+      if (dmg > 0) {
+        if (gs.hero.state === 'death_door' || gs.hero.state === 'dead') snd.deathDoor()
+        else snd.heroHit()
+      }
+      if (gs.hero.heroClass === 'berserker' && prevHpPct > 0.25 && gs.hero.hp / gs.hero.maxHp <= 0.25 && gs.hero.state !== 'dead') snd.rageSfx()
+      if (dmg > 0) setTimeout(() => flashHit('hero'), 50)
+      let msg = `⚔ ${enemy.name} strikes for ${dmg}`
+      if (gs.hero.state === 'death_door') msg += " — Death's Door"
+      if (gs.hero.state === 'dead') msg += ' — DEAD'
+      addLog(gs, msg)
+      if (intent.lifesteal && dmg > 0) {
+        const healed = Math.min(dmg, enemy.maxHp - enemy.hp)
+        enemy.hp += healed
+        if (healed > 0) addLog(gs, `♥ ${enemy.name} lifesteals ${healed}`)
+      }
+      checkWin(gs)
+      break
+    }
+    case 'bleed':
+      snd.bleedSfx()
+      addStatus(gs.hero, 'bleed', intent.value)
+      addLog(gs, `🩸 ${enemy.name} applies bleed ${intent.value} to ${gs.hero.name}`)
+      break
+    case 'defend':
+      addStatus(enemy, 'defend', intent.value)
+      addLog(gs, `🛡 ${enemy.name} gains defend ${intent.value}`)
+      break
+    case 'stun':
+      snd.stunSfx()
+      addStatus(gs.hero, 'stun', 1)
+      addLog(gs, `⚡ ${enemy.name} stuns ${gs.hero.name}`)
+      break
+    case 'raise': {
+      // Find a dead enemy that hasn't been raised yet (raisedOnce flag)
+      const corpse = gs.enemies.find(e => e.state === 'dead' && !e.raisedOnce)
+      if (corpse) {
+        // Mark corpse as consumed — idempotent, same corpse can't be raised twice
+        corpse.raisedOnce = true
+        const skelDef = ENEMY_DEFS.skeleton
+        const skeletonId = `skeleton-${Date.now()}`
+        const skeleton = {
+          id: skeletonId,
+          key: 'skeleton',
+          name: 'Skeleton',
+          hp: skelDef.hp, maxHp: skelDef.maxHp,
+          state: 'alive',
+          statuses: [],
+          intentIndex: 0,
+          intents: skelDef.intents,
+          portrait: skelDef.portrait,
+        }
+        gs.enemies.push(skeleton)
+        addLog(gs, `💀 ${enemy.name} raises ${corpse.name} as a Skeleton!`)
+      } else {
+        addLog(gs, `💀 ${enemy.name} attempts to raise dead — no corpse available`)
+      }
+      break
+    }
+    case 'empower': {
+      // Give +2 attack to living skeleton if present (next attack only)
+      const skeleton = gs.enemies.find(e => e.key === 'skeleton' && e.state !== 'dead')
+      if (skeleton) {
+        skeleton.empowered = (skeleton.empowered || 0) + 2
+        addLog(gs, `✨ ${enemy.name} empowers ${skeleton.name} (+2 next attack)`)
+      } else {
+        addLog(gs, `✨ ${enemy.name} empowers — no skeleton to empower`)
+      }
+      break
+    }
+  }
+}
+
+function tickStatuses(gs, who) {
+  const entity = who === 'hero' ? gs.hero : gs.enemies.find(e => e.id === who)
+  const bleed = getStatus(entity, 'bleed')
+  if (bleed) {
+    const dmg = bleed.stacks
+    applyDamageToEntity(entity, dmg)
+    addLog(gs, `🩸 ${entity.name} bleeds for ${dmg}`)
+    bleed.stacks = Math.max(0, bleed.stacks - 1)
+    if (bleed.stacks === 0) removeStatus(entity, 'bleed')
+    checkWin(gs)
+  }
+  // defend expires at end of turn (it was already consumed during damage)
+}
+
+// ─── Hit flash ────────────────────────────────────────────────────────────
+
+function flashHit(targetId) {
+  const id = targetId === 'hero' ? 'heroPortrait' : `enemy-portrait-${targetId}`
+  const cls = targetId === 'hero' ? 'hit-flash-hero' : 'hit-flash-enemy'
+  const el = document.getElementById(id)
+  if (!el) return
+  el.classList.remove(cls)
+  void el.offsetWidth
+  el.classList.add(cls)
+  setTimeout(() => el.classList.remove(cls), 400)
+}
+
+// ─── Card tooltip ─────────────────────────────────────────────────────────
+
+function showCardTooltip(card, el) {
+  const tip = document.getElementById('cardTooltip')
+  const rect = el.getBoundingClientRect()
+
+  const axesTags = (card.axes || []).map(a => {
+    const c = AXIS_COLORS[a] || {}
+    return `<span class="tooltip-axis" style="color:${c.color};border-color:${c.border};background:${c.bg}">${a}</span>`
+  }).join('')
+
+  const narrative = card.narrativeLine
+    ? `<div class="tooltip-narrative">"${card.narrativeLine}"</div>` : ''
+
+  tip.innerHTML = `
+    <div class="tooltip-name">${card.name}</div>
+    <div class="tooltip-axes">${axesTags}</div>
+    <div class="tooltip-rules">${card.rulesText}</div>
+    ${narrative}
+  `
+
+  // Position above card, centered
+  const tipW = 210
+  let left = rect.left + rect.width / 2 - tipW / 2
+  left = Math.max(8, Math.min(left, window.innerWidth - tipW - 8))
+  const top = rect.top - 12
+
+  tip.style.left = left + 'px'
+  tip.style.top  = top + 'px'
+  tip.style.transform = 'translateY(-100%)'
+  tip.classList.add('visible')
+}
+
+function hideCardTooltip() {
+  document.getElementById('cardTooltip').classList.remove('visible')
+}
+
+// ─── Invariant checks ─────────────────────────────────────────────────────
+
+const INVARIANTS = [
+  {
+    id: 'HP_FLOOR',
+    label: 'hp-floor',
+    check: gs => gs.hero.hp >= 0 && gs.enemies.every(e => e.hp >= 0),
+    violation: gs => `Entity HP is negative: hero=${gs.hero.hp}`,
+  },
+  {
+    id: 'HP_CEILING',
+    label: 'hp-ceiling',
+    check: gs => gs.hero.hp <= gs.hero.maxHp && gs.enemies.every(e => e.hp <= e.maxHp),
+    violation: gs => `HP exceeds maximum: hero=${gs.hero.hp}/${gs.hero.maxHp}`,
+  },
+  {
+    id: 'DEAD_ENTITY_STATE',
+    label: 'dead-cannot-act',
+    check: gs => !(gs.hero.state === 'dead' && gs.hero.energy > 0),
+    violation: () => 'Dead entity attempted to act. State machine corrupted.',
+  },
+  {
+    id: 'CHARGE_CAP',
+    label: 'charge-cap',
+    check: gs => (gs.hero.chargeStacks ?? 0) <= 3,
+    violation: gs => `Charge stacks exceeded maximum: ${gs.hero.chargeStacks}/3`,
+  },
+  {
+    id: 'BLEED_CAP',
+    label: 'bleed-cap',
+    check: gs => {
+      const b = gs.hero.statuses.find(s => s.name === 'bleed')
+      return !b || b.stacks <= 10
+    },
+    violation: gs => {
+      const b = gs.hero.statuses.find(s => s.name === 'bleed')
+      return `Bleed stacks exceeded cap: ${b?.stacks}/10`
+    },
+  },
+]
+
+function assertValidGameState(gs) {
+  for (const inv of INVARIANTS) {
+    if (!inv.check(gs)) {
+      triggerCorruption(inv.label, inv.violation(gs))
+      return false
+    }
+  }
+  return true
+}
+
+function triggerCorruption(invariantId, detail) {
+  document.getElementById('corruptedSeed').textContent = `#${gs.seed}`
+  document.getElementById('corruptedTurn').textContent = `Turn ${gs.turn} — Segment ${gs.turn}`
+  document.getElementById('corruptedInvariant').textContent = invariantId.toUpperCase()
+  document.getElementById('corruptedDetail').textContent = detail
+
+  const ov = document.getElementById('overlayCorrupted')
+  ov.style.display = 'flex'
+
+  // Brief screen flash on trigger
+  document.body.style.transition = 'background 0.05s'
+  document.body.style.background = '#3a0000'
+  setTimeout(() => { document.body.style.background = '#0d0d1a' }, 80)
+  setTimeout(() => { document.body.style.background = '#1a0000' }, 160)
+  setTimeout(() => { document.body.style.background = '#0d0d1a' }, 240)
+}
+
+function acknowledgeCorruption() {
+  document.getElementById('overlayCorrupted').style.display = 'none'
+  initGame()
+}
+
+// ─── Init ──────────────────────────────────────────────────────────────────
+
+function initGame() {
+  const seed = parseInt(document.getElementById('seedInput').value) || 42
+  gs = makeGameState(seed)
+  selectedCardId = null
+  selectedEnemyId = null
+  // Clear enemy panels so they rebuild fresh for the new encounter
+  document.getElementById('enemiesArea').innerHTML = ''
+  document.getElementById('overlayGameover').style.display = 'none'
+  document.getElementById('overlayCorrupted').style.display = 'none'
+  document.querySelectorAll('.hero-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.hero === forcedHero)
+  })
+  render()
+}
+
+// ─── Render ────────────────────────────────────────────────────────────────
+
+function render() {
+  renderTopBar()
+  renderHero()
+  renderEnemies()
+  renderHand()
+  renderLog()
+  renderOverlays()
+}
+
+function renderTopBar() {
+  document.getElementById('turnDisplay').textContent = `TURN ${gs.turn}`
+  document.getElementById('encounterDisplay').textContent =
+    gs.enemies.map(e => e.name.toUpperCase()).join(' + ')
+}
+
+function renderHero() {
+  const h = gs.hero
+  document.getElementById('heroName').textContent = h.name
+
+  const hpPct = h.maxHp > 0 ? (h.hp / h.maxHp * 100) : 0
+  document.getElementById('heroHpText').textContent = `${h.hp}/${h.maxHp}`
+  const bar = document.getElementById('heroHpBar')
+  bar.style.width = hpPct + '%'
+  bar.className = 'hp-bar-fill hero-fill' + (h.state === 'death_door' ? ' death-door-fill' : '')
+
+  const frame = document.getElementById('heroPortrait')
+  const img = frame.querySelector('img')
+  if (img && h.portrait) img.src = h.portrait
+  frame.className = 'portrait-frame hero-frame'
+  if (h.state === 'death_door') frame.classList.add('death-door')
+  if (h.state === 'dead') frame.classList.add('dead')
+
+  // Death's Door badge
+  const existingBadge = frame.querySelector('.deathdoor-badge')
+  if (h.state === 'death_door' && !existingBadge) {
+    const badge = document.createElement('div')
+    badge.className = 'deathdoor-badge'
+    badge.textContent = "DEATH'S DOOR"
+    frame.appendChild(badge)
+  } else if (h.state !== 'death_door' && existingBadge) {
+    existingBadge.remove()
+  }
+
+  renderStatuses('heroStatuses', h.statuses)
+
+  const ePips = document.getElementById('energyPips')
+  ePips.innerHTML = ''
+  for (let i = 0; i < h.maxEnergy; i++) {
+    const pip = document.createElement('div')
+    pip.className = 'pip energy-pip ' + (i < h.energy ? 'filled' : 'empty')
+    ePips.appendChild(pip)
+  }
+
+  const resource2Label = document.getElementById('resource2Label')
+  const cPips = document.getElementById('chargePips')
+  cPips.innerHTML = ''
+  if (h.heroClass === 'paladin') {
+    resource2Label.textContent = 'CHG'
+    for (let i = 0; i < 3; i++) {
+      const pip = document.createElement('div')
+      pip.className = 'pip charge-pip ' + (i < (h.chargeStacks || 0) ? 'filled' : 'empty')
+      cPips.appendChild(pip)
+    }
+  } else if (h.heroClass === 'berserker') {
+    resource2Label.textContent = 'RAGE'
+    for (let i = 0; i < 5; i++) {
+      const pip = document.createElement('div')
+      pip.className = 'pip rage-pip ' + (i < (h.rageStacks || 0) ? 'filled' : 'empty')
+      cPips.appendChild(pip)
+    }
+  } else {
+    resource2Label.textContent = ''
+  }
+
+  // Form badge for Werewolf
+  const existingFormBadge = frame.querySelector('.form-badge')
+  if (h.heroClass === 'werewolf') {
+    const badge = existingFormBadge || (() => {
+      const b = document.createElement('div')
+      b.className = 'form-badge'
+      frame.appendChild(b)
+      return b
+    })()
+    badge.textContent = h.formState === 'werewolf' ? '🐺 WOLF' : 'HUMAN'
+    badge.style.color = h.formState === 'werewolf' ? '#e05050' : '#cfcfcf'
+  } else if (existingFormBadge) {
+    existingFormBadge.remove()
+  }
+}
+
+function renderEnemies() {
+  const area = document.getElementById('enemiesArea')
+  const multi = gs.enemies.length > 1
+  const cardNeedsTarget = selectedCardId && ALL_CARDS[selectedCardId]?.target === 'enemy'
+
+  gs.enemies.forEach(e => {
+    let panel = document.getElementById(`enemy-panel-${e.id}`)
+    if (!panel) {
+      // Create panel first time
+      panel = document.createElement('div')
+      panel.id = `enemy-panel-${e.id}`
+      panel.className = 'entity-panel' + (multi ? ' multi' : '')
+
+      panel.innerHTML = `
+        <div class="portrait-frame enemy-frame" id="enemy-portrait-${e.id}" onclick="clickEnemyPanel('${e.id}')">
+          <img src="${e.portrait}" alt="${e.name}">
+        </div>
+        <div class="entity-info">
+          <div class="entity-name" id="enemy-name-${e.id}">${e.name}</div>
+          <div class="intent-badge" id="enemy-intent-${e.id}"></div>
+          <div class="hp-row">
+            <div class="hp-bar-track">
+              <div class="hp-bar-fill" id="enemy-hpbar-${e.id}" style="width:100%"></div>
+            </div>
+            <span class="hp-text" id="enemy-hptext-${e.id}">${e.hp}/${e.maxHp}</span>
+          </div>
+          <div class="status-chips" id="enemy-statuses-${e.id}"></div>
+        </div>
+      `
+      area.appendChild(panel)
+    }
+
+    // Update panel state
+    const frame = document.getElementById(`enemy-portrait-${e.id}`)
+    frame.className = 'portrait-frame enemy-frame'
+    if (e.state === 'death_door') frame.classList.add('death-door-archive')
+    if (e.state === 'dead')       frame.classList.add('dead')
+    if (cardNeedsTarget && e.state !== 'dead') frame.classList.add('targetable')
+
+    // Archived badge
+    const existingArchived = frame.querySelector('.archived-badge')
+    if (e.state === 'dead' && !existingArchived) {
+      const badge = document.createElement('div')
+      badge.className = 'archived-badge'
+      badge.textContent = 'Archived'
+      frame.appendChild(badge)
+    } else if (e.state !== 'dead' && existingArchived) {
+      existingArchived.remove()
+    }
+
+    const hpPct = e.maxHp > 0 ? (e.hp / e.maxHp * 100) : 0
+    document.getElementById(`enemy-hptext-${e.id}`).textContent = `${e.hp}/${e.maxHp}`
+    document.getElementById(`enemy-hpbar-${e.id}`).style.width = hpPct + '%'
+
+    const intent = e.intents[e.intentIndex % e.intents.length]
+    document.getElementById(`enemy-intent-${e.id}`).textContent =
+      e.state === 'dead' ? '✦ Archived' : `${intent.icon} ${intent.label}`
+
+    // Will-attack badge: sword icon on enemies with attack intent
+    const existingBadge = frame.querySelector('.will-attack-badge')
+    const willAttack = e.state !== 'dead' && !hasStatus(e, 'stun') &&
+      (intent.type === 'attack')
+    if (willAttack && !existingBadge) {
+      const badge = document.createElement('div')
+      badge.className = 'will-attack-badge'
+      badge.textContent = '⚔'
+      frame.appendChild(badge)
+    } else if (!willAttack && existingBadge) {
+      existingBadge.remove()
+    }
+
+    renderStatuses(`enemy-statuses-${e.id}`, e.statuses)
+  })
+
+  document.getElementById('cancelHint').style.display = selectedCardId ? 'block' : 'none'
+}
+
+const STATUS_META = {
+  bleed:     { icon: '🩸', label: 'Bleed',     showStacks: true  },
+  stun:      { icon: '⚡', label: 'Stun',      showStacks: false },
+  defend:    { icon: '🛡', label: 'Defend',    showStacks: true  },
+  vulnerable:{ icon: '💜', label: 'Vulnerable', showStacks: false },
+}
+
+function renderStatuses(elId, statuses) {
+  const el = document.getElementById(elId)
+  const priority = ['stun', 'bleed', 'vulnerable', 'defend']
+  const sorted = [...statuses].sort((a, b) =>
+    priority.indexOf(a.name) - priority.indexOf(b.name))
+
+  el.innerHTML = sorted.map(s => {
+    const meta = STATUS_META[s.name] || { icon: '', label: s.name, showStacks: true }
+    const stacks = meta.showStacks && s.stacks > 0 ? ` ${s.stacks}` : ''
+    return `<span class="chip chip-${s.name}">${meta.icon} ${meta.label}${stacks}</span>`
+  }).join('')
+}
+
+function renderHand() {
+  const hand = document.getElementById('handArea')
+  const btn = document.getElementById('endTurnBtn')
+  hand.innerHTML = ''
+
+  const isStunned = hasStatus(gs.hero, 'stun')
+
+  if (isStunned) {
+    const msg = document.createElement('div')
+    msg.style.cssText = `
+      font-family: Cinzel, serif; font-size: 11px; letter-spacing: 2px;
+      color: rgba(240,192,64,0.7); border: 1px solid rgba(240,192,64,0.3);
+      border-radius: 4px; padding: 8px 18px; background: rgba(240,192,64,0.06);
+      align-self: center;
+    `
+    msg.textContent = '⚡ STUNNED — END TURN'
+    hand.appendChild(msg)
+    hand.appendChild(btn)
+    btn.disabled = false
+    return
+  }
+
+  gs.hero.hand.forEach(cardId => {
+    const card = ALL_CARDS[cardId]
+    if (!card) return
+
+    const canPlay = !gs.isOver && !isStunned && gs.hero.energy >= card.energyCost && gs.hero.state !== 'dead'
+    const isSelected = selectedCardId === cardId
+
+    const isChargeReady = cardId === 'righteous_strike' && (gs.hero.chargeStacks || 0) >= 3
+
+    const div = document.createElement('div')
+    div.className = `hand-card ${card.heroClass}` +
+      (isSelected ? ' selected' : '') +
+      (!canPlay ? ' disabled' : '') +
+      (isChargeReady && canPlay ? ' charge-ready' : '')
+
+    const chargeBadge = isChargeReady
+      ? `<div class="charge-ready-badge">×2</div>` : ''
+
+    div.innerHTML = `
+      ${chargeBadge}
+      <div class="hand-card-energy">${card.energyCost}</div>
+      <div class="hand-card-art" style="background-image:url('assets/card-${cardId.replaceAll('_','-')}.jpg')"></div>
+      <div class="hand-card-name">${card.name}</div>
+    `
+
+    if (canPlay) div.onclick = () => selectCard(cardId)
+
+    div.addEventListener('mouseenter', e => showCardTooltip(card, div))
+    div.addEventListener('mouseleave', () => hideCardTooltip())
+
+    hand.appendChild(div)
+  })
+
+  hand.appendChild(btn)
+  btn.disabled = gs.isOver
+}
+
+let lastLogLength = 0
+
+function renderLog() {
+  const el = document.getElementById('combatLog')
+  const entries = gs.log.slice(0, 5)
+  const hasNew = gs.log.length > lastLogLength
+  lastLogLength = gs.log.length
+
+  // newest at bottom: reverse so index 0 = oldest shown, last = newest
+  const reversed = [...entries].reverse()
+
+  // only rebuild if content changed
+  const newHtml = reversed.map((msg, i) => {
+    const age = reversed.length - 1 - i  // 0 = newest (last element)
+    return `<div class="log-entry" data-age="${age}">${msg}</div>`
+  }).join('')
+
+  if (el.innerHTML !== newHtml) {
+    el.innerHTML = newHtml
+  }
+}
+
+function renderOverlays() {
+  // Death's Door tint
+  const dd = document.getElementById('overlayDeathdoor')
+  dd.className = 'overlay-deathdoor' + (gs.hero.state === 'death_door' ? ' active' : '')
+
+  // Stability label
+  const stab = document.getElementById('stabilityLabel')
+  stab.textContent = gs.hero.state === 'death_door'
+    ? 'INTEGRITY CRITICAL'
+    : 'SIMULATION STABLE'
+  stab.className = 'stability-label ' + (gs.hero.state === 'death_door' ? 'corrupted' : 'stable')
+
+  // Game over — delay so player sees Archived/Death's Door moment first
+  if (gs.isOver && document.getElementById('overlayGameover').style.display !== 'flex') {
+    const delay = gs.winner === 'hero' ? 1200 : 800
+    setTimeout(() => {
+      const ov = document.getElementById('overlayGameover')
+      ov.style.display = 'flex'
+
+    const isVictory = gs.winner === 'hero'
+    const keyClass  = isVictory ? 'victory-key' : 'defeat-key'
+
+    ov.className = 'overlay-gameover ' + (isVictory ? 'victory-bg' : 'defeat-bg')
+
+    document.getElementById('gameoverTitle').textContent =
+      isVictory ? 'CONTAINMENT SUCCESSFUL' : 'TIMELINE COLLAPSED'
+    document.getElementById('gameoverTitle').className =
+      'gameover-title ' + (isVictory ? 'victory' : 'defeat')
+
+    const VICTORY_QUOTES = [
+      '"Invariant preserved. The timeline holds."',
+      '"Simulation stable. No further anomalies detected."',
+      '"The Archivist confirms: this run was valid."',
+    ]
+    const DEFEAT_QUOTES = [
+      '"Some timelines were never meant to survive."',
+      '"The Archivist has archived this failure."',
+      '"Containment failed. The hero is gone."',
+    ]
+    const quotes = isVictory ? VICTORY_QUOTES : DEFEAT_QUOTES
+    document.getElementById('gameoverQuote').textContent =
+      quotes[gs.turn % quotes.length]
+
+    document.getElementById('gameoverStats').className =
+      'gameover-stats ' + (isVictory ? 'victory-stats' : 'defeat-stats')
+
+    ;['statKey1','statKey2','statKey3','statKey4'].forEach(id => {
+      document.getElementById(id).className = 'stat-key ' + keyClass
+    })
+
+    document.getElementById('statVal1').textContent = `Seed #${gs.seed}`
+    document.getElementById('statVal2').textContent = `${gs.turn} turn${gs.turn !== 1 ? 's' : ''}`
+    document.getElementById('statVal3').textContent = gs.enemies.map(e => e.name).join(' + ')
+    document.getElementById('statVal4').textContent =
+      isVictory ? 'Archived — Stable' : `Hero HP reached 0 on turn ${gs.turn}`
+
+    document.getElementById('restartBtn').className =
+      'restart-btn ' + (isVictory ? 'victory-btn' : 'defeat-btn')
+    }, delay)
+  }
+}
+
+// ─── Keyboard ─────────────────────────────────────────────────────────────
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { selectedCardId = null; render() }
+  if (e.key === 'Enter' && !gs.isOver) endTurn()
+  if (e.key === '1') selectCard(gs.hero.hand[0])
+  if (e.key === '2') selectCard(gs.hero.hand[1])
+  if (e.key === '3') selectCard(gs.hero.hand[2])
+  // Cmd+Shift+C — demo trigger для портфолио (Mac)
+  if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'c') {
+    e.preventDefault()
+    triggerCorruption('dead-cannot-act', 'Dead entity attempted to act. State machine corrupted.')
+  }
+})
+
+// Enemy panel clicks are handled via onclick="clickEnemyPanel(id)" in renderEnemies
+
+// ─── Sound ────────────────────────────────────────────────────────────────
+
+const snd = (() => {
+  let ctx = null
+
+  function ac() {
+    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)()
+    if (ctx.state === 'suspended') ctx.resume()
+    return ctx
+  }
+
+  function cardPlay() {
+    const c = ac(), t = c.currentTime
+    const osc = c.createOscillator(), g = c.createGain()
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(600, t)
+    osc.frequency.exponentialRampToValueAtTime(300, t + 0.08)
+    g.gain.setValueAtTime(0.1, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.1)
+    osc.connect(g); g.connect(c.destination)
+    osc.start(t); osc.stop(t + 0.11)
+  }
+
+  function strike() {
+    const c = ac(), t = c.currentTime
+    const osc = c.createOscillator(), g = c.createGain()
+    osc.type = 'sawtooth'
+    osc.frequency.setValueAtTime(280, t)
+    osc.frequency.exponentialRampToValueAtTime(70, t + 0.13)
+    g.gain.setValueAtTime(0.28, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.13)
+    osc.connect(g); g.connect(c.destination)
+    osc.start(t); osc.stop(t + 0.15)
+  }
+
+  function heroHit() {
+    const c = ac(), t = c.currentTime
+    const osc = c.createOscillator(), g = c.createGain()
+    osc.type = 'square'
+    osc.frequency.setValueAtTime(130, t)
+    osc.frequency.exponentialRampToValueAtTime(45, t + 0.22)
+    g.gain.setValueAtTime(0.32, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.22)
+    osc.connect(g); g.connect(c.destination)
+    osc.start(t); osc.stop(t + 0.24)
+  }
+
+  function heal() {
+    const c = ac(), t = c.currentTime
+    ;[523, 659, 784].forEach((freq, i) => {
+      const osc = c.createOscillator(), g = c.createGain()
+      osc.type = 'sine'; osc.frequency.value = freq
+      const st = t + i * 0.1
+      g.gain.setValueAtTime(0, st); g.gain.linearRampToValueAtTime(0.18, st + 0.02)
+      g.gain.exponentialRampToValueAtTime(0.001, st + 0.28)
+      osc.connect(g); g.connect(c.destination)
+      osc.start(st); osc.stop(st + 0.3)
+    })
+  }
+
+  function enemyDead() {
+    const c = ac(), t = c.currentTime
+    const osc = c.createOscillator(), g = c.createGain()
+    osc.type = 'sawtooth'
+    osc.frequency.setValueAtTime(220, t)
+    osc.frequency.exponentialRampToValueAtTime(28, t + 0.35)
+    g.gain.setValueAtTime(0.28, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.35)
+    osc.connect(g); g.connect(c.destination)
+    osc.start(t); osc.stop(t + 0.37)
+  }
+
+  function deathDoor() {
+    const c = ac(), t = c.currentTime
+    const osc = c.createOscillator(), g = c.createGain()
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(65, t)
+    osc.frequency.exponentialRampToValueAtTime(42, t + 0.55)
+    g.gain.setValueAtTime(0.38, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.55)
+    osc.connect(g); g.connect(c.destination)
+    osc.start(t); osc.stop(t + 0.57)
+  }
+
+  function bleedSfx() {
+    const c = ac(), t = c.currentTime
+    const buf = c.createBuffer(1, Math.floor(c.sampleRate * 0.14), c.sampleRate)
+    const d = buf.getChannelData(0)
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1
+    const src = c.createBufferSource(); src.buffer = buf
+    const flt = c.createBiquadFilter(); flt.type = 'highpass'; flt.frequency.value = 3500
+    const g = c.createGain()
+    g.gain.setValueAtTime(0.18, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.14)
+    src.connect(flt); flt.connect(g); g.connect(c.destination)
+    src.start(t)
+  }
+
+  function stunSfx() {
+    const c = ac(), t = c.currentTime
+    const osc = c.createOscillator(), g = c.createGain()
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(1500, t)
+    osc.frequency.exponentialRampToValueAtTime(180, t + 0.28)
+    g.gain.setValueAtTime(0.2, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.28)
+    osc.connect(g); g.connect(c.destination)
+    osc.start(t); osc.stop(t + 0.3)
+  }
+
+  function transform() {
+    const c = ac(), t = c.currentTime
+    const o1 = c.createOscillator(), g1 = c.createGain()
+    o1.type = 'sawtooth'
+    o1.frequency.setValueAtTime(55, t); o1.frequency.exponentialRampToValueAtTime(28, t + 0.45)
+    g1.gain.setValueAtTime(0.35, t); g1.gain.exponentialRampToValueAtTime(0.001, t + 0.45)
+    o1.connect(g1); g1.connect(c.destination); o1.start(t); o1.stop(t + 0.47)
+    const o2 = c.createOscillator(), g2 = c.createGain()
+    o2.type = 'sine'
+    o2.frequency.setValueAtTime(180, t + 0.1); o2.frequency.exponentialRampToValueAtTime(880, t + 0.55)
+    g2.gain.setValueAtTime(0, t + 0.1); g2.gain.linearRampToValueAtTime(0.25, t + 0.25)
+    g2.gain.exponentialRampToValueAtTime(0.001, t + 0.62)
+    o2.connect(g2); g2.connect(c.destination); o2.start(t + 0.1); o2.stop(t + 0.64)
+  }
+
+  function rageSfx() {
+    const c = ac(), t = c.currentTime
+    const o1 = c.createOscillator(), g1 = c.createGain()
+    o1.type = 'sawtooth'
+    o1.frequency.setValueAtTime(80, t); o1.frequency.exponentialRampToValueAtTime(45, t + 0.3)
+    g1.gain.setValueAtTime(0, t); g1.gain.linearRampToValueAtTime(0.4, t + 0.05)
+    g1.gain.exponentialRampToValueAtTime(0.001, t + 0.4)
+    o1.connect(g1); g1.connect(c.destination); o1.start(t); o1.stop(t + 0.42)
+    const o2 = c.createOscillator(), g2 = c.createGain()
+    o2.type = 'sawtooth'
+    o2.frequency.setValueAtTime(400, t); o2.frequency.exponentialRampToValueAtTime(150, t + 0.15)
+    g2.gain.setValueAtTime(0.2, t); g2.gain.exponentialRampToValueAtTime(0.001, t + 0.2)
+    o2.connect(g2); g2.connect(c.destination); o2.start(t); o2.stop(t + 0.22)
+  }
+
+  function endTurnSfx() {
+    const c = ac(), t = c.currentTime
+    const osc = c.createOscillator(), g = c.createGain()
+    osc.type = 'square'
+    osc.frequency.setValueAtTime(700, t); osc.frequency.exponentialRampToValueAtTime(350, t + 0.07)
+    g.gain.setValueAtTime(0.12, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.08)
+    osc.connect(g); g.connect(c.destination)
+    osc.start(t); osc.stop(t + 0.09)
+  }
+
+  function victory() {
+    const c = ac(), t = c.currentTime
+    ;[523, 659, 784, 1047].forEach((freq, i) => {
+      const osc = c.createOscillator(), g = c.createGain()
+      osc.type = 'triangle'; osc.frequency.value = freq
+      const st = t + i * 0.14
+      g.gain.setValueAtTime(0.22, st); g.gain.exponentialRampToValueAtTime(0.001, st + 0.45)
+      osc.connect(g); g.connect(c.destination)
+      osc.start(st); osc.stop(st + 0.47)
+    })
+  }
+
+  function defeat() {
+    const c = ac(), t = c.currentTime
+    ;[[440, 0], [349, 0.18], [220, 0.36]].forEach(([freq, delay]) => {
+      const osc = c.createOscillator(), g = c.createGain()
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(freq, t + delay)
+      osc.frequency.exponentialRampToValueAtTime(freq * 0.65, t + delay + 0.85)
+      g.gain.setValueAtTime(0.2, t + delay); g.gain.exponentialRampToValueAtTime(0.001, t + delay + 0.85)
+      osc.connect(g); g.connect(c.destination)
+      osc.start(t + delay); osc.stop(t + delay + 0.87)
+    })
+  }
+
+  return { cardPlay, strike, heroHit, heal, enemyDead, deathDoor, bleedSfx, stunSfx, transform, rageSfx, endTurnSfx, victory, defeat }
+})()
+
+// ─── Boot ──────────────────────────────────────────────────────────────────
+
+initGame()
+</script>
+</body>
+</html>

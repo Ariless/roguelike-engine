@@ -1,0 +1,573 @@
+{
+  "seed": 61,
+  "heroClass": "werewolf",
+  "enemyType": "guardian",
+  "faults": {
+    "bleedOffByOne": false,
+    "ignoreStun": false
+  },
+  "events": [
+    {
+      "type": "play_card",
+      "turn": 1,
+      "preStateHash": "824b99",
+      "postStateHash": "ab6fd9",
+      "cardId": "pack_sense"
+    },
+    {
+      "type": "play_card",
+      "turn": 1,
+      "preStateHash": "ab6fd9",
+      "postStateHash": "b8d580",
+      "cardId": "stalk"
+    },
+    {
+      "type": "status_tick",
+      "turn": 1,
+      "preStateHash": "b8d580",
+      "postStateHash": "b8d580",
+      "targetId": "hero"
+    },
+    {
+      "type": "enemy_action",
+      "turn": 1,
+      "preStateHash": "b8d580",
+      "postStateHash": "aa1959",
+      "targetId": "hero"
+    },
+    {
+      "type": "status_tick",
+      "turn": 1,
+      "preStateHash": "aa1959",
+      "postStateHash": "63a1e8",
+      "targetId": "enemy"
+    },
+    {
+      "type": "turn_end",
+      "turn": 2,
+      "preStateHash": "b8d580",
+      "postStateHash": "9137dd"
+    },
+    {
+      "type": "status_tick",
+      "turn": 2,
+      "preStateHash": "9137dd",
+      "postStateHash": "9137dd",
+      "targetId": "hero"
+    },
+    {
+      "type": "enemy_action",
+      "turn": 2,
+      "preStateHash": "9137dd",
+      "postStateHash": "d84ed2",
+      "targetId": "hero"
+    },
+    {
+      "type": "status_tick",
+      "turn": 2,
+      "preStateHash": "d84ed2",
+      "postStateHash": "93c5c6",
+      "targetId": "enemy"
+    },
+    {
+      "type": "turn_end",
+      "turn": 3,
+      "preStateHash": "9137dd",
+      "postStateHash": "9df2b3"
+    },
+    {
+      "type": "status_tick",
+      "turn": 3,
+      "preStateHash": "9df2b3",
+      "postStateHash": "d31898",
+      "targetId": "hero"
+    },
+    {
+      "type": "enemy_action",
+      "turn": 3,
+      "preStateHash": "d31898",
+      "postStateHash": "c93ef0",
+      "targetId": "hero"
+    },
+    {
+      "type": "status_tick",
+      "turn": 3,
+      "preStateHash": "c93ef0",
+      "postStateHash": "7066aa",
+      "targetId": "enemy"
+    },
+    {
+      "type": "turn_end",
+      "turn": 4,
+      "preStateHash": "9df2b3",
+      "postStateHash": "3d092a"
+    },
+    {
+      "type": "play_card",
+      "turn": 4,
+      "preStateHash": "3d092a",
+      "postStateHash": "97605c",
+      "cardId": "rend"
+    },
+    {
+      "type": "play_card",
+      "turn": 4,
+      "preStateHash": "97605c",
+      "postStateHash": "c940d7",
+      "cardId": "reality_crack"
+    },
+    {
+      "type": "status_tick",
+      "turn": 4,
+      "preStateHash": "c940d7",
+      "postStateHash": "c940d7",
+      "targetId": "hero"
+    },
+    {
+      "type": "enemy_action",
+      "turn": 4,
+      "preStateHash": "c940d7",
+      "postStateHash": "b5a39e",
+      "targetId": "hero"
+    },
+    {
+      "type": "status_tick",
+      "turn": 4,
+      "preStateHash": "b5a39e",
+      "postStateHash": "e23d4c",
+      "targetId": "enemy"
+    },
+    {
+      "type": "turn_end",
+      "turn": 5,
+      "preStateHash": "c940d7",
+      "postStateHash": "f7a4b6"
+    },
+    {
+      "type": "play_card",
+      "turn": 5,
+      "preStateHash": "f7a4b6",
+      "postStateHash": "af5ea1",
+      "cardId": "rend"
+    },
+    {
+      "type": "play_card",
+      "turn": 5,
+      "preStateHash": "af5ea1",
+      "postStateHash": "33ed39",
+      "cardId": "rampage"
+    },
+    {
+      "type": "status_tick",
+      "turn": 5,
+      "preStateHash": "33ed39",
+      "postStateHash": "33ed39",
+      "targetId": "hero"
+    },
+    {
+      "type": "enemy_action",
+      "turn": 5,
+      "preStateHash": "33ed39",
+      "postStateHash": "8f9cc9",
+      "targetId": "hero"
+    },
+    {
+      "type": "status_tick",
+      "turn": 5,
+      "preStateHash": "8f9cc9",
+      "postStateHash": "616145",
+      "targetId": "enemy"
+    },
+    {
+      "type": "turn_end",
+      "turn": 6,
+      "preStateHash": "33ed39",
+      "postStateHash": "26f9a9"
+    }
+  ],
+  "snapshots": [
+    {
+      "turn": 2,
+      "hero": {
+        "id": "hero",
+        "name": "Werewolf",
+        "hp": 28,
+        "maxHp": 28,
+        "state": "alive",
+        "statuses": [
+          {
+            "name": "defend",
+            "stacks": 7
+          }
+        ],
+        "formState": "human"
+      },
+      "enemies": [
+        {
+          "id": "enemy",
+          "name": "Guardian",
+          "hp": 34,
+          "maxHp": 35,
+          "state": "alive",
+          "statuses": [
+            {
+              "name": "vulnerable",
+              "stacks": 1
+            },
+            {
+              "name": "bleed",
+              "stacks": 1
+            },
+            {
+              "name": "defend",
+              "stacks": 8
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "play_card",
+          "turn": 1,
+          "preStateHash": "824b99",
+          "postStateHash": "ab6fd9",
+          "cardId": "pack_sense"
+        },
+        {
+          "type": "play_card",
+          "turn": 1,
+          "preStateHash": "ab6fd9",
+          "postStateHash": "b8d580",
+          "cardId": "stalk"
+        },
+        {
+          "type": "status_tick",
+          "turn": 1,
+          "preStateHash": "b8d580",
+          "postStateHash": "b8d580",
+          "targetId": "hero"
+        },
+        {
+          "type": "enemy_action",
+          "turn": 1,
+          "preStateHash": "b8d580",
+          "postStateHash": "aa1959",
+          "targetId": "hero"
+        },
+        {
+          "type": "status_tick",
+          "turn": 1,
+          "preStateHash": "aa1959",
+          "postStateHash": "63a1e8",
+          "targetId": "enemy"
+        },
+        {
+          "type": "turn_end",
+          "turn": 2,
+          "preStateHash": "b8d580",
+          "postStateHash": "9137dd"
+        }
+      ],
+      "hashValid": true
+    },
+    {
+      "turn": 3,
+      "hero": {
+        "id": "hero",
+        "name": "Werewolf",
+        "hp": 28,
+        "maxHp": 28,
+        "state": "alive",
+        "statuses": [
+          {
+            "name": "defend",
+            "stacks": 7
+          },
+          {
+            "name": "stun",
+            "stacks": 1
+          }
+        ],
+        "formState": "human"
+      },
+      "enemies": [
+        {
+          "id": "enemy",
+          "name": "Guardian",
+          "hp": 33,
+          "maxHp": 35,
+          "state": "alive",
+          "statuses": [
+            {
+              "name": "vulnerable",
+              "stacks": 1
+            },
+            {
+              "name": "bleed",
+              "stacks": 1
+            },
+            {
+              "name": "defend",
+              "stacks": 8
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "status_tick",
+          "turn": 2,
+          "preStateHash": "9137dd",
+          "postStateHash": "9137dd",
+          "targetId": "hero"
+        },
+        {
+          "type": "enemy_action",
+          "turn": 2,
+          "preStateHash": "9137dd",
+          "postStateHash": "d84ed2",
+          "targetId": "hero"
+        },
+        {
+          "type": "status_tick",
+          "turn": 2,
+          "preStateHash": "d84ed2",
+          "postStateHash": "93c5c6",
+          "targetId": "enemy"
+        },
+        {
+          "type": "turn_end",
+          "turn": 3,
+          "preStateHash": "9137dd",
+          "postStateHash": "9df2b3"
+        }
+      ],
+      "hashValid": true
+    },
+    {
+      "turn": 4,
+      "hero": {
+        "id": "hero",
+        "name": "Werewolf",
+        "hp": 25,
+        "maxHp": 28,
+        "state": "alive",
+        "statuses": [],
+        "formState": "human"
+      },
+      "enemies": [
+        {
+          "id": "enemy",
+          "name": "Guardian",
+          "hp": 32,
+          "maxHp": 35,
+          "state": "alive",
+          "statuses": [
+            {
+              "name": "vulnerable",
+              "stacks": 1
+            },
+            {
+              "name": "bleed",
+              "stacks": 1
+            },
+            {
+              "name": "defend",
+              "stacks": 8
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "status_tick",
+          "turn": 3,
+          "preStateHash": "9df2b3",
+          "postStateHash": "d31898",
+          "targetId": "hero"
+        },
+        {
+          "type": "enemy_action",
+          "turn": 3,
+          "preStateHash": "d31898",
+          "postStateHash": "c93ef0",
+          "targetId": "hero"
+        },
+        {
+          "type": "status_tick",
+          "turn": 3,
+          "preStateHash": "c93ef0",
+          "postStateHash": "7066aa",
+          "targetId": "enemy"
+        },
+        {
+          "type": "turn_end",
+          "turn": 4,
+          "preStateHash": "9df2b3",
+          "postStateHash": "3d092a"
+        }
+      ],
+      "hashValid": true
+    },
+    {
+      "turn": 5,
+      "hero": {
+        "id": "hero",
+        "name": "Werewolf",
+        "hp": 25,
+        "maxHp": 28,
+        "state": "alive",
+        "statuses": [],
+        "formState": "human"
+      },
+      "enemies": [
+        {
+          "id": "enemy",
+          "name": "Guardian",
+          "hp": 25,
+          "maxHp": 35,
+          "state": "alive",
+          "statuses": [
+            {
+              "name": "vulnerable",
+              "stacks": 1
+            },
+            {
+              "name": "bleed",
+              "stacks": 3
+            },
+            {
+              "name": "defend",
+              "stacks": 8
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "play_card",
+          "turn": 4,
+          "preStateHash": "3d092a",
+          "postStateHash": "97605c",
+          "cardId": "rend"
+        },
+        {
+          "type": "play_card",
+          "turn": 4,
+          "preStateHash": "97605c",
+          "postStateHash": "c940d7",
+          "cardId": "reality_crack"
+        },
+        {
+          "type": "status_tick",
+          "turn": 4,
+          "preStateHash": "c940d7",
+          "postStateHash": "c940d7",
+          "targetId": "hero"
+        },
+        {
+          "type": "enemy_action",
+          "turn": 4,
+          "preStateHash": "c940d7",
+          "postStateHash": "b5a39e",
+          "targetId": "hero"
+        },
+        {
+          "type": "status_tick",
+          "turn": 4,
+          "preStateHash": "b5a39e",
+          "postStateHash": "e23d4c",
+          "targetId": "enemy"
+        },
+        {
+          "type": "turn_end",
+          "turn": 5,
+          "preStateHash": "c940d7",
+          "postStateHash": "f7a4b6"
+        }
+      ],
+      "hashValid": true
+    },
+    {
+      "turn": 6,
+      "hero": {
+        "id": "hero",
+        "name": "Werewolf",
+        "hp": 25,
+        "maxHp": 28,
+        "state": "alive",
+        "statuses": [
+          {
+            "name": "stun",
+            "stacks": 1
+          }
+        ],
+        "formState": "human"
+      },
+      "enemies": [
+        {
+          "id": "enemy",
+          "name": "Guardian",
+          "hp": 10,
+          "maxHp": 35,
+          "state": "alive",
+          "statuses": [
+            {
+              "name": "vulnerable",
+              "stacks": 1
+            },
+            {
+              "name": "bleed",
+              "stacks": 5
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "play_card",
+          "turn": 5,
+          "preStateHash": "f7a4b6",
+          "postStateHash": "af5ea1",
+          "cardId": "rend"
+        },
+        {
+          "type": "play_card",
+          "turn": 5,
+          "preStateHash": "af5ea1",
+          "postStateHash": "33ed39",
+          "cardId": "rampage"
+        },
+        {
+          "type": "status_tick",
+          "turn": 5,
+          "preStateHash": "33ed39",
+          "postStateHash": "33ed39",
+          "targetId": "hero"
+        },
+        {
+          "type": "enemy_action",
+          "turn": 5,
+          "preStateHash": "33ed39",
+          "postStateHash": "8f9cc9",
+          "targetId": "hero"
+        },
+        {
+          "type": "status_tick",
+          "turn": 5,
+          "preStateHash": "8f9cc9",
+          "postStateHash": "616145",
+          "targetId": "enemy"
+        },
+        {
+          "type": "turn_end",
+          "turn": 6,
+          "preStateHash": "33ed39",
+          "postStateHash": "26f9a9"
+        }
+      ],
+      "hashValid": true
+    }
+  ],
+  "outcome": "in_progress"
+}

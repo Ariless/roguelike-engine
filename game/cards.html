@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Card Archive — Roguelike Engine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Text:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:          #0d0d1a;
+      --panel:       #17172a;
+      --text:        #f0e6d3;
+      --gold:        #c9a84c;
+      --bone:        #cfcfcf;
+      --energy:      #e67e22;
+
+      --paladin:     #c9a84c;
+      --bloodmage:   #a83232;
+      --berserker:   #b87333;
+      --werewolf:    #cc2222;
+
+      --tempo:       #5c8df6;
+      --pressure:    #e05050;
+      --stability:   #4caf6e;
+      --conversion:  #c9a84c;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Crimson Text', serif;
+      min-height: 100vh;
+      padding: 48px 40px 80px;
+    }
+
+    /* ── Page header ─────────────────────────────────────────── */
+
+    .page-header {
+      text-align: center;
+      margin-bottom: 64px;
+    }
+
+    .page-header h1 {
+      font-family: 'Cinzel', serif;
+      font-size: 2.2rem;
+      letter-spacing: 6px;
+      color: var(--gold);
+      text-shadow: 0 0 40px rgba(201,168,76,0.35);
+    }
+
+    .page-header p {
+      margin-top: 10px;
+      font-style: italic;
+      font-size: 1rem;
+      color: rgba(240,230,211,0.4);
+      letter-spacing: 1.5px;
+    }
+
+    /* ── Hero section ─────────────────────────────────────────── */
+
+    .hero-section {
+      margin-bottom: 64px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: baseline;
+      gap: 18px;
+      padding-bottom: 14px;
+      margin-bottom: 28px;
+      border-bottom: 1px solid;
+    }
+
+    .section-header h2 {
+      font-family: 'Cinzel', serif;
+      font-size: 1.05rem;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }
+
+    .section-header .mechanic-line {
+      font-style: italic;
+      font-size: 0.9rem;
+      color: rgba(240,230,211,0.45);
+    }
+
+    .paladin .section-header  { border-color: rgba(201,168,76,0.3); }
+    .paladin .section-header h2 { color: var(--paladin); }
+
+    .bloodmage .section-header { border-color: rgba(168,50,50,0.35); }
+    .bloodmage .section-header h2 { color: var(--bloodmage); }
+
+    .berserker .section-header { border-color: rgba(184,115,51,0.35); }
+    .berserker .section-header h2 { color: var(--berserker); }
+
+    /* ── Form sub-header (Berserker only) ────────────────────── */
+
+    .form-group + .form-group {
+      margin-top: 32px;
+    }
+
+    .form-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 18px;
+      font-family: 'Cinzel', serif;
+      font-size: 0.72rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 4px;
+      border: 1px solid;
+    }
+
+    .form-label.human {
+      color: var(--berserker);
+      border-color: rgba(184,115,51,0.45);
+      background: rgba(184,115,51,0.08);
+    }
+
+    .form-label.werewolf {
+      color: #e05050;
+      border-color: rgba(220,50,50,0.45);
+      background: rgba(180,0,0,0.1);
+    }
+
+    /* ── Cards row ───────────────────────────────────────────── */
+
+    .cards-row {
+      display: flex;
+      gap: 22px;
+      flex-wrap: wrap;
+    }
+
+    /* ── Card ────────────────────────────────────────────────── */
+
+    .card {
+      width: 240px;
+      height: 370px;
+      border-radius: 8px;
+      border: 1.5px solid;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+      flex-shrink: 0;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      cursor: default;
+    }
+
+    .card:hover {
+      transform: translateY(-10px) scale(1.04);
+    }
+
+    .card.paladin {
+      border-color: var(--paladin);
+      box-shadow: 0 2px 14px rgba(201,168,76,0.18);
+    }
+    .card.paladin:hover {
+      box-shadow: 0 14px 44px rgba(201,168,76,0.55);
+    }
+
+    .card.bloodmage {
+      border-color: var(--bloodmage);
+      box-shadow: 0 2px 14px rgba(168,50,50,0.2);
+    }
+    .card.bloodmage:hover {
+      box-shadow: 0 14px 44px rgba(200,40,40,0.55);
+    }
+
+    .card.berserker-human {
+      border-color: var(--berserker);
+      box-shadow: 0 2px 14px rgba(184,115,51,0.18);
+    }
+    .card.berserker-human:hover {
+      box-shadow: 0 14px 44px rgba(200,120,40,0.52);
+    }
+
+    .card.berserker-werewolf {
+      border-color: var(--werewolf);
+      box-shadow: 0 2px 18px rgba(200,20,20,0.25);
+    }
+    .card.berserker-werewolf:hover {
+      box-shadow: 0 14px 48px rgba(230,30,30,0.6);
+    }
+
+    /* ── Energy badge ─────────────────────────────────────────── */
+
+    .energy-badge {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 26px;
+      height: 26px;
+      background: var(--energy);
+      border: 2px solid rgba(240,230,211,0.75);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Cinzel', serif;
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+      z-index: 10;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.55);
+    }
+
+    /* ── Card header ──────────────────────────────────────────── */
+
+    .card-header {
+      padding: 10px 38px 9px 10px;
+      background: rgba(10,10,22,0.94);
+      position: relative;
+      z-index: 5;
+    }
+
+    .card-name {
+      font-family: 'Cinzel', serif;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: 0.6px;
+      line-height: 1.2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .card-axes {
+      display: flex;
+      gap: 4px;
+      margin-top: 6px;
+      flex-wrap: wrap;
+    }
+
+    .axis {
+      font-family: 'Cinzel', serif;
+      font-size: 8.5px;
+      font-weight: 600;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 3px;
+      border: 1px solid;
+    }
+
+    .axis-Tempo      { color: var(--tempo);      border-color: rgba(92,141,246,0.4);  background: rgba(92,141,246,0.1); }
+    .axis-Pressure   { color: var(--pressure);   border-color: rgba(224,80,80,0.4);   background: rgba(224,80,80,0.1); }
+    .axis-Stability  { color: var(--stability);  border-color: rgba(76,175,110,0.4);  background: rgba(76,175,110,0.1); }
+    .axis-Conversion { color: var(--conversion); border-color: rgba(201,168,76,0.4);  background: rgba(201,168,76,0.1); }
+
+    /* ── Card art ─────────────────────────────────────────────── */
+
+    .card-art {
+      flex: 1;
+      background-size: cover;
+      background-position: center top;
+      position: relative;
+      min-height: 0;
+    }
+
+    .card-art::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 65%;
+      background: linear-gradient(to bottom, transparent 0%, rgba(23,23,42,0.9) 100%);
+      pointer-events: none;
+    }
+
+    /* ── Card body ────────────────────────────────────────────── */
+
+    .card-body {
+      background: rgba(23,23,42,0.97);
+      padding: 8px 10px 10px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      min-height: 106px;
+    }
+
+    .card-rules {
+      font-family: 'Crimson Text', serif;
+      font-size: 13px;
+      line-height: 1.45;
+      color: rgba(240,230,211,0.88);
+    }
+
+    .card-narrative {
+      margin-top: 7px;
+      padding-top: 7px;
+      border-top: 1px solid rgba(255,255,255,0.07);
+      font-family: 'Crimson Text', serif;
+      font-style: italic;
+      font-size: 11.5px;
+      line-height: 1.4;
+      color: rgba(240,230,211,0.45);
+    }
+
+    /* ── Divider ─────────────────────────────────────────────── */
+
+    .divider {
+      border: none;
+      border-top: 1px solid rgba(255,255,255,0.07);
+      margin: 64px 0;
+    }
+
+    /* ── Enemy card ──────────────────────────────────────────── */
+
+    .enemy-card {
+      width: 240px;
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      cursor: default;
+      border: 1.5px solid;
+    }
+
+    .enemy-card img {
+      width: 100%;
+      display: block;
+    }
+
+    .enemy-hp {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(180,30,30,0.85);
+      border: 1.5px solid rgba(240,230,211,0.5);
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-family: 'Cinzel', serif;
+      font-size: 11px;
+      font-weight: 600;
+      color: #f0e6d3;
+      z-index: 10;
+      backdrop-filter: blur(2px);
+    }
+
+    .enemy-intents {
+      background: rgba(13,13,26,0.97);
+      border-top: 1px solid rgba(255,255,255,0.07);
+      padding: 10px 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .intent-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'Crimson Text', serif;
+      font-size: 12.5px;
+      color: rgba(240,230,211,0.85);
+    }
+
+    .intent-turn {
+      font-family: 'Cinzel', serif;
+      font-size: 8px;
+      letter-spacing: 0.8px;
+      color: rgba(240,230,211,0.35);
+      width: 36px;
+      flex-shrink: 0;
+    }
+
+    .intent-icon { font-size: 13px; }
+
+    .enemy-card.goblin      { border-color: rgba(120,140,90,0.5);  box-shadow: 0 2px 14px rgba(100,120,80,0.2); }
+    .enemy-card.guardian    { border-color: rgba(100,120,180,0.5); box-shadow: 0 2px 14px rgba(80,100,160,0.2); }
+    .enemy-card.vampire     { border-color: rgba(160,30,30,0.5);   box-shadow: 0 2px 14px rgba(140,20,20,0.25); }
+    .enemy-card.necromancer { border-color: rgba(140,70,200,0.5);  box-shadow: 0 2px 14px rgba(120,60,180,0.2); }
+    .enemy-card.boss        { border-color: rgba(201,168,76,0.5);  box-shadow: 0 2px 20px rgba(201,168,76,0.25); }
+
+    .enemy-card.goblin:hover      { transform: translateY(-10px) scale(1.04); box-shadow: 0 14px 40px rgba(100,140,60,0.45); }
+    .enemy-card.guardian:hover    { transform: translateY(-10px) scale(1.04); box-shadow: 0 14px 40px rgba(80,110,180,0.5); }
+    .enemy-card.vampire:hover     { transform: translateY(-10px) scale(1.04); box-shadow: 0 14px 40px rgba(180,20,20,0.55); }
+    .enemy-card.necromancer:hover { transform: translateY(-10px) scale(1.04); box-shadow: 0 14px 40px rgba(140,60,200,0.5); }
+    .enemy-card.boss:hover        { transform: translateY(-10px) scale(1.04); box-shadow: 0 14px 48px rgba(201,168,76,0.6); }
+  </style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>CARD ARCHIVE</h1>
+  <p>Three classes. Twelve timelines. All contained.</p>
+</div>
+
+<div id="gallery"></div>
+
+<script>
+const CARDS = [
+  // ── Paladin ──────────────────────────────────────────────────
+  {
+    id: 'righteous_strike', heroClass: 'paladin', form: null,
+    name: 'Righteous Strike', energyCost: 1,
+    axes: ['Tempo', 'Conversion'],
+    rulesText: 'Deal 5 damage. If target is vulnerable, gain 1 charge.',
+    narrativeLine: null,
+  },
+  {
+    id: 'stubborn_recovery', heroClass: 'paladin', form: null,
+    name: 'Stubborn Recovery', energyCost: 1,
+    axes: ['Stability', 'Conversion'],
+    rulesText: 'Heal self for 6 HP.',
+    narrativeLine: 'Not healing — refusing to die.',
+  },
+  {
+    id: 'divine_charge', heroClass: 'paladin', form: null,
+    name: 'Divine Charge', energyCost: 1,
+    axes: ['Tempo', 'Conversion'],
+    rulesText: 'Gain 1 charge (max 3). At 3 charges your next attack deals double damage.',
+    narrativeLine: null,
+  },
+  // ── Blood Mage ───────────────────────────────────────────────
+  {
+    id: 'open_the_wound', heroClass: 'bloodmage', form: null,
+    name: 'Open the Wound', energyCost: 1,
+    axes: ['Pressure', 'Stability'],
+    rulesText: 'Apply 3 bleed. If target is already bleeding, also apply vulnerable.',
+    narrativeLine: 'Deliberate. Not an accident.',
+  },
+  {
+    id: 'bloodrite', heroClass: 'bloodmage', form: null,
+    name: 'Bloodrite', energyCost: 2,
+    axes: ['Conversion', 'Pressure'],
+    rulesText: 'Deal 8 damage. Take 3 self-damage.',
+    narrativeLine: 'You pay in blood for power.',
+  },
+  {
+    id: 'chaos_bolt', heroClass: 'bloodmage', form: null,
+    name: 'Chaos Bolt', energyCost: 1,
+    axes: ['Tempo', 'Pressure'],
+    rulesText: 'Deal 5 damage to a random target.',
+    narrativeLine: 'Reality fractures at the point of impact.',
+  },
+  // ── Berserker — human form ───────────────────────────────────
+  {
+    id: 'savage_lunge', heroClass: 'berserker', form: 'human',
+    name: 'Savage Lunge', energyCost: 1,
+    axes: ['Tempo', 'Stability'],
+    rulesText: 'Deal 6 damage. Push enemy to back row.',
+    narrativeLine: null,
+  },
+  {
+    id: 'primal_fury', heroClass: 'berserker', form: 'human',
+    name: 'Primal Fury', energyCost: 1,
+    axes: ['Conversion', 'Tempo'],
+    rulesText: 'Deal 4 damage. Gain 1 rage stack.',
+    narrativeLine: null,
+  },
+  {
+    id: 'primal_dodge', heroClass: 'berserker', form: 'human',
+    name: 'Primal Dodge', energyCost: 1,
+    axes: ['Stability', 'Conversion'],
+    rulesText: 'Gain defend 4. If berserker passive is active, reduce energy cost of next card.',
+    narrativeLine: null,
+  },
+  // ── Berserker — werewolf form ────────────────────────────────
+  {
+    id: 'rend', heroClass: 'berserker', form: 'werewolf',
+    name: 'Rend', energyCost: 2,
+    axes: ['Pressure', 'Tempo'],
+    rulesText: 'Deal 8 damage. Apply bleed 2.',
+    narrativeLine: null,
+  },
+  {
+    id: 'rampage', heroClass: 'berserker', form: 'werewolf',
+    name: 'Rampage', energyCost: 2,
+    axes: ['Tempo', 'Pressure'],
+    rulesText: 'Deal 4 damage to all front-row enemies.',
+    narrativeLine: null,
+  },
+  {
+    id: 'reality_crack', heroClass: 'berserker', form: 'werewolf',
+    name: 'Reality Crack', energyCost: 1,
+    axes: ['Pressure', 'Conversion'],
+    rulesText: 'Apply vulnerable to all enemies.',
+    narrativeLine: 'In werewolf form, the world around you breaks.',
+  },
+]
+
+function cardVariant(heroClass, form) {
+  if (heroClass === 'paladin')   return 'paladin'
+  if (heroClass === 'bloodmage') return 'bloodmage'
+  return form === 'werewolf' ? 'berserker-werewolf' : 'berserker-human'
+}
+
+function imageUrl(id) {
+  return `assets/card-${id.replaceAll('_', '-')}.jpg`
+}
+
+function renderCard(card) {
+  const axes = card.axes
+    .map(a => `<span class="axis axis-${a}">${a}</span>`)
+    .join('')
+
+  const narrative = card.narrativeLine
+    ? `<div class="card-narrative">"${card.narrativeLine}"</div>`
+    : ''
+
+  return `
+    <div class="card ${cardVariant(card.heroClass, card.form)}">
+      <div class="energy-badge">${card.energyCost}</div>
+      <div class="card-header">
+        <div class="card-name">${card.name}</div>
+        <div class="card-axes">${axes}</div>
+      </div>
+      <div class="card-art" style="background-image: url('${imageUrl(card.id)}')"></div>
+      <div class="card-body">
+        <div class="card-rules">${card.rulesText}</div>
+        ${narrative}
+      </div>
+    </div>`
+}
+
+function renderSection({ heroClass, label, mechanic, groups }) {
+  const all = CARDS.filter(c => c.heroClass === heroClass)
+
+  let body = ''
+  if (groups) {
+    for (const form of groups) {
+      const formCards = all.filter(c => c.form === form)
+      const formLabel = form === 'human' ? 'Human Form' : 'Werewolf Form'
+      body += `
+        <div class="form-group">
+          <div class="form-label ${form}">${formLabel}</div>
+          <div class="cards-row">${formCards.map(renderCard).join('')}</div>
+        </div>`
+    }
+  } else {
+    body = `<div class="cards-row">${all.map(renderCard).join('')}</div>`
+  }
+
+  return `
+    <div class="hero-section ${heroClass}">
+      <div class="section-header">
+        <h2>${label}</h2>
+        <span class="mechanic-line">${mechanic}</span>
+      </div>
+      ${body}
+    </div>`
+}
+
+const SECTIONS = [
+  {
+    heroClass: 'paladin',
+    label:     'The Paladin',
+    mechanic:  'Charge accumulation · HP ceiling invariant · threshold boundary',
+    groups:    null,
+  },
+  {
+    heroClass: 'bloodmage',
+    label:     'The Blood Mage',
+    mechanic:  'Self-damage as fuel · bleed stacking · RNG targeting',
+    groups:    null,
+  },
+  {
+    heroClass: 'berserker',
+    label:     'The Berserker',
+    mechanic:  'Nested state machine · scaling with missing HP · human ↔ werewolf form',
+    groups:    ['human', 'werewolf'],
+  },
+]
+
+const ENEMIES = [
+  {
+    id: 'goblin', variant: 'goblin', hp: 20,
+    intents: [
+      { turn: 'Turn 1', icon: '⚔', text: 'Strike 6' },
+      { turn: 'Turn 2', icon: '⚔', text: 'Strike 6' },
+      { turn: 'Turn 3', icon: '↺', text: 'Repeat' },
+    ]
+  },
+  {
+    id: 'guardian', variant: 'guardian', hp: 35,
+    intents: [
+      { turn: 'Turn 1', icon: '🛡', text: 'Shield (defend 8)' },
+      { turn: 'Turn 2', icon: '⚡', text: 'Stun' },
+      { turn: 'Turn 3', icon: '⚔', text: 'Heavy Strike 10' },
+    ]
+  },
+  {
+    id: 'vampire', variant: 'vampire', hp: 30,
+    intents: [
+      { turn: 'Turn 1', icon: '⚔', text: 'Strike 6 + lifesteal' },
+      { turn: 'Turn 2', icon: '🩸', text: 'Exploit Wound' },
+      { turn: 'Turn 3', icon: '💀', text: 'Execute 12' },
+    ]
+  },
+  {
+    id: 'necromancer', variant: 'necromancer', hp: 25,
+    intents: [
+      { turn: 'Turn 1', icon: '🩸', text: 'Wither (bleed 3)' },
+      { turn: 'Turn 2', icon: '💀', text: 'Raise Dead' },
+      { turn: 'Turn 3', icon: '✨', text: 'Empower Skeleton' },
+    ]
+  },
+  {
+    id: 'archivist', variant: 'boss', hp: 120,
+    intents: [
+      { turn: 'Phase 1', icon: '🚫', text: 'Memory Suppression' },
+      { turn: 'Phase 2', icon: '↩', text: 'Timeline Inversion' },
+      { turn: 'Phase 3', icon: '⟳', text: 'State Reset' },
+    ]
+  },
+]
+
+function renderEnemy(e) {
+  const src = e.id === 'archivist' ? `assets/boss-${e.id}.jpg` : `assets/enemy-${e.id}.jpg`
+  const intents = e.intents.map(i => `
+    <div class="intent-row">
+      <span class="intent-turn">${i.turn}</span>
+      <span class="intent-icon">${i.icon}</span>
+      <span>${i.text}</span>
+    </div>`).join('')
+
+  return `
+    <div class="enemy-card ${e.variant}">
+      <div class="enemy-hp">❤ ${e.hp}</div>
+      <img src="${src}" alt="${e.id}">
+      <div class="enemy-intents">${intents}</div>
+    </div>`
+}
+
+const gallery = document.getElementById('gallery')
+
+gallery.innerHTML =
+  SECTIONS.map(renderSection).join('') +
+  `<hr class="divider">
+   <div class="hero-section">
+     <div class="section-header" style="border-color: rgba(255,255,255,0.1)">
+       <h2 style="color: rgba(240,230,211,0.7)">Enemies</h2>
+       <span class="mechanic-line">Telegraphed intent · Deterministic sequences · Scripted dramaturgy</span>
+     </div>
+     <div class="cards-row">${ENEMIES.map(renderEnemy).join('')}</div>
+   </div>`
+</script>
+</body>
+</html>

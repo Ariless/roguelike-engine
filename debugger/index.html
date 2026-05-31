@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Timeline Archive Viewer</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #0d0d1a;
+    --panel:   #13131f;
+    --border:  rgba(255,255,255,0.08);
+    --text:    #f0e6d3;
+    --dim:     rgba(240,230,211,0.45);
+    --gold:    #c9a84c;
+    --red:     #c0392b;
+    --green:   #4caf6e;
+    --corrupt: #7b1010;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Cinzel', serif;
+    font-size: 12px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Top bar ───────────────────────────────────────────── */
+  .top-bar {
+    height: 48px;
+    background: rgba(10,10,20,0.95);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 32px;
+    flex-shrink: 0;
+  }
+
+  .top-title {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--gold);
+    text-transform: uppercase;
+  }
+
+  .top-meta {
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    color: var(--dim);
+  }
+
+  .stability-badge {
+    margin-left: auto;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    padding: 3px 10px;
+    border-radius: 3px;
+    border: 1px solid;
+  }
+
+  .stability-badge.stable   { border-color: rgba(76,175,110,0.5); color: #4caf6e; background: rgba(76,175,110,0.07); }
+  .stability-badge.unstable { border-color: rgba(220,50,50,0.5);  color: #e05050; background: rgba(220,50,50,0.07);  }
+
+  /* ── Load screen ───────────────────────────────────────── */
+  #loadScreen {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+  }
+
+  .load-label {
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--dim);
+    text-transform: uppercase;
+  }
+
+  .load-hint {
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    color: rgba(240,230,211,0.2);
+  }
+
+  .loading-phrase {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: rgba(201,168,76,0.4);
+    font-style: italic;
+  }
+
+  .file-btn {
+    background: transparent;
+    border: 1px solid rgba(201,168,76,0.4);
+    border-radius: 4px;
+    padding: 8px 24px;
+    color: var(--gold);
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.15s;
+  }
+
+  .file-btn:hover { border-color: var(--gold); background: rgba(201,168,76,0.08); }
+
+  /* ── Main layout ───────────────────────────────────────── */
+  #mainView {
+    display: none;
+    flex: 1;
+    overflow: hidden;
+    flex-direction: column;
+  }
+
+  .main-body {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* ── Segments sidebar ──────────────────────────────────── */
+  .segments-panel {
+    width: 180px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 12px 0;
+  }
+
+  .segments-title {
+    font-size: 8px;
+    letter-spacing: 2px;
+    color: var(--dim);
+    text-transform: uppercase;
+    padding: 0 12px 8px;
+  }
+
+  .segment-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px;
+    cursor: pointer;
+    border-left: 2px solid transparent;
+    transition: all 0.1s;
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: var(--dim);
+  }
+
+  .segment-item:hover { background: rgba(255,255,255,0.03); color: var(--text); }
+  .segment-item.active { border-left-color: var(--gold); background: rgba(201,168,76,0.06); color: var(--gold); }
+  .segment-item.corrupted { color: #e05050; }
+  .segment-item.active.corrupted { border-left-color: #e05050; background: rgba(220,50,50,0.06); }
+
+  .seg-num { font-size: 9px; opacity: 0.6; min-width: 20px; }
+  .seg-icon { font-size: 10px; }
+
+  /* ── Detail panel ──────────────────────────────────────── */
+  .detail-panel {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px;
+    display: flex;
+    gap: 24px;
+  }
+
+  .detail-left  { flex: 1; min-width: 0; }
+  .detail-right { width: 320px; flex-shrink: 0; }
+
+  .section-title {
+    font-size: 8px;
+    letter-spacing: 2.5px;
+    color: var(--dim);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 6px;
+  }
+
+  /* ── Entity integrity bars ─────────────────────────────── */
+  .entity-block {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+  }
+
+  .entity-name {
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    color: var(--text);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .entity-state-badge {
+    font-size: 8px;
+    letter-spacing: 1px;
+    padding: 2px 6px;
+    border-radius: 2px;
+    border: 1px solid;
+  }
+
+  .entity-state-badge.alive      { border-color: rgba(76,175,110,0.4); color: #4caf6e; }
+  .entity-state-badge.death_door { border-color: rgba(220,50,50,0.6); color: #e05050; }
+  .entity-state-badge.dead       { border-color: rgba(100,100,100,0.4); color: #666; }
+
+  .integrity-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+
+  .integrity-label {
+    font-size: 8px;
+    letter-spacing: 1px;
+    color: var(--dim);
+    width: 60px;
+    flex-shrink: 0;
+  }
+
+  .integrity-bar-track {
+    flex: 1;
+    height: 6px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .integrity-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s;
+    background: linear-gradient(90deg, #4caf6e, #6fd68a);
+  }
+
+  .integrity-bar-fill.low  { background: linear-gradient(90deg, #c0392b, #e05050); }
+  .integrity-bar-fill.dead { background: rgba(100,100,100,0.3); }
+
+  .integrity-val {
+    font-size: 9px;
+    color: var(--dim);
+    min-width: 45px;
+    text-align: right;
+  }
+
+  .status-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+  }
+
+  .chip {
+    font-size: 8px;
+    letter-spacing: 0.8px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid;
+  }
+
+  .chip-bleed     { border-color: rgba(192,57,43,0.5);  color: #e05050; background: rgba(192,57,43,0.1);  }
+  .chip-stun      { border-color: rgba(240,192,64,0.5);  color: #f0c040; background: rgba(240,192,64,0.1);  }
+  .chip-defend    { border-color: rgba(92,141,246,0.5);  color: #5c8df6; background: rgba(92,141,246,0.1);  }
+  .chip-vulnerable{ border-color: rgba(143,91,232,0.5); color: #9b6de8; background: rgba(143,91,232,0.1); }
+
+  /* ── Events log ────────────────────────────────────────── */
+  .event-list { display: flex; flex-direction: column; gap: 3px; }
+
+  .event-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    border-radius: 3px;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    color: var(--dim);
+    border-left: 2px solid transparent;
+  }
+
+  .event-row.play_card   { border-left-color: var(--gold); color: var(--text); background: rgba(201,168,76,0.04); }
+  .event-row.enemy_action { border-left-color: #e05050; color: rgba(240,100,100,0.9); background: rgba(220,50,50,0.03); }
+  .event-row.transform   { border-left-color: #9b6de8; color: rgba(155,109,232,0.9); }
+  .event-row.turn_end    { border-left-color: var(--border); color: rgba(240,230,211,0.2); font-style: italic; }
+
+  .event-hash {
+    margin-left: auto;
+    font-size: 8px;
+    letter-spacing: 0.5px;
+    font-family: monospace;
+  }
+
+  .hash-ok   { color: rgba(76,175,110,0.6); }
+  .hash-fail { color: #e05050; font-weight: bold; }
+
+  /* ── Hash verification footer ──────────────────────────── */
+  .verification-block {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    font-size: 10px;
+    letter-spacing: 1px;
+  }
+
+  .verification-block.ok      { border-color: rgba(76,175,110,0.3); color: #4caf6e; }
+  .verification-block.corrupt { border-color: rgba(220,50,50,0.5);  color: #e05050; background: rgba(122,16,16,0.15); }
+
+  /* ── Bottom navigation ─────────────────────────────────── */
+  .nav-bar {
+    height: 44px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 20px;
+    flex-shrink: 0;
+    background: rgba(10,10,20,0.8);
+  }
+
+  .nav-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 4px 14px;
+    color: var(--dim);
+    font-family: 'Cinzel', serif;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.12s;
+  }
+
+  .nav-btn:hover:not(:disabled) { border-color: rgba(255,255,255,0.25); color: var(--text); }
+  .nav-btn:disabled { opacity: 0.25; cursor: default; }
+
+  .nav-position {
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    color: var(--dim);
+  }
+
+  .export-btn {
+    margin-left: auto;
+    border-color: rgba(201,168,76,0.3);
+    color: rgba(201,168,76,0.6);
+  }
+
+  .export-btn:hover { border-color: var(--gold) !important; color: var(--gold) !important; }
+
+  /* ── Outcome banner ────────────────────────────────────── */
+  .outcome-banner {
+    font-size: 10px;
+    letter-spacing: 2px;
+    padding: 6px 14px;
+    border-radius: 3px;
+    margin-left: 8px;
+  }
+
+  .outcome-banner.hero_wins  { background: rgba(76,175,110,0.1);  border: 1px solid rgba(76,175,110,0.3); color: #4caf6e; }
+  .outcome-banner.hero_loses { background: rgba(220,50,50,0.08); border: 1px solid rgba(220,50,50,0.3); color: #e05050; }
+
+  /* Scrollbars */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div class="top-title">Timeline Archive Viewer</div>
+  <div class="top-meta" id="topMeta">No timeline loaded</div>
+  <div id="outcomeBanner"></div>
+  <div class="stability-badge stable" id="stabilityBadge">—</div>
+</div>
+
+<!-- Load screen -->
+<div id="loadScreen">
+  <div class="loading-phrase" id="loadingPhrase">The Archivist remembers every failed seed.</div>
+  <div class="load-label">Load archived timeline</div>
+  <label class="file-btn">
+    Open Replay JSON
+    <input type="file" accept=".json" id="fileInput" style="display:none" onchange="loadFile(event)">
+  </label>
+  <div class="load-hint">Drop a failing-seed-*.json or replay log from /artifacts</div>
+</div>
+
+<!-- Main viewer -->
+<div id="mainView">
+  <div class="main-body">
+
+    <!-- Segments sidebar -->
+    <div class="segments-panel">
+      <div class="segments-title">Timeline Segments</div>
+      <div id="segmentList"></div>
+    </div>
+
+    <!-- Detail panel -->
+    <div class="detail-panel">
+
+      <div class="detail-left">
+        <div class="section-title" id="segmentTitle">Segment —</div>
+
+        <!-- Integrity verification -->
+        <div class="verification-block ok" id="verificationBlock">
+          ✓ Containment successful — all hashes verified
+        </div>
+
+        <!-- Entities -->
+        <div class="section-title">Entity Integrity</div>
+        <div id="entitiesContainer"></div>
+      </div>
+
+      <div class="detail-right">
+        <div class="section-title">Archived Events</div>
+        <div id="eventList" class="event-list"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="nav-bar">
+    <button class="nav-btn" id="prevBtn" onclick="prevSegment()" disabled>◀ PREV</button>
+    <div class="nav-position" id="navPosition">— / —</div>
+    <button class="nav-btn" id="nextBtn" onclick="nextSegment()">NEXT ▶</button>
+    <button class="nav-btn export-btn" onclick="exportJSON()">Export JSON</button>
+  </div>
+</div>
+
+<script>
+  const LOADING_PHRASES = [
+    'The Archivist remembers every failed seed.',
+    'Not every timeline is valid.',
+    'The dead should not act.',
+    'Some seeds should never be opened.',
+    'Invariants preserve reality.',
+    'A fragile victory.',
+    'The cycle repeats.',
+    'Persistence outlives failure.',
+  ]
+
+  const STATUS_META = {
+    bleed:      { icon: '🩸', label: 'Bleed' },
+    stun:       { icon: '⚡', label: 'Stun' },
+    defend:     { icon: '🛡', label: 'Defend' },
+    vulnerable: { icon: '💜', label: 'Vuln' },
+  }
+
+  const EVENT_ICON = {
+    play_card:   '▶',
+    enemy_action:'⚔',
+    status_tick: '🩸',
+    transform:   '🐺',
+    turn_end:    '──',
+    death_resolution: '💀',
+    game_over:   '✦',
+  }
+
+  let log = null
+  let currentSegment = 0
+
+  // Rotate loading phrases
+  let pi = 0
+  setInterval(() => {
+    pi = (pi + 1) % LOADING_PHRASES.length
+    document.getElementById('loadingPhrase').textContent = LOADING_PHRASES[pi]
+  }, 3000)
+
+  // ─── Load file ──────────────────────────────────────────────────────────────
+
+  function loadFile(event) {
+    const file = event.target.files[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = e => {
+      try {
+        log = JSON.parse(e.target.result)
+        initDebugger()
+      } catch (err) {
+        alert('Invalid JSON file: ' + err.message)
+      }
+    }
+    reader.readAsText(file)
+  }
+
+  // Programmatic entry point for Playwright tests — bypasses file dialog
+  window.loadJSON = function(data) {
+    log = data
+    initDebugger()
+  }
+
+  function initDebugger() {
+    if (!log || !log.snapshots || !log.snapshots.length) {
+      alert('No snapshots found in this log. Run with a newer executor version.')
+      return
+    }
+
+    document.getElementById('loadScreen').style.display = 'none'
+    document.getElementById('mainView').style.display = 'flex'
+    document.getElementById('mainView').style.flexDirection = 'column'
+
+    // Top bar meta
+    document.getElementById('topMeta').textContent =
+      `Timeline ID: ${log.seed}  ·  ${log.heroClass.toUpperCase()}  ·  ${log.snapshots.length} segments`
+
+    // Outcome banner
+    const bannerEl = document.getElementById('outcomeBanner')
+    if (log.outcome !== 'in_progress') {
+      bannerEl.className = `outcome-banner ${log.outcome}`
+      bannerEl.textContent = log.outcome === 'hero_wins' ? 'ARCHIVED' : 'TIMELINE COLLAPSED'
+    }
+
+    // Stability score
+    const totalEvents = log.events.filter(e => e.type === 'turn_end' || e.type === 'play_card').length
+    const corruptedSegs = log.snapshots.filter(s => !s.hashValid).length
+    const stability = totalEvents > 0
+      ? Math.round(((log.snapshots.length - corruptedSegs) / log.snapshots.length) * 100)
+      : 100
+    const badge = document.getElementById('stabilityBadge')
+    badge.textContent = `Timeline Stability: ${stability}%`
+    badge.className = `stability-badge ${stability >= 90 ? 'stable' : 'unstable'}`
+
+    buildSegmentList()
+    showSegment(0)
+  }
+
+  // ─── Segment list ───────────────────────────────────────────────────────────
+
+  function buildSegmentList() {
+    const list = document.getElementById('segmentList')
+    list.innerHTML = ''
+    log.snapshots.forEach((snap, i) => {
+      const div = document.createElement('div')
+      div.className = 'segment-item' + (snap.hashValid ? '' : ' corrupted')
+      div.id = `seg-item-${i}`
+      div.onclick = () => showSegment(i)
+
+      const icon = snap.hashValid ? '✓' : '⚠'
+      const allDead = snap.enemies.every(e => e.state === 'dead')
+      const heroState = snap.hero.state !== 'alive'
+        ? (snap.hero.state === 'death_door' ? ' ⚠' : ' ✝') : ''
+
+      div.innerHTML = `
+        <span class="seg-num">${i + 1}</span>
+        <span>${icon}${heroState}</span>
+        <span style="font-size:8px;opacity:0.5">${allDead ? '★' : ''}</span>
+      `
+      list.appendChild(div)
+    })
+  }
+
+  // ─── Show segment ───────────────────────────────────────────────────────────
+
+  function showSegment(idx) {
+    currentSegment = Math.max(0, Math.min(idx, log.snapshots.length - 1))
+    const snap = log.snapshots[currentSegment]
+
+    // Update active state in sidebar
+    document.querySelectorAll('.segment-item').forEach((el, i) => {
+      el.classList.toggle('active', i === currentSegment)
+    })
+
+    // Title
+    document.getElementById('segmentTitle').textContent =
+      `Timeline Segment ${snap.turn}`
+
+    // Verification block
+    const vBlock = document.getElementById('verificationBlock')
+    if (snap.hashValid) {
+      vBlock.className = 'verification-block ok'
+      vBlock.textContent = '✓ Containment successful — all hashes verified'
+    } else {
+      vBlock.className = 'verification-block corrupt'
+      vBlock.textContent = '⚠ CORRUPTION EVENT DETECTED — hash mismatch in this segment'
+    }
+
+    // Entities
+    renderEntities(snap)
+
+    // Events
+    renderEvents(snap.events)
+
+    // Navigation
+    document.getElementById('prevBtn').disabled = currentSegment === 0
+    document.getElementById('nextBtn').disabled = currentSegment === log.snapshots.length - 1
+    document.getElementById('navPosition').textContent =
+      `Segment ${currentSegment + 1} / ${log.snapshots.length}`
+  }
+
+  function renderEntities(snap) {
+    const container = document.getElementById('entitiesContainer')
+    container.innerHTML = ''
+
+    const allEntities = [
+      { ...snap.hero, isHero: true },
+      ...snap.enemies.map(e => ({ ...e, isHero: false })),
+    ]
+
+    allEntities.forEach(entity => {
+      const pct = entity.maxHp > 0 ? (entity.hp / entity.maxHp * 100) : 0
+      const barClass = entity.state === 'dead' ? 'dead' : pct <= 30 ? 'low' : ''
+
+      const statuses = (entity.statuses || []).map(s => {
+        const meta = STATUS_META[s.name] || { icon: '', label: s.name }
+        return `<span class="chip chip-${s.name}">${meta.icon} ${meta.label} ${s.stacks}</span>`
+      }).join('')
+
+      const stateLabel = entity.state === 'alive' ? 'ACTIVE'
+        : entity.state === 'death_door' ? "DEATH'S DOOR" : 'ARCHIVED'
+      const stateClass = entity.state
+
+      let nameExtra = ''
+      if (entity.formState && entity.formState !== 'human') {
+        nameExtra = ` <span style="color:#9b6de8;font-size:8px">🐺 WOLF</span>`
+      }
+
+      const block = document.createElement('div')
+      block.className = 'entity-block'
+      block.innerHTML = `
+        <div class="entity-name">
+          ${entity.name.toUpperCase()}${nameExtra}
+          <span class="entity-state-badge ${stateClass}">${stateLabel}</span>
+        </div>
+        <div class="integrity-row">
+          <div class="integrity-label">INTEGRITY</div>
+          <div class="integrity-bar-track">
+            <div class="integrity-bar-fill ${barClass}" style="width:${pct}%"></div>
+          </div>
+          <div class="integrity-val">${entity.hp} / ${entity.maxHp}</div>
+        </div>
+        ${statuses ? `<div class="status-chips">${statuses}</div>` : ''}
+      `
+      container.appendChild(block)
+    })
+  }
+
+  function renderEvents(events) {
+    const list = document.getElementById('eventList')
+    list.innerHTML = ''
+
+    if (!events || !events.length) {
+      list.innerHTML = '<div style="color:var(--dim);font-size:9px;letter-spacing:1px;">No events recorded</div>'
+      return
+    }
+
+    events.forEach(ev => {
+      const icon = EVENT_ICON[ev.type] || '·'
+      const hashOk = ev.preStateHash && ev.postStateHash
+        && ev.preStateHash !== '000000' && ev.postStateHash !== '000000'
+      const hashDisplay = ev.postStateHash
+        ? `<span class="event-hash ${hashOk ? 'hash-ok' : 'hash-fail'}">${ev.postStateHash}</span>`
+        : ''
+
+      let label = ev.type.replace(/_/g, ' ')
+      if (ev.type === 'play_card' && ev.cardId) {
+        label = ev.cardId.replace(/_/g, ' ').toUpperCase()
+        if (ev.targetId) label += ` → ${ev.targetId}`
+      }
+      if (ev.type === 'turn_end') label = '── end of turn ──'
+      if (ev.type === 'game_over') label = '✦ Timeline resolved'
+      if (ev.rngValue !== undefined) {
+        label += ` <span style="color:var(--dim);font-size:8px;">[rng: ${ev.rngValue.toFixed(4)}]</span>`
+      }
+
+      const row = document.createElement('div')
+      row.className = `event-row ${ev.type}`
+      row.innerHTML = `<span>${icon}</span><span>${label}</span>${hashDisplay}`
+      list.appendChild(row)
+    })
+  }
+
+  // ─── Navigation ─────────────────────────────────────────────────────────────
+
+  function prevSegment() { showSegment(currentSegment - 1) }
+  function nextSegment() { showSegment(currentSegment + 1) }
+
+  document.addEventListener('keydown', e => {
+    if (!log) return
+    if (e.key === 'ArrowLeft')  prevSegment()
+    if (e.key === 'ArrowRight') nextSegment()
+  })
+
+  // ─── Export ──────────────────────────────────────────────────────────────────
+
+  function exportJSON() {
+    if (!log) return
+    const blob = new Blob([JSON.stringify(log, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `archived-timeline-${log.seed}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+</script>
+</body>
+</html>

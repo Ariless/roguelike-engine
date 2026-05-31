@@ -1,0 +1,200 @@
+import { describe, it, expect } from 'vitest'
+import {
+  BERSERKER_CARDS,
+  savageLunge, primalFury, primalDodge,
+  isInRage, rageDamage,
+  playSavageLunge, playPrimalFury, playPrimalDodge,
+} from '../../src/engine/heroes/berserker'
+import type { GameState } from '../../src/engine/types'
+
+function makeState(heroHp = 28, enemyHp = 30): GameState {
+  return {
+    seed: 1, turn: 1,
+    hero: {
+      id: 'hero', name: 'Berserker',
+      hp: heroHp, maxHp: 28,
+      state: 'alive', statuses: [], row: 'front',
+      heroClass: 'berserker', formState: 'human',
+      hand: [], energy: 3,
+    },
+    enemies: [{
+      id: 'enemy', name: 'Goblin',
+      hp: enemyHp, maxHp: 30,
+      state: 'alive', statuses: [], row: 'front',
+      enemyType: 'goblin',
+      intent: { type: 'attack', value: 6 },
+    }],
+    isOver: false,
+  }
+}
+
+// ─── Card catalogue ──────────────────────────────────────────────────────────
+
+describe('BERSERKER_CARDS', () => {
+  it('3 карты', () => expect(BERSERKER_CARDS).toHaveLength(3))
+  it('все heroClass: berserker', () => {
+    BERSERKER_CARDS.forEach(c => expect(c.heroClass).toBe('berserker'))
+  })
+  it('у каждой карты 2 оси', () => {
+    BERSERKER_CARDS.forEach(c => expect(c.axes).toHaveLength(2))
+  })
+})
+
+// ─── isInRage ─────────────────────────────────────────────────────────────────
+
+describe('isInRage', () => {
+  const hero = makeState(28).hero
+
+  it('HP > 25% → rage неактивна', () => {
+    expect(isInRage({ ...hero, hp: 8 })).toBe(false)  // 8/28 = 28.5%
+  })
+
+  it('HP = 25% → rage активна', () => {
+    expect(isInRage({ ...hero, hp: 7 })).toBe(true)   // 7/28 = 25%
+  })
+
+  it('HP < 25% → rage активна', () => {
+    expect(isInRage({ ...hero, hp: 4 })).toBe(true)
+  })
+
+  it('HP = 0 (death_door) → rage неактивна — герой мёртв', () => {
+    expect(isInRage({ ...hero, hp: 0, state: 'dead' })).toBe(false)
+  })
+
+  it('HP = 0 (death_door state) → rage активна пока не dead', () => {
+    expect(isInRage({ ...hero, hp: 0, state: 'death_door' })).toBe(true)
+  })
+})
+
+// ─── rageDamage ───────────────────────────────────────────────────────────────
+
+describe('rageDamage', () => {
+  const hero = makeState(28).hero
+
+  it('HP > 25% → базовый урон без бонуса', () => {
+    expect(rageDamage({ ...hero, hp: 8 }, 6)).toBe(6)
+  })
+
+  it('HP ≤ 25% → урон ×1.5', () => {
+    expect(rageDamage({ ...hero, hp: 7 }, 6)).toBe(9)
+  })
+
+  it('floor от дробного результата', () => {
+    expect(rageDamage({ ...hero, hp: 7 }, 5)).toBe(7)  // 5 * 1.5 = 7.5 → 7
+  })
+})
+
+// ─── playSavageLunge ─────────────────────────────────────────────────────────
+
+describe('playSavageLunge', () => {
+  it('HP > 25% → 6 базового урона', () => {
+    const s = makeState(28)
+    const next = playSavageLunge(s, 'enemy')
+    expect(next.enemies[0].hp).toBe(30 - 6)
+  })
+
+  it('HP ≤ 25% → 9 урона (6 × 1.5)', () => {
+    const s = makeState(7)
+    const next = playSavageLunge(s, 'enemy')
+    expect(next.enemies[0].hp).toBe(30 - 9)
+  })
+
+  it('толкает цель в back row', () => {
+    const next = playSavageLunge(makeState(), 'enemy')
+    expect(next.enemies[0].row).toBe('back')
+  })
+
+  it('row героя не меняется', () => {
+    const next = playSavageLunge(makeState(), 'enemy')
+    expect(next.hero.row).toBe('front')
+  })
+})
+
+// ─── playPrimalFury ──────────────────────────────────────────────────────────
+
+describe('playPrimalFury', () => {
+  it('HP > 25% → 4 базового урона', () => {
+    const next = playPrimalFury(makeState(28), 'enemy')
+    expect(next.enemies[0].hp).toBe(30 - 4)
+  })
+
+  it('HP ≤ 25% → 6 урона (4 × 1.5)', () => {
+    const next = playPrimalFury(makeState(7), 'enemy')
+    expect(next.enemies[0].hp).toBe(30 - 6)
+  })
+
+  it('накапливает rage stack', () => {
+    const next = playPrimalFury(makeState(), 'enemy')
+    expect(next.hero.rageStacks).toBe(1)
+  })
+
+  it('rage стаки накапливаются', () => {
+    let s = makeState()
+    s = playPrimalFury(s, 'enemy')
+    s = playPrimalFury(s, 'enemy')
+    expect(s.hero.rageStacks).toBe(2)
+  })
+
+  it('rage стаки не превышают 5', () => {
+    let s = makeState()
+    s = { ...s, hero: { ...s.hero, rageStacks: 5 } }
+    expect(playPrimalFury(s, 'enemy').hero.rageStacks).toBe(5)
+  })
+})
+
+// ─── playPrimalDodge ─────────────────────────────────────────────────────────
+
+describe('playPrimalDodge', () => {
+  it('даёт 4 defend', () => {
+    const next = playPrimalDodge(makeState())
+    const def = next.hero.statuses.find(st => st.name === 'defend')
+    expect(def?.stacks).toBe(4)
+  })
+
+  it('HP > 25% → энергия не растёт', () => {
+    const s = makeState(20)
+    expect(playPrimalDodge(s).hero.energy).toBe(s.hero.energy)
+  })
+
+  it('HP ≤ 25% → +1 энергия', () => {
+    const s = makeState(7)
+    expect(playPrimalDodge(s).hero.energy).toBe(s.hero.energy + 1)
+  })
+})
+
+// ─── Mutation killing tests ───────────────────────────────────────────────────
+
+describe('playSavageLunge — only targeted enemy goes to back row', () => {
+  it('с двумя врагами только target уходит в back row', () => {
+    const s = makeState()
+    const state = {
+      ...s,
+      enemies: [
+        { ...s.enemies[0], id: 'e0', row: 'front' as const },
+        { ...s.enemies[0], id: 'e1', row: 'front' as const },
+      ],
+    }
+    const next = playSavageLunge(state, 'e0')
+    expect(next.enemies[0].row).toBe('back')   // target
+    expect(next.enemies[1].row).toBe('front')  // kills id===targetId → true mutant
+  })
+})
+
+describe('rageDamage — точные граничные значения', () => {
+  const hero = makeState(28).hero
+
+  it('HP = 8 (29% > 25%) → базовый урон без бонуса', () => {
+    expect(rageDamage({ ...hero, hp: 8 }, 6)).toBe(6)   // kills conditional→true
+  })
+
+  it('HP = 7 (ровно 25%) → rage активна, ×1.5', () => {
+    expect(rageDamage({ ...hero, hp: 7 }, 6)).toBe(9)
+  })
+
+  it('HP = 8 vs HP = 7 — разные результаты (boundary is strict)', () => {
+    const above = rageDamage({ ...hero, hp: 8 }, 10)
+    const at    = rageDamage({ ...hero, hp: 7 }, 10)
+    expect(above).toBe(10)  // no rage
+    expect(at).toBe(15)     // rage active — kills conditional→true that collapses boundary
+  })
+})

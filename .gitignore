@@ -1,0 +1,8 @@
+node_modules/
+.stryker-tmp/
+test-results/
+reports/mutation/
+reports/ci-report.html
+cucumber.json
+.DS_Store
+SOLUTIONS/
