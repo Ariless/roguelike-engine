@@ -1,12 +1,12 @@
 import type { Enemy, Entity, GameState, Hero } from './types'
 
-// Находит сущность в стейте по id (герой или враг)
+// Finds an entity in the state by id (hero or enemy)
 function findEntity(state: GameState, id: string): Entity | undefined {
   if (state.hero.id === id) return state.hero
   return state.enemies.find(e => e.id === id)
 }
 
-// Возвращает новый стейт с обновлённой сущностью
+// Returns a new state with the entity updated
 function updateEntity(state: GameState, updated: Hero | Enemy): GameState {
   if (state.hero.id === updated.id) {
     return { ...state, hero: updated as Hero }
@@ -17,13 +17,13 @@ function updateEntity(state: GameState, updated: Hero | Enemy): GameState {
   }
 }
 
-// ─── Урон ─────────────────────────────────────────────────────────────────────
+// ─── Damage ──────────────────────────────────────────────────────────────────
 
 export function applyDamage(state: GameState, targetId: string, amount: number): GameState {
   const target = findEntity(state, targetId)
   if (!target || target.state === 'dead') return state
 
-  // Defend поглощает урон первым
+  // Defend absorbs damage first
   const defend = target.statuses.find(s => s.name === 'defend')
   let remaining = amount
   let newStatuses = target.statuses
@@ -50,7 +50,7 @@ export function applyDamage(state: GameState, targetId: string, amount: number):
   return updateEntity(state, updated)
 }
 
-// ─── Лечение ──────────────────────────────────────────────────────────────────
+// ─── Healing ─────────────────────────────────────────────────────────────────
 
 export function applyHeal(state: GameState, targetId: string, amount: number): GameState {
   const target = findEntity(state, targetId)
@@ -58,7 +58,7 @@ export function applyHeal(state: GameState, targetId: string, amount: number): G
 
   const newHp = Math.min(target.hp + amount, target.maxHp)
 
-  // death_door → alive при лечении
+  // death_door → alive on healing
   const newState = target.state === 'death_door' ? 'alive' as const : target.state
 
   const updated = { ...target, hp: newHp, state: newState } as Hero | Enemy

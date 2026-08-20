@@ -17,11 +17,11 @@ import type { ReplayLog } from '../src/telemetry/types'
 const RUNS = parseInt(process.argv[2] ?? '500')
 const USE_CLAUDE = !!process.env.ANTHROPIC_API_KEY
 
-// Колода и раскладка seed общие с simulate.ts, стратегия игры — своя, и это
-// разделение принципиально. Общее обязано совпадать: агент, играющий другой
-// колодой или сканирующий другое подмножество конфигураций, находил бы
-// «интересные таймлайны» в игре, которую больше никто не проверяет.
-// Различаться должен только способ выбирать ход — в нём весь смысл агента.
+// The deck and the seed layout are shared with simulate.ts; the play strategy is its own, and that
+// split matters. What is shared has to stay shared: an agent playing a different
+// deck or scanning a different subset of configurations would be finding
+// "interesting timelines" in a game nobody else is checking.
+// Only the way a move is chosen should differ — that is the whole point of the agent.
 
 // Card priority: higher score = prefer to play this card
 // Adversarial: maximize pressure, ignore healing, deplete hero HP

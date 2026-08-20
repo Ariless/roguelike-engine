@@ -54,7 +54,7 @@ function makeState(options: {
 // ─── arp2_statusApplication ───────────────────────────────────────────────────
 
 describe('arp2_statusApplication', () => {
-  it('применяет bleed к цели', () => {
+  it('applies bleed to the target', () => {
     const state = makeState({ enemies: [makeEnemy('g1')] })
     const next = arp2_statusApplication(state, {
       type: 'applyStatus',
@@ -66,7 +66,7 @@ describe('arp2_statusApplication', () => {
     expect(bleed?.stacks).toBe(3)
   })
 
-  it('не трогает стейт для damage-действий', () => {
+  it('leaves the state alone for damage actions', () => {
     const state = makeState({ enemies: [makeEnemy('g1')] })
     const next = arp2_statusApplication(state, {
       type: 'damage',
@@ -77,7 +77,7 @@ describe('arp2_statusApplication', () => {
     expect(next).toBe(state)
   })
 
-  it('применяет stun к герою', () => {
+  it('applies stun to the hero', () => {
     const state = makeState()
     const next = arp2_statusApplication(state, {
       type: 'applyStatus',
@@ -92,21 +92,21 @@ describe('arp2_statusApplication', () => {
 // ─── arp3_isBlocked ───────────────────────────────────────────────────────────
 
 describe('arp3_isBlocked', () => {
-  it('melee атака на front-row врага не блокируется', () => {
+  it('a melee attack on a front-row enemy is not blocked', () => {
     const state = makeState({ enemies: [makeEnemy('g1', 'front')] })
     expect(arp3_isBlocked(state, {
       type: 'damage', sourceId: 'hero', targetId: 'g1', amount: 5, rangeType: 'melee',
     })).toBe(false)
   })
 
-  it('melee атака на back-row врага блокируется если front-row жив', () => {
+  it('a melee attack on a back-row enemy is blocked while the front row is alive', () => {
     const state = makeState({ enemies: [makeEnemy('g1', 'front'), makeEnemy('g2', 'back')] })
     expect(arp3_isBlocked(state, {
       type: 'damage', sourceId: 'hero', targetId: 'g2', amount: 5, rangeType: 'melee',
     })).toBe(true)
   })
 
-  it('melee атака на back-row врага проходит если front-row мёртв', () => {
+  it('a melee attack on a back-row enemy lands once the front row is dead', () => {
     const frontDead = { ...makeEnemy('g1', 'front'), state: 'dead' as const }
     const state = makeState({ enemies: [frontDead, makeEnemy('g2', 'back')] })
     expect(arp3_isBlocked(state, {
@@ -114,14 +114,14 @@ describe('arp3_isBlocked', () => {
     })).toBe(false)
   })
 
-  it('ranged атака на back-row врага не блокируется', () => {
+  it('a ranged attack on a back-row enemy is not blocked', () => {
     const state = makeState({ enemies: [makeEnemy('g1', 'front'), makeEnemy('g2', 'back')] })
     expect(arp3_isBlocked(state, {
       type: 'damage', sourceId: 'hero', targetId: 'g2', amount: 5, rangeType: 'ranged',
     })).toBe(false)
   })
 
-  it('ataka без rangeType не блокируется', () => {
+  it('an attack without rangeType is not blocked', () => {
     const state = makeState({ enemies: [makeEnemy('g1', 'front'), makeEnemy('g2', 'back')] })
     expect(arp3_isBlocked(state, {
       type: 'damage', sourceId: 'hero', targetId: 'g2', amount: 5,
@@ -132,7 +132,7 @@ describe('arp3_isBlocked', () => {
 // ─── arp4_calculate ───────────────────────────────────────────────────────────
 
 describe('arp4_calculate — damage', () => {
-  it('наносит базовый урон', () => {
+  it('deals base damage', () => {
     const state = makeState({ enemies: [makeEnemy('g1')] })
     const { state: next } = arp4_calculate(state, {
       type: 'damage', sourceId: 'hero', targetId: 'g1', amount: 6,
@@ -140,7 +140,7 @@ describe('arp4_calculate — damage', () => {
     expect(next.enemies[0].hp).toBe(14)
   })
 
-  it('vulnerable умножает урон на 1.5 (floor)', () => {
+  it('vulnerable multiplies damage by 1.5 (floored)', () => {
     const vuln = makeEnemy('g1', 'front', 20, [{ name: 'vulnerable', stacks: 1 }])
     const state = makeState({ enemies: [vuln] })
     const { state: next, finalAmount } = arp4_calculate(state, {
@@ -151,7 +151,7 @@ describe('arp4_calculate — damage', () => {
     expect(next.enemies[0].hp).toBe(11)
   })
 
-  it('возвращает finalAmount без vulnerable', () => {
+  it('returns finalAmount when vulnerable is absent', () => {
     const state = makeState({ enemies: [makeEnemy('g1')] })
     const { finalAmount } = arp4_calculate(state, {
       type: 'damage', sourceId: 'hero', targetId: 'g1', amount: 8,
@@ -161,7 +161,7 @@ describe('arp4_calculate — damage', () => {
 })
 
 describe('arp4_calculate — heal', () => {
-  it('восстанавливает HP герою', () => {
+  it('restores HP to the hero', () => {
     const state = makeState({ heroHp: 30 })
     const { state: next } = arp4_calculate(state, {
       type: 'heal', sourceId: 'hero', targetId: 'hero', amount: 10,
@@ -169,7 +169,7 @@ describe('arp4_calculate — heal', () => {
     expect(next.hero.hp).toBe(40)
   })
 
-  it('HP не превышает maxHp', () => {
+  it('HP never exceeds maxHp', () => {
     const state = makeState({ heroHp: 45 })
     const { state: next } = arp4_calculate(state, {
       type: 'heal', sourceId: 'hero', targetId: 'hero', amount: 20,
@@ -178,10 +178,10 @@ describe('arp4_calculate — heal', () => {
   })
 })
 
-// ─── resolveAction (интеграция) ───────────────────────────────────────────────
+// ─── resolveAction (integration) ─────────────────────────────────────────────
 
 describe('resolveAction', () => {
-  it('damage action наносит урон', () => {
+  it('a damage action deals damage', () => {
     const state = makeState({ enemies: [makeEnemy('g1')] })
     const next = resolveAction(state, {
       type: 'damage', sourceId: 'hero', targetId: 'g1', amount: 5,
@@ -189,7 +189,7 @@ describe('resolveAction', () => {
     expect(next.enemies[0].hp).toBe(15)
   })
 
-  it('damage с vulnerable проходит через модификатор', () => {
+  it('damage with vulnerable goes through the modifier', () => {
     const vuln = makeEnemy('g1', 'front', 20, [{ name: 'vulnerable', stacks: 1 }])
     const state = makeState({ enemies: [vuln] })
     const next = resolveAction(state, {
@@ -198,7 +198,7 @@ describe('resolveAction', () => {
     expect(next.enemies[0].hp).toBe(11) // 20 - floor(6*1.5)=9
   })
 
-  it('melee в back-row при живом front-row — стейт не меняется', () => {
+  it('melee into the back row with a living front row leaves the state unchanged', () => {
     const state = makeState({ enemies: [makeEnemy('g1', 'front'), makeEnemy('g2', 'back')] })
     const next = resolveAction(state, {
       type: 'damage', sourceId: 'hero', targetId: 'g2', amount: 10, rangeType: 'melee',
@@ -206,7 +206,7 @@ describe('resolveAction', () => {
     expect(next.enemies[1].hp).toBe(20)
   })
 
-  it('applyStatus action применяет статус', () => {
+  it('an applyStatus action applies the status', () => {
     const state = makeState({ enemies: [makeEnemy('g1')] })
     const next = resolveAction(state, {
       type: 'applyStatus', sourceId: 'hero', targetId: 'g1',
@@ -215,7 +215,7 @@ describe('resolveAction', () => {
     expect(next.enemies[0].statuses.some(s => s.name === 'vulnerable')).toBe(true)
   })
 
-  it('heal action восстанавливает HP', () => {
+  it('a heal action restores HP', () => {
     const state = makeState({ heroHp: 20 })
     const next = resolveAction(state, {
       type: 'heal', sourceId: 'hero', targetId: 'hero', amount: 15,
@@ -223,7 +223,7 @@ describe('resolveAction', () => {
     expect(next.hero.hp).toBe(35)
   })
 
-  it('onPostEffects handler вызывается после урона', () => {
+  it('the onPostEffects handler is called after the damage', () => {
     const state = makeState({ enemies: [makeEnemy('g1')] })
     let capturedDamage: number | undefined
     resolveAction(

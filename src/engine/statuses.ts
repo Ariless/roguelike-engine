@@ -1,6 +1,6 @@
 import type { Entity, GameState, Hero, Enemy, Status, StatusName } from './types'
 
-// ─── Добавление статуса ───────────────────────────────────────────────────────
+// ─── Adding a status ─────────────────────────────────────────────────────────
 
 export function addStatus(state: GameState, targetId: string, incoming: Status): GameState {
   const target = findEntity(state, targetId)
@@ -13,7 +13,7 @@ export function addStatus(state: GameState, targetId: string, incoming: Status):
 function applyStatusToEntity(entity: Entity, incoming: Status): Entity {
   const existing = entity.statuses.find(s => s.name === incoming.name)
 
-  // Stun не стакается — просто сбрасывает duration на 1
+  // Stun does not stack — it just resets duration to 1
   if (incoming.name === 'stun') {
     if (existing) {
       return {
@@ -26,7 +26,7 @@ function applyStatusToEntity(entity: Entity, incoming: Status): Entity {
     return { ...entity, statuses: [...entity.statuses, { ...incoming, duration: 1 }] }
   }
 
-  // Bleed стакается, максимум 10
+  // Bleed stacks, capped at 10
   if (incoming.name === 'bleed') {
     if (existing) {
       const newStacks = Math.min(existing.stacks + incoming.stacks, 10)
@@ -43,7 +43,7 @@ function applyStatusToEntity(entity: Entity, incoming: Status): Entity {
     }
   }
 
-  // Defend стакается
+  // Defend stacks
   if (incoming.name === 'defend') {
     if (existing) {
       return {
@@ -56,34 +56,34 @@ function applyStatusToEntity(entity: Entity, incoming: Status): Entity {
     return { ...entity, statuses: [...entity.statuses, incoming] }
   }
 
-  // Vulnerable не стакается — просто добавляем если нет
+  // Vulnerable does not stack — just add it if absent
   if (!existing) {
     return { ...entity, statuses: [...entity.statuses, incoming] }
   }
   return entity
 }
 
-// ─── Тик статусов (начало хода) ───────────────────────────────────────────────
+// ─── Status tick (start of turn) ─────────────────────────────────────────────
 
-// Применяет все статусы на сущности и убирает истёкшие
+// Applies every status on the entity and removes the expired ones
 export function tickStatuses(state: GameState, targetId: string): GameState {
   const target = findEntity(state, targetId)
   if (!target) return state
 
   let entity = { ...target, statuses: [...target.statuses] }
 
-  // Bleed: снимает HP равное количеству стаков
+  // Bleed: removes HP equal to the number of stacks
   const bleed = entity.statuses.find(s => s.name === 'bleed')
   if (bleed) {
     entity = { ...entity, hp: Math.max(0, entity.hp - bleed.stacks) }
-    // Если HP стало 0 — death_door
+    // HP reached 0 — death_door
     if (entity.hp === 0 && entity.state === 'alive') {
       entity = { ...entity, state: 'death_door' }
     }
   }
 
-  // Убираем статусы с истёкшим duration
-  // Stun длится 1 ход, defend сбрасывается в конце хода
+  // Drop statuses whose duration has expired
+  // Stun lasts 1 turn, defend is cleared at the end of the turn
   entity = {
     ...entity,
     statuses: entity.statuses
@@ -94,7 +94,7 @@ export function tickStatuses(state: GameState, targetId: string): GameState {
   return updateEntity(state, entity as Hero | Enemy)
 }
 
-// ─── Проверки ─────────────────────────────────────────────────────────────────
+// ─── Checks ──────────────────────────────────────────────────────────────────
 
 export function hasStatus(entity: Entity, name: StatusName): boolean {
   return entity.statuses.some(s => s.name === name)
@@ -104,7 +104,7 @@ export function canAct(entity: Entity): boolean {
   return !hasStatus(entity, 'stun')
 }
 
-// ─── Вспомогательные (копируем из resolution.ts чтобы не было зависимостей) ───
+// ─── Helpers (copied from resolution.ts to avoid a dependency) ───────────────
 
 function findEntity(state: GameState, id: string): Entity | undefined {
   if (state.hero.id === id) return state.hero

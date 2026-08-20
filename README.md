@@ -19,7 +19,7 @@ The roguelike is a rule engine — the same class of system as a payment process
 | **Replay system** | `replayGame(log).success === true` for any random game | Byte-perfect verification via pre/post state hashes per event |
 | **Metamorphic testing** | `damage(lowHp) ≥ damage(highHp)` — formula without expected value | Relations between inputs, not exact outputs |
 | **`it.fails()` false invariant** | `healWerewolfIsAlwaysBeneficial` — intentionally failing test as domain spec | Documents rule violations; fails if someone "fixes" the wrong thing |
-| **Mutation testing** | Stryker ~79%; targeted kills: `hasStatus always-true`, `&&→||` | Finds gaps that code review misses |
+| **Mutation testing** | Stryker 86.1% across 13 files; `faults.ts` came back at 26% | The scope of a mutation run is itself unaudited — "79%" covered half the system |
 | **Monte Carlo simulation** | `npm run simulate` → winrate per class and per matchup, Wilson intervals, verdict against a target corridor | Statistical stability; caught a whole enemy that never got implemented |
 | **Sampling-bias detection** | Hero and enemy both derived from `seed % 4` → 4 of 16 configurations ever scanned | A biased sample returns a plausible number nobody rechecks |
 | **Metric stability** | `npm run stability` → cross-batch spread + convergence as runs double | An interval narrowing toward a seed-dependent answer looks *more* trustworthy |
@@ -56,7 +56,7 @@ npm run spec-to-test "Bleed deals damage equal to stacks per turn"
 npm run meta-oracle               # Test the AI judge quality
 npm run ci-summary                # AI-generated CI narrative
 npm run ci-report                 # HTML stability report
-npm run test:mutation             # Stryker ~79% — 4 minutes
+npm run test:mutation             # Stryker 86.1% across 13 files — 38 minutes
 ```
 
 Open `game/index.html` in browser — playable combat UI.  
@@ -143,16 +143,37 @@ artefacts.
 ## Mutation testing
 
 ```
-npm run test:mutation
+npm run test:mutation        # 13 files, 1489 mutants, 38 minutes
 
-File           | Score  | Targeted kills
----------------|--------|------------------------------------------
-resolution.ts  | 92.4%  | Core pipeline well-covered from day 1
-statuses.ts    | ~94%   | hasStatus always-true, duration filter, updateEntity
-paladin.ts     | 80.3%  | ?? 0 → && 0 boundary, undefined chargeStacks
-berserker.ts   | 69.9%  | Multi-enemy row mutation, rage 25% boundary
-Overall        | ~79%   | Above typical industry baseline (65–75%)
+File                | Score   | Note
+--------------------|---------|--------------------------------------------
+resolution.ts       | 100.00% |
+turnPipeline.ts     | 100.00% |
+actionResolution.ts |  97.56% |
+statuses.ts         |  96.55% | hasStatus always-true, duration filter
+berserker.ts        |  95.89% | rage 25% boundary
+rng.ts              |  95.65% |
+replayer.ts         |  92.00% |
+bloodmage.ts        |  89.87% |
+executor.ts         |  85.07% | largest file in the project
+paladin.ts          |  84.85% | ?? 0 → && 0 boundary
+invariants.ts       |  79.66% |
+werewolf.ts         |  79.53% |
+faults.ts           |  26.00% | ← 37 of 50 mutants survive
+Overall             |  86.10% | thresholds.break = 85 — the run fails below it
 ```
+
+**`faults.ts` at 26% is the finding, not the 86%.** That module exists to corrupt engine
+behaviour on purpose (`bleedOffByOne` and friends) so the suite can demonstrate it notices planted
+bugs. It is the instrument that audits the tests — and it turned out to be the least tested code in
+the repository. Break it and the injector silently injects nothing: property tests still pass, and
+"we verified the tests catch a planted bug" quietly becomes an unsupported claim. A broken injector
+is indistinguishable from a working one on healthy code.
+
+The previous figure, "~79%", was never wrong — it was incomplete. It covered 6 files and stayed
+silent about 7 others, `executor.ts` and `rng.ts` among them. Scope is one line in a config that
+nobody rereads, and a score sounds equally convincing whether it describes a whole system or half
+of one.
 
 ---
 
@@ -354,7 +375,7 @@ Real defects:      16  (see BUGS.md — each with root cause and fix)
                    never implemented, a silently truncated seed, and a UI test
                    whose assert did not check what its name promised.
 
-Mutation score:    ~79%  (above typical 65–75%)
+Mutation score:    86.1%  (13 files: engine, runtime, telemetry)
 
 Bugs found by property tests specifically:
   BUG-06  fast-check found off-by-one in test generator  (test was wrong, not code)

@@ -1,18 +1,18 @@
-// Monte Carlo simulation — сканирует N таймлайнов, проверяет их против коридоров.
+// Monte Carlo simulation — scans N timelines and checks them against the corridors.
 //
 // Usage: npx tsx scripts/simulate.ts [runs=10000] [baseSeed=0] [--gate]
 //
-// Отчёт даёт по каждому классу: винрейт с доверительным интервалом, вердикт
-// против коридора, среднюю длительность с разбросом, матрицу пар герой/враг и
-// распределение длительности боёв. Падающие seed архивируются в /artifacts/.
+// For each class the report gives: win rate with a confidence interval, a verdict
+// against the corridor, mean duration with spread, the hero/enemy matchup matrix and
+// the distribution of battle lengths. Failing seeds are archived into /artifacts/.
 //
 // Exit code:
-//   1 — испорченные таймлайны или расхождение хешей (это дефект)
-//   1 — при --gate также если баланс вышел из коридора (это сигнал дизайна)
-//   0 — иначе
+//   1 — corrupted timelines or a hash divergence (that is a defect)
+//   1 — with --gate, also when balance leaves its corridor (that is a design signal)
+//   0 — otherwise
 //
-// Разделение осознанное: сломанный детерминизм нельзя оставлять в ветке,
-// а разошедшийся баланс — материал для решения, а не повод валить сборку.
+// The split is deliberate: broken determinism cannot be left in a branch,
+// while drifted balance is material for a decision, not a reason to fail the build.
 
 import {
   runBatch, winrateOf, configFor, matchupKey,
@@ -31,7 +31,7 @@ const GATE      = process.argv.includes('--gate')
 const WIDTH = 78
 const line = (char = '═') => char.repeat(WIDTH)
 
-// ─── Прогон ───────────────────────────────────────────────────────────────────
+// ─── Run ─────────────────────────────────────────────────────────────────────
 
 process.stdout.write('Scanning timelines')
 const progressStep = Math.max(1, Math.floor(RUNS / 20))
@@ -44,7 +44,7 @@ const batch = runBatch(RUNS, BASE_SEED, {
 
 process.stdout.write('\n\n')
 
-// ─── Стабильность таймлайнов ──────────────────────────────────────────────────
+// ─── Timeline stability ──────────────────────────────────────────────────────
 
 const stable = RUNS - batch.corrupted
 const hashMismatches = batch.failingSeeds.length - batch.corrupted
@@ -59,7 +59,7 @@ console.log(`  Corrupted          ${batch.corrupted}`)
 console.log(`  Hash mismatches    ${Math.max(0, hashMismatches)}`)
 console.log()
 
-// ─── Винрейт по классам ───────────────────────────────────────────────────────
+// ─── Win rate by class ───────────────────────────────────────────────────────
 
 const VERDICT_MARK: Record<Verdict, string> = {
   PASS:         'PASS',
@@ -98,11 +98,11 @@ for (const heroClass of HERO_CLASSES) {
 
 console.log()
 
-// ─── Матрица пар ──────────────────────────────────────────────────────────────
+// ─── Matchup matrix ──────────────────────────────────────────────────────────
 //
-// Печатается всегда, а не только при отклонении: именно эта таблица показывает,
-// какая часть пространства конфигураций вообще была просканирована. Пустая
-// клетка означает, что пара не встретилась ни на одном seed.
+// Always printed, not only on deviation: this table is what shows
+// how much of the configuration space was scanned at all. An empty
+// cell means the pair never came up on any seed.
 
 const perCell = Math.floor(RUNS / (HERO_CLASSES.length * ENEMY_TYPES.length))
 
@@ -139,7 +139,7 @@ if (matchupOutside > 0) {
 }
 console.log()
 
-// ─── Распределение длительности ───────────────────────────────────────────────
+// ─── Duration distribution ───────────────────────────────────────────────────
 
 const allTurns = HERO_CLASSES.flatMap(c => batch.perClass[c].turns)
 const durationMean = mean(allTurns)
@@ -153,7 +153,7 @@ const dist = histogram(allTurns)
 const maxCount = Math.max(...dist.values())
 
 for (const [turns, count] of dist) {
-  if (count / maxCount < 0.005) continue  // хвост тоньше половины процента не печатаем
+  if (count / maxCount < 0.005) continue  // a tail thinner than half a percent is not printed
   const width = Math.round((count / maxCount) * 40)
   const outside = turns < BATTLE_DURATION.min || turns > BATTLE_DURATION.max
   console.log(
@@ -167,7 +167,7 @@ console.log(`  p50 ${percentile(allTurns, 50)}   p95 ${percentile(allTurns, 95)}
             `max ${Math.max(...allTurns)}   sd ${stdDev(allTurns).toFixed(2)}`)
 console.log()
 
-// ─── Итог ─────────────────────────────────────────────────────────────────────
+// ─── Summary ─────────────────────────────────────────────────────────────────
 
 const passed = classVerdicts.filter(v => v === 'PASS').length
 const failed = classVerdicts.filter(v => v === 'FAIL').length

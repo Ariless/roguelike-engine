@@ -2,44 +2,46 @@ import { describe, it, expect } from 'vitest'
 import { ENEMY_INTENTS } from '../src/runtime/executor'
 import type { EnemyType, Intent } from '../src/engine/types'
 
-// ─── Зачем этот файл ──────────────────────────────────────────────────────────
+// ─── Why this file exists ─────────────────────────────────────────────────────
 //
-// `CLAUDE.md`, раздел Rule priority: «If Decision Tables conflict with engine
-// code, treat tables as intended spec — file a bug». До этого файла такого
-// сравнения не делал никто: 391 тест проверял, что реализованный код работает
-// правильно, и ни один не спрашивал, реализовано ли то, что описано.
+// `CLAUDE.md`, Rule priority section: "If Decision Tables conflict with engine
+// code, treat tables as intended spec — file a bug". Until this file, nobody
+// ran that comparison: 391 tests checked that the implemented code behaves
+// correctly, and not one asked whether the specified behaviour was implemented
+// at all.
 //
-// Разница принципиальная. Тест на существующий код ловит поломку. Сверка со
-// спецификацией ловит отсутствие — механику, которая есть в трёх документах и
-// в UI, но никогда не доехала до движка (BUG-14). Мутационное тестирование
-// здесь тоже слепо: мутировать нечего, кода нет.
+// The difference is not cosmetic. A test on existing code catches a break.
+// A comparison against the spec catches an absence — a mechanic that appears in
+// three documents and in the UI but never reached the engine (BUG-14). Mutation
+// testing is blind here too: there is nothing to mutate, the code isn't there.
 //
-// ─── Почему сьют остаётся зелёным при известных разрывах ─────────────────────
+// ─── Why the suite stays green while gaps are open ────────────────────────────
 //
-// Два разрыва открыты и требуют не правки, а реализации механик. Красный тест,
-// который нельзя закрыть, приучает игнорировать красный цвет — поэтому разрывы
-// зафиксированы явным списком KNOWN_GAPS с точным описанием текущего поведения.
+// Two gaps are open and need mechanics implemented, not a fix applied. A red
+// test that cannot be closed teaches people to ignore red — so the gaps are
+// pinned in an explicit KNOWN_GAPS list with the exact current behaviour.
 //
-// Список работает в обе стороны:
-//   — если расхождение изменится, тест упадёт: зафиксированное больше не верно
-//   — если механику реализуют, тест упадёт с требованием убрать врага из списка
+// The list works in both directions:
+//   — if the divergence changes, the test fails: what was pinned is no longer true
+//   — if the mechanic ships, the test fails, demanding the enemy be removed
 //
-// То есть разрыв нельзя ни тихо ухудшить, ни тихо починить.
+// So the gap can be neither silently widened nor silently closed.
 
-// ─── Спецификация ─────────────────────────────────────────────────────────────
+// ─── Specification ────────────────────────────────────────────────────────────
 //
-// Источник — docs/DECISION-TABLES.md. Записано как данные, потому что парсинг
-// markdown ломается от любой правки форматирования, а расхождение таблицы с
-// этим блоком видно в diff.
+// Source: docs/DECISION-TABLES.md. Encoded as data, because parsing markdown
+// breaks on any formatting change, while a divergence between the table and
+// this block is visible in the diff.
 
-// Спецификация НЕ выражается через тип Intent движка — и это принципиально.
-// Первая версия этого файла описывала таблицы в терминах Intent, и модель
-// немедленно соврала: заявленные действия некроманта (raise, empower) в типе
-// Intent не существуют, поэтому в спецификацию попали только запасные ветки,
-// которые с реализацией совпадают. Разрыв стал невидим ровно потому, что
-// описывался словарём той стороны, у которой его нет.
+// The spec is deliberately NOT expressed through the engine's Intent type.
+// The first version of this file described the tables in terms of Intent, and
+// the model immediately lied: the Necromancer's declared actions (raise,
+// empower) do not exist in the Intent type, so only the fallback branches made
+// it into the spec — and those do match the implementation. The gap became
+// invisible precisely because it was described in the vocabulary of the side
+// that does not have it.
 //
-// Спецификация обязана уметь называть то, чего в коде ещё нет.
+// A specification has to be able to name what the code does not have yet.
 interface SpecAction {
   kind: string
   value?: number
@@ -47,17 +49,17 @@ interface SpecAction {
 }
 
 interface SpecTurn {
-  // Основное заявленное действие хода.
+  // The main declared action for the turn.
   action: SpecAction
-  // Ветвление по состоянию поля или героя, если таблица его объявляет,
-  // и запасное действие, когда условие не выполнено.
+  // Branching on board or hero state, where the table declares it, plus the
+  // fallback action used when the condition does not hold.
   conditional?: string
   fallback?: SpecAction
 }
 
 const SPEC: Record<EnemyType, SpecTurn[]> = {
   // DECISION-TABLES.md — "Goblin — The Pressure"
-  // Каждая строка идентична: одно условие (always), одно действие.
+  // Every row is identical: one condition (always), one action.
   goblin: [
     { action: { kind: 'attack', value: 6 } },
     { action: { kind: 'attack', value: 6 } },
@@ -65,7 +67,7 @@ const SPEC: Record<EnemyType, SpecTurn[]> = {
   ],
 
   // DECISION-TABLES.md — "Guardian — The Lockdown"
-  // Shield → stun → punish. Ветвлений нет, последовательность фиксированная.
+  // Shield → stun → punish. No branching, the sequence is fixed.
   guardian: [
     { action: { kind: 'defend' } },
     { action: { kind: 'stun' } },
@@ -103,8 +105,9 @@ const SPEC: Record<EnemyType, SpecTurn[]> = {
   ],
 }
 
-// Сравнение спецификации с реализацией. Действие, которого нет в типе Intent,
-// не может совпасть ни с чем — это и есть искомый разрыв, а не ошибка сверки.
+// Comparing spec against implementation. An action absent from the Intent type
+// cannot match anything — that is the gap we are looking for, not a flaw in the
+// comparison.
 function matchesSpec(intent: Intent, action: SpecAction): boolean {
   if (intent.type !== action.kind) return false
   const intentValue = 'value' in intent ? intent.value : undefined
@@ -116,13 +119,13 @@ function matchesSpec(intent: Intent, action: SpecAction): boolean {
   return true
 }
 
-// ─── Зафиксированные разрывы ──────────────────────────────────────────────────
+// ─── Pinned gaps ──────────────────────────────────────────────────────────────
 
 interface KnownGap {
   bug: string
   reason: string
-  // Что движок делает СЕЙЧАС. Обязано совпадать точно: это защита от тихого
-  // изменения разрыва.
+  // What the engine does RIGHT NOW. Has to match exactly: this is the guard
+  // against the gap changing silently.
   actual: Intent[]
 }
 
@@ -130,8 +133,8 @@ const KNOWN_GAPS: Partial<Record<EnemyType, KnownGap>> = {
   vampire: {
     bug: 'BUG-14 (related)',
     reason:
-      'Ход 2 по спецификации — атака (усиленная при bleed), в движке — наложение bleed 2. ' +
-      'Ход 3 всегда 12 без ветки на 8. Условных интентов движок не поддерживает.',
+      'Turn 2 per the spec is an attack (amplified when bleed is present); the engine applies ' +
+      'bleed 2 instead. Turn 3 is always 12 with no branch to 8. The engine has no conditional intents.',
     actual: [
       { type: 'attack', value: 6, lifesteal: true },
       { type: 'bleed', value: 2 },
@@ -141,10 +144,10 @@ const KNOWN_GAPS: Partial<Record<EnemyType, KnownGap>> = {
   necromancer: {
     bug: 'BUG-14',
     reason:
-      'Raise Dead и Empower не существуют в движке: тип Intent содержит только ' +
-      'attack/bleed/defend/stun. Механика реализована в game/index.html и в src/ ' +
-      'встречается лишь в комментариях. Некромант не наносит прямого урона и ' +
-      'проигрывает 4000 боёв из 4000.',
+      'Raise Dead and Empower do not exist in the engine: the Intent type only holds ' +
+      'attack/bleed/defend/stun. The mechanic is implemented in game/index.html and appears in ' +
+      'src/ only inside comments. The Necromancer deals no direct damage and loses 4,000 ' +
+      'battles out of 4,000.',
     actual: [
       { type: 'bleed', value: 3 },
       { type: 'bleed', value: 3 },
@@ -155,92 +158,93 @@ const KNOWN_GAPS: Partial<Record<EnemyType, KnownGap>> = {
 
 const ALL_ENEMIES = Object.keys(SPEC) as EnemyType[]
 
-// ─── Полнота сверки ───────────────────────────────────────────────────────────
+// ─── Completeness of the comparison ───────────────────────────────────────────
 
-describe('покрытие спецификацией', () => {
-  it('у каждого врага движка есть таблица решений', () => {
+describe('specification coverage', () => {
+  it('every enemy in the engine has a decision table', () => {
     expect(Object.keys(ENEMY_INTENTS).sort()).toEqual(ALL_ENEMIES.sort())
   })
 
-  it('длина цикла интентов совпадает со спецификацией', () => {
+  it('the intent cycle length matches the specification', () => {
     for (const enemy of ALL_ENEMIES) {
-      expect(ENEMY_INTENTS[enemy].length, `${enemy}: длина цикла`).toBe(SPEC[enemy].length)
+      expect(ENEMY_INTENTS[enemy].length, `${enemy}: cycle length`).toBe(SPEC[enemy].length)
     }
   })
 })
 
-// ─── Соответствие ─────────────────────────────────────────────────────────────
+// ─── Compliance ───────────────────────────────────────────────────────────────
 
-describe('интенты соответствуют таблицам решений', () => {
+describe('intents comply with the decision tables', () => {
   const compliant = ALL_ENEMIES.filter(e => !(e in KNOWN_GAPS))
 
-  it.each(compliant)('%s выполняет ровно то, что описано', enemy => {
+  it.each(compliant)('%s does exactly what is specified', enemy => {
     SPEC[enemy].forEach((turn, index) => {
       expect(
         matchesSpec(ENEMY_INTENTS[enemy][index], turn.action),
-        `${enemy} ход ${index + 1}: спецификация требует ` +
-        `${JSON.stringify(turn.action)}, движок делает ` +
+        `${enemy} turn ${index + 1}: the spec requires ` +
+        `${JSON.stringify(turn.action)}, the engine does ` +
         `${JSON.stringify(ENEMY_INTENTS[enemy][index])}`,
       ).toBe(true)
     })
   })
 })
 
-// ─── Зафиксированные разрывы ──────────────────────────────────────────────────
+// ─── Pinned gaps ──────────────────────────────────────────────────────────────
 
-describe('известные разрывы спецификации и движка', () => {
+describe('known gaps between specification and engine', () => {
   const gaps = Object.keys(KNOWN_GAPS) as EnemyType[]
 
-  it.each(gaps)('%s: разрыв не изменился', enemy => {
+  it.each(gaps)('%s: the gap has not changed', enemy => {
     const gap = KNOWN_GAPS[enemy]!
     expect(
       ENEMY_INTENTS[enemy],
-      `Поведение ${enemy} изменилось, но KNOWN_GAPS не обновлён. ` +
-      `Если механика реализована — убери врага из KNOWN_GAPS. ` +
-      `Если изменилось что-то другое — обнови actual и проверь ${gap.bug}.`,
+      `${enemy} behaviour changed but KNOWN_GAPS was not updated. ` +
+      `If the mechanic is implemented, remove the enemy from KNOWN_GAPS. ` +
+      `If something else changed, update actual and re-check ${gap.bug}.`,
     ).toEqual(gap.actual)
   })
 
-  it.each(gaps)('%s: разрыв всё ещё существует', enemy => {
-    // Падает в тот момент, когда реализация догоняет спецификацию. Это и есть
-    // сигнал закрыть BUG-14 и убрать врага из списка — иначе разрыв закроют,
-    // а запись о нём останется висеть и введёт в заблуждение следующего.
+  it.each(gaps)('%s: the gap still exists', enemy => {
+    // Fails the moment the implementation catches up with the spec. That is the
+    // signal to close BUG-14 and drop the enemy from the list — otherwise the
+    // gap gets closed while the record of it stays behind and misleads whoever
+    // reads it next.
     const compliant = SPEC[enemy].every((turn, index) =>
       matchesSpec(ENEMY_INTENTS[enemy][index], turn.action),
     )
     expect(
       compliant,
-      `${enemy} теперь соответствует спецификации — убери его из KNOWN_GAPS ` +
-      `и закрой ${KNOWN_GAPS[enemy]!.bug} в BUGS.md.`,
+      `${enemy} now complies with the specification — remove it from KNOWN_GAPS ` +
+      `and close ${KNOWN_GAPS[enemy]!.bug} in BUGS.md.`,
     ).toBe(false)
   })
 })
 
-// ─── Условные интенты ─────────────────────────────────────────────────────────
+// ─── Conditional intents ──────────────────────────────────────────────────────
 
-describe('условные строки таблиц решений', () => {
-  it('движок не поддерживает условные интенты — все такие строки нереализуемы', () => {
-    // Не придирка к отдельным врагам, а свойство модели: интент выбирается как
-    // intents[turnIndex % length], состояние поля в выборе не участвует.
-    // Пока это так, любая строка таблицы вида «если X → действие A, иначе B»
-    // не может быть выполнена, каким бы ни было содержимое таблиц.
+describe('conditional rows in the decision tables', () => {
+  it('the engine has no conditional intents, so every such row is unimplementable', () => {
+    // Not a complaint about individual enemies but a property of the model: the
+    // intent is picked as intents[turnIndex % length], and board state plays no
+    // part in that choice. While that holds, any table row of the shape
+    // "if X → action A, else B" cannot be executed, whatever the tables say.
     const conditionalRows = ALL_ENEMIES.flatMap(enemy =>
       SPEC[enemy]
         .map((turn, index) => ({ enemy, turn: index + 1, condition: turn.conditional }))
         .filter(row => row.condition),
     )
 
-    // Условные строки в таблицах есть — значит спецификация требует механизма,
-    // которого нет. Тест фиксирует объём долга.
+    // The tables do contain conditional rows, which means the spec requires a
+    // mechanism that does not exist. This test pins the size of that debt.
     expect(conditionalRows.length).toBeGreaterThan(0)
 
-    // Ни один враг с условными строками не может им соответствовать.
+    // No enemy with conditional rows can possibly comply with them.
     for (const row of conditionalRows) {
       expect(
         row.enemy in KNOWN_GAPS,
-        `${row.enemy} ход ${row.turn} описан условием «${row.condition}», ` +
-        `но условных интентов движок не поддерживает. Такой враг обязан быть ` +
-        `в KNOWN_GAPS, пока механизм не появится.`,
+        `${row.enemy} turn ${row.turn} is specified with the condition "${row.condition}", ` +
+        `but the engine has no conditional intents. Such an enemy has to stay in ` +
+        `KNOWN_GAPS until the mechanism exists.`,
       ).toBe(true)
     }
   })

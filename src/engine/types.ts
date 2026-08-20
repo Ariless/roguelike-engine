@@ -5,10 +5,10 @@ export type StatusName = 'bleed' | 'stun' | 'defend' | 'vulnerable'
 export interface Status {
   name: StatusName
   stacks: number
-  duration?: number  // сколько ходов осталось (undefined = бесконечно пока не снят)
+  duration?: number  // turns remaining (undefined = indefinite until removed)
 }
 
-// ─── Enemy intent (что враг сделает в следующий ход) ─────────────────────────
+// ─── Enemy intent (what the enemy will do next turn) ─────────────────────────
 
 export type Intent =
   | { type: 'attack'; value: number; lifesteal?: boolean }
@@ -48,8 +48,8 @@ export interface Card {
 export interface Hero extends Entity {
   heroClass: HeroClass
   formState: FormState
-  hand: string[]       // id карт в руке
-  energy: number       // очки действий за ход
+  hand: string[]       // ids of the cards in hand
+  energy: number       // action points per turn
   chargeStacks?: number     // Paladin only; undefined = 0
   rageStacks?: number       // Berserker only; undefined = 0
   werewolfTurnsLeft?: number // Berserker only; 0 = not in werewolf form
@@ -59,7 +59,7 @@ export type EnemyType = 'goblin' | 'guardian' | 'vampire' | 'necromancer'
 
 export interface Enemy extends Entity {
   enemyType: EnemyType
-  intent: Intent       // что сделает в этот ход
+  intent: Intent       // what it will do this turn
 }
 
 // ─── Game state ───────────────────────────────────────────────────────────────

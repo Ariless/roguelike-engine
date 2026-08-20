@@ -1,30 +1,31 @@
 import { describe, it, expect } from 'vitest'
 import { createRng, nextInt, pick, shuffle } from '../src/runtime/rng'
 
-// ─── Зачем этот файл ──────────────────────────────────────────────────────────
+// ─── Why this file exists ─────────────────────────────────────────────────────
 //
-// rng.test.ts проверяет КОНТРАКТ генератора: тот же seed → та же
-// последовательность, значения в границах, shuffle не мутирует вход. Всё это
-// свойства отдельного вызова.
+// rng.test.ts checks the generator's CONTRACT: same seed → same sequence,
+// values within bounds, shuffle does not mutate its input. All of those are
+// properties of an individual call.
 //
-// Здесь проверяется РАСПРЕДЕЛЕНИЕ: генератор, проходящий каждый тест из
-// rng.test.ts, может при этом выдавать 1 вдвое чаще, чем 6. Контракт держится,
-// баланс уезжает, и ни один существующий тест этого не увидит.
+// This file checks the DISTRIBUTION. A generator that passes every test in
+// rng.test.ts can still roll a 1 twice as often as a 6. The contract holds, the
+// balance drifts, and not one existing test would see it.
 //
-// Про флейки: статистический тест на случайных seed'ах падает раз в N прогонов
-// по построению — это нормально для лаборатории и неприемлемо в CI. Все seed'ы
-// здесь фиксированы, поэтому каждая метрика воспроизводима до последней цифры.
-// Тест либо зелёный всегда, либо красный всегда. Красный означает, что кто-то
-// изменил генератор, а не что сегодня не повезло.
+// On flakiness: a statistical test on random seeds fails once every N runs by
+// construction. That is fine in a lab and unacceptable in CI. Every seed here is
+// fixed, so each metric is reproducible to the last digit. The test is either
+// always green or always red. Red means somebody changed the generator, not
+// that today was unlucky.
 
-// ─── Статистический аппарат ───────────────────────────────────────────────────
+// ─── Statistical apparatus ────────────────────────────────────────────────────
 
 function chiSquare(observed: number[], expected: number): number {
   return observed.reduce((acc, o) => acc + (o - expected) ** 2 / expected, 0)
 }
 
-// Критические значения χ² при α = 0.001. Порог намеренно строгий: seed'ы
-// фиксированы, запас нужен не от невезения, а от малых сдвигов распределения.
+// Critical χ² values at α = 0.001. The threshold is deliberately strict: the
+// seeds are fixed, so the margin is there to absorb small distribution shifts,
+// not bad luck.
 const CHI2_CRITICAL: Record<number, number> = {
   4:  18.467,
   5:  20.515,
@@ -33,17 +34,17 @@ const CHI2_CRITICAL: Record<number, number> = {
   99: 148.230,
 }
 
-// Двусторонний нормальный порог при α = 0.001
+// Two-sided normal threshold at α = 0.001
 const Z_CRITICAL = 3.291
 
 function meanOf(xs: number[]): number {
   return xs.reduce((a, b) => a + b, 0) / xs.length
 }
 
-// ─── Равномерность одного потока ──────────────────────────────────────────────
+// ─── Uniformity of a single stream ────────────────────────────────────────────
 
-describe('распределение createRng', () => {
-  it('значения равномерны по 100 бинам на четырёх независимых seed', () => {
+describe('createRng distribution', () => {
+  it('values are uniform across 100 bins on four independent seeds', () => {
     const N = 200_000
     const BINS = 100
 
@@ -56,9 +57,9 @@ describe('распределение createRng', () => {
     }
   })
 
-  it('пары соседних значений равномерны по решётке 10×10', () => {
-    // Ловит решётчатую структуру: у слабых генераторов точки (x_i, x_i+1)
-    // ложатся на небольшое число гиперплоскостей вместо заполнения квадрата.
+  it('pairs of consecutive values are uniform across a 10×10 lattice', () => {
+    // Catches lattice structure: with weak generators the points (x_i, x_i+1)
+    // land on a small number of hyperplanes instead of filling the square.
     const N = 200_000
     const SIDE = 10
     const cells = new Array(SIDE * SIDE).fill(0)
@@ -73,20 +74,21 @@ describe('распределение createRng', () => {
     expect(chiSquare(cells, N / (SIDE * SIDE))).toBeLessThan(CHI2_CRITICAL[99])
   })
 
-  it('старший бит выпадает в половине случаев (monobit)', () => {
+  it('the high bit comes up half the time (monobit)', () => {
     const N = 500_000
     const rng = createRng(31337)
     let ones = 0
     for (let i = 0; i < N; i++) if (rng() >= 0.5) ones++
 
-    // Доля ~ N(0.5, 1/(4N)) → z = (2·ones − N) / √N
+    // The proportion ~ N(0.5, 1/(4N)) → z = (2·ones − N) / √N
     const z = (2 * ones - N) / Math.sqrt(N)
     expect(Math.abs(z)).toBeLessThan(Z_CRITICAL)
   })
 
-  it('серии выше и ниже медианы имеют ожидаемую длину (runs test)', () => {
-    // Генератор может дать идеально равномерную гистограмму и при этом ходить
-    // длинными сериями «всё выше медианы / всё ниже». Гистограмма это пропустит.
+  it('runs above and below the median have the expected length (runs test)', () => {
+    // A generator can produce a perfectly uniform histogram and still walk in
+    // long streaks of "all above the median / all below it". The histogram
+    // would miss that entirely.
     const N = 200_000
     const rng = createRng(4242)
 
@@ -110,7 +112,7 @@ describe('распределение createRng', () => {
     expect(Math.abs(z)).toBeLessThan(Z_CRITICAL)
   })
 
-  it('соседние значения не коррелируют (lag-1)', () => {
+  it('consecutive values are uncorrelated (lag-1)', () => {
     const N = 500_000
     const rng = createRng(999)
 
@@ -127,17 +129,18 @@ describe('распределение createRng', () => {
       (N * sxy - sx * sy) /
       Math.sqrt((N * sxx - sx * sx) * (N * syy - sy * sy))
 
-    // При независимости r ≈ N(0, 1/N)
+    // Under independence r ≈ N(0, 1/N)
     expect(Math.abs(r) * Math.sqrt(N)).toBeLessThan(Z_CRITICAL)
   })
 })
 
-// ─── Равномерность производных функций ────────────────────────────────────────
-// Генератор может быть безупречен, а обёртка над ним — смещена. Классика:
-// целочисленное сведение через остаток даёт лишний вес младшим значениям.
+// ─── Uniformity of the derived functions ──────────────────────────────────────
+// The generator can be flawless while the wrapper around it is biased. The
+// classic case: reducing to an integer via a modulo gives extra weight to the
+// lower values.
 
-describe('распределение nextInt', () => {
-  it('шестигранник не смещён', () => {
+describe('nextInt distribution', () => {
+  it('a six-sided die is unbiased', () => {
     const N = 600_000
     const bins = new Array(6).fill(0)
     const rng = createRng(2024)
@@ -146,9 +149,9 @@ describe('распределение nextInt', () => {
     expect(chiSquare(bins, N / 6)).toBeLessThan(CHI2_CRITICAL[5])
   })
 
-  it('диапазон, не кратный степени двойки, не смещён', () => {
-    // 1..10 — 10 не делит 2³², то есть именно тот случай, где сведение
-    // целочисленного генератора к диапазону обычно и уезжает.
+  it('a range that is not a power of two is unbiased', () => {
+    // 1..10 — 10 does not divide 2³², which is exactly the case where reducing
+    // an integer generator to a range usually drifts.
     const N = 500_000
     const bins = new Array(10).fill(0)
     const rng = createRng(555)
@@ -157,7 +160,7 @@ describe('распределение nextInt', () => {
     expect(chiSquare(bins, N / 10)).toBeLessThan(CHI2_CRITICAL[9])
   })
 
-  it('среднее по диапазону сходится к середине', () => {
+  it('the mean over a range converges to the midpoint', () => {
     const N = 200_000
     const rng = createRng(8080)
     const values: number[] = new Array(N)
@@ -167,8 +170,8 @@ describe('распределение nextInt', () => {
   })
 })
 
-describe('распределение pick', () => {
-  it('каждый элемент выбирается одинаково часто', () => {
+describe('pick distribution', () => {
+  it('every element is chosen equally often', () => {
     const N = 500_000
     const items = ['a', 'b', 'c', 'd', 'e']
     const counts: Record<string, number> = { a: 0, b: 0, c: 0, d: 0, e: 0 }
@@ -180,11 +183,12 @@ describe('распределение pick', () => {
   })
 })
 
-describe('распределение shuffle', () => {
-  it('все 24 перестановки четырёх элементов равновероятны', () => {
-    // Тест на корректность Fisher-Yates. Наивная реализация (случайный индекс
-    // по всей длине вместо оставшегося хвоста) даёт все перестановки, но с
-    // разными вероятностями — видно только по такой гистограмме.
+describe('shuffle distribution', () => {
+  it('all 24 permutations of four elements are equally likely', () => {
+    // A correctness test for Fisher-Yates. The naive implementation (a random
+    // index across the whole length instead of the remaining tail) still
+    // produces every permutation, but with different probabilities — visible
+    // only in a histogram like this one.
     const N = 240_000
     const permutations = new Map<string, number>()
     const rng = createRng(1234)
@@ -199,7 +203,7 @@ describe('распределение shuffle', () => {
       .toBeLessThan(CHI2_CRITICAL[23])
   })
 
-  it('каждый элемент попадает в каждую позицию одинаково часто', () => {
+  it('every element lands in every position equally often', () => {
     const N = 200_000
     const SIZE = 5
     const positions = Array.from({ length: SIZE }, () => new Array(SIZE).fill(0))
@@ -216,38 +220,39 @@ describe('распределение shuffle', () => {
   })
 })
 
-// ─── Пространство seed: где генератор перестаёт держать обещание ──────────────
+// ─── Seed space: where the generator stops keeping its promise ────────────────
 //
-// Всё выше — про качество одного потока. Ниже — про то, что потоков на самом
-// деле меньше, чем кажется. Для симуляции это важнее равномерности: два прогона,
-// которые считаются независимыми, могут оказаться одним и тем же прогоном.
+// Everything above is about the quality of one stream. What follows is about
+// there being fewer streams than it looks. For a simulation that matters more
+// than uniformity: two runs believed to be independent may turn out to be the
+// same run.
 
-describe('пространство seed', () => {
-  it('seed усечён до 32 бит: seed и seed + 2³² дают один поток', () => {
-    // rng.ts:7 — `let s = seed >>> 0`. Всё, что выше 2³², молча теряется.
-    // rng.test.ts:30 проверяет, что createRng(MAX_SAFE_INTEGER) не бросает
-    // исключение — и проходит, потому что усечение исключения не бросает.
-    // Тест зелёный, а seed при этом не тот, который передали.
+describe('seed space', () => {
+  it('the seed is truncated to 32 bits: seed and seed + 2³² give one stream', () => {
+    // rng.ts:7 — `let s = seed >>> 0`. Anything above 2³² is silently lost.
+    // rng.test.ts:30 checks that createRng(MAX_SAFE_INTEGER) does not throw,
+    // and it passes, because truncation does not throw. The test is green while
+    // the seed is not the one that was passed in.
     const a = createRng(7)
     const b = createRng(7 + 2 ** 32)
     expect([a(), a(), a()]).toEqual([b(), b(), b()])
 
-    // Number.MAX_SAFE_INTEGER схлопывается в 2³² − 1
+    // Number.MAX_SAFE_INTEGER collapses into 2³² − 1
     expect(createRng(Number.MAX_SAFE_INTEGER)()).toBe(createRng(4294967295)())
   })
 
-  it('различимых seed ровно 2³², и это потолок числа независимых прогонов', () => {
-    // Прямое следствие усечения: сколько бы прогонов ни просили, начиная
-    // с 2³² они начнут повторять уже посчитанные.
+  it('there are exactly 2³² distinguishable seeds, and that caps independent runs', () => {
+    // A direct consequence of the truncation: however many runs are requested,
+    // from 2³² onwards they start repeating runs already counted.
     const DISTINCT_SEEDS = 2 ** 32
 
     expect(createRng(0)()).toBe(createRng(DISTINCT_SEEDS)())
     expect(createRng(1)()).toBe(createRng(DISTINCT_SEEDS + 1)())
   })
 
-  it('соседние seed дают непересекающиеся потоки', () => {
-    // Рабочий случай: simulate.ts берёт seed = номер прогона. Проверяем, что
-    // на используемом отрезке потоки действительно расходятся.
+  it('adjacent seeds give non-overlapping streams', () => {
+    // The working case: simulate.ts takes seed = run number. This checks that
+    // the streams really do diverge across the range actually in use.
     for (let seed = 0; seed < 200; seed++) {
       const a = createRng(seed)
       const b = createRng(seed + 1)
@@ -258,19 +263,19 @@ describe('пространство seed', () => {
     }
   })
 
-  it.fails('разные seed дают независимые потоки', () => {
-    // Ложный инвариант — документирует реальное устройство генератора.
+  it.fails('different seeds give independent streams', () => {
+    // A false invariant — it documents how the generator is actually built.
     //
-    // mulberry32 продвигает состояние прибавлением константы 0x6D2B79F5.
-    // Значит seed не выбирает поток, а выбирает точку входа в один общий
-    // поток длины 2³². Два seed, отличающиеся ровно на эту константу, дают
-    // одну и ту же последовательность со сдвигом на один шаг.
+    // mulberry32 advances its state by adding the constant 0x6D2B79F5. So the
+    // seed does not choose a stream, it chooses an entry point into one shared
+    // stream of length 2³². Two seeds differing by exactly that constant give
+    // the same sequence, offset by a single step.
     //
-    // Для simulate.ts с seed = 0…N это безопасно: расстояние между соседними
-    // точками входа огромно. Опасность появляется в момент, когда seed начнут
-    // брать из времени, хеша или счётчика с шагом — тогда два «независимых»
-    // прогона могут оказаться одним, и статистика по ним будет считать
-    // один результат дважды.
+    // For simulate.ts with seeds 0…N this is safe: the distance between
+    // adjacent entry points is enormous. The danger appears the moment seeds
+    // start coming from a clock, a hash, or a counter with a stride — then two
+    // "independent" runs can turn out to be one, and the statistics over them
+    // will count a single result twice.
     const DELTA = 0x6D2B79F5
     const a = createRng(1)
     const b = createRng((1 + DELTA) >>> 0)
@@ -278,7 +283,7 @@ describe('пространство seed', () => {
     const headA = [a(), a(), a(), a(), a()]
     const headB = [b(), b(), b(), b(), b()]
 
-    // Assert намеренно ложный: headB — это headA, сдвинутый на один шаг
+    // The assertion is deliberately false: headB is headA shifted by one step
     expect(headA.slice(1)).not.toEqual(headB.slice(0, 4))
   })
 })

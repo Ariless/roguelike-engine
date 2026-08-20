@@ -1,7 +1,7 @@
-// Общий прогонный слой для симуляционных скриптов.
-// simulate.ts и stability.ts гоняют один и тот же автоплеер — если он разъедется
-// между скриптами, их отчёты начнут противоречить друг другу, и понять, какой
-// прав, будет уже нельзя.
+// Shared run layer for the simulation scripts.
+// simulate.ts and stability.ts run the same auto-player — if the two drift apart
+// between the scripts, their reports will start contradicting each other, and telling which one is
+// right will no longer be possible.
 
 import { createGame } from '../../src/runtime/executor'
 import { createRng, shuffle } from '../../src/runtime/rng'
@@ -15,9 +15,9 @@ export const HERO_CLASSES: readonly HeroClass[] =
 export const ENEMY_TYPES: readonly EnemyType[] =
   ['goblin', 'guardian', 'vampire', 'necromancer']
 
-// Карты, доступные автоплееру. Экспортируются, потому что chaos-agent играет по
-// своей стратегии, но теми же картами — а расхождение колод между скриптами
-// означало бы, что они гоняют разные игры под одинаковыми названиями отчётов.
+// Cards available to the auto-player. Exported because the chaos agent plays by
+// its own strategy but with the same cards — and a deck divergence between the scripts
+// would mean they run different games under identical report headings.
 export const HERO_CARDS: Record<HeroClass, string[]> = {
   paladin:   ['righteous_strike', 'divine_charge', 'stubborn_recovery'],
   bloodmage: ['chaos_bolt', 'open_the_wound', 'bloodrite'],
@@ -25,24 +25,24 @@ export const HERO_CARDS: Record<HeroClass, string[]> = {
   werewolf:  ['lunar_strike', 'pack_sense', 'stalk', 'rend', 'rampage', 'reality_crack'],
 }
 
-// Карты, которым не нужна живая цель.
+// Cards that do not need a living target.
 export const SELF_ONLY = [
   'primal_dodge', 'stubborn_recovery', 'divine_charge', 'reality_crack', 'rampage',
 ]
 
-// ─── Раскладка seed по конфигурациям ──────────────────────────────────────────
+// ─── Mapping seeds onto configurations ───────────────────────────────────────
 //
-// Раньше обе координаты брались из одного остатка:
+// Both coordinates used to come from the same remainder:
 //     heroClass = HERO_CLASSES[seed % 4]
 //     enemyType = ENEMY_TYPES[seed % 4]
-// то есть seed выбирал не пару, а диагональ матрицы 4×4. Paladin встречал
-// только Goblin, Werewolf — только Necromancer, и 12 из 16 сочетаний не
-// проверялись ни на одном seed, сколько бы прогонов ни просили. Винрейты
-// 99.8% и 100% — не свойство героев, а следствие того, что каждому из них
-// доставался фиксированный противник.
+// so the seed was choosing not a pair but the diagonal of a 4×4 matrix. Paladin only ever met
+// the Goblin, Werewolf only the Necromancer, and 12 of the 16 combinations
+// were never checked on any seed, however many runs were requested. The win rates
+// 99.8% and 100% are not a property of the heroes but a consequence of each of them
+// being handed a fixed opponent.
 //
-// Теперь вторая координата берётся из старшей части seed: полный цикл по всем
-// 16 парам, каждая получает ровно 1/16 прогонов.
+// Now the second coordinate comes from the high part of the seed: a full cycle over
+// all 16 pairs, each getting exactly 1/16 of the runs.
 
 export function configFor(seed: number): { heroClass: HeroClass; enemyType: EnemyType } {
   return {
@@ -55,15 +55,15 @@ export function matchupKey(heroClass: HeroClass, enemyType: EnemyType): string {
   return `${heroClass}|${enemyType}`
 }
 
-// ─── Автоплеер ────────────────────────────────────────────────────────────────
-// Случайно-жадный: каждый ход разыгрывает 1–3 доступные карты в случайном
-// порядке. Играет заведомо неоптимально — это осознанно. Винрейт неоптимальной
-// игры показывает, есть ли в бою вызов вообще; винрейт идеальной игры показал
-// бы только потолок.
+// ─── Auto-player ─────────────────────────────────────────────────────────────
+// Random-greedy: each turn it plays 1–3 available cards in random
+// order. It plays sub-optimally on purpose. The win rate of sub-optimal
+// play shows whether the fight has any challenge at all; the win rate of perfect play would show
+// would give only the ceiling.
 
 export function autoPlay(seed: number, heroClass: HeroClass, enemyType: EnemyType): ReplayLog {
   const game = createGame({ seed, heroClass, enemyType })
-  const rng = createRng(seed ^ 0xDEAD)  // отдельный поток на выбор карт
+  const rng = createRng(seed ^ 0xDEAD)  // a separate stream for choosing cards
 
   for (let turn = 0; turn < 50; turn++) {
     if (game.getState().isOver) break
@@ -91,7 +91,7 @@ export function autoPlay(seed: number, heroClass: HeroClass, enemyType: EnemyTyp
   return game.getLog()
 }
 
-// ─── Батч ─────────────────────────────────────────────────────────────────────
+// ─── Batch ───────────────────────────────────────────────────────────────────
 
 export interface ClassStats {
   wins: number
@@ -120,8 +120,8 @@ function emptyClassStats(): ClassStats {
 }
 
 export interface BatchOptions {
-  // Архивировать падающие прогоны в /artifacts/. Выключено в многобатчевом
-  // режиме: сотня батчей засыпала бы каталог сотнями файлов про одно и то же.
+  // Archive failing runs into /artifacts/. Disabled in the multi-batch
+  // mode: a hundred batches would bury the directory in hundreds of files about the same thing.
   archiveFailures?: boolean
   onProgress?: (done: number, total: number) => void
 }
@@ -147,7 +147,7 @@ export function runBatch(runs: number, baseSeed = 0, options: BatchOptions = {})
     try {
       log = autoPlay(seed, heroClass, enemyType)
     } catch {
-      // Нарушен инвариант — таймлайн испорчен, исход не определён
+      // An invariant broke — the timeline is corrupted, the outcome is undefined
       corrupted++
       failingSeeds.push(seed)
       perClass[heroClass].corrupted++
@@ -176,7 +176,7 @@ export function runBatch(runs: number, baseSeed = 0, options: BatchOptions = {})
       matchup.turns.push(finalTurn)
     }
 
-    // Расхождение хешей — сломан детерминизм, а не баланс. Отдельный класс отказа.
+    // A hash divergence means broken determinism, not broken balance. A separate failure class.
     if (log.snapshots.some(snap => !snap.hashValid)) {
       if (!failingSeeds.includes(seed)) failingSeeds.push(seed)
       if (archiveFailures) saveFailingRun(log)

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { applyDamage, applyHeal } from '../src/engine/resolution'
 import type { GameState } from '../src/engine/types'
 
-// Вспомогательная функция — создаёт минимальный стейт для тестов
+// Helper — builds a minimal state for tests
 function makeState(options: {
   heroHp?: number
   heroDefend?: number
@@ -46,61 +46,61 @@ function makeState(options: {
 // ─── applyDamage ──────────────────────────────────────────────────────────────
 
 describe('applyDamage', () => {
-  it('уменьшает HP цели на величину урона', () => {
+  it('reduces target HP by the damage amount', () => {
     const state = makeState({ enemyHp: 25 })
     const next = applyDamage(state, 'goblin-0', 10)
     expect(next.enemies[0].hp).toBe(15)
   })
 
-  it('HP не уходит ниже 0', () => {
+  it('HP never goes below 0', () => {
     const state = makeState({ enemyHp: 5 })
     const next = applyDamage(state, 'goblin-0', 100)
     expect(next.enemies[0].hp).toBe(0)
   })
 
-  it('alive → death_door когда HP доходит до 0', () => {
+  it('alive → death_door when HP reaches 0', () => {
     const state = makeState({ enemyHp: 10 })
     const next = applyDamage(state, 'goblin-0', 10)
     expect(next.enemies[0].state).toBe('death_door')
   })
 
-  it('defend поглощает урон перед HP', () => {
+  it('defend absorbs damage before HP', () => {
     const state = makeState({ heroHp: 45, heroDefend: 4 })
     const next = applyDamage(state, 'hero', 10)
-    // defend поглотил 4, реальный урон = 6
+    // defend absorbed 4, actual damage = 6
     expect(next.hero.hp).toBe(39)
   })
 
-  it('defend удаляется после поглощения', () => {
+  it('defend is removed once it is consumed', () => {
     const state = makeState({ heroHp: 45, heroDefend: 4 })
     const next = applyDamage(state, 'hero', 10)
     const defend = next.hero.statuses.find(s => s.name === 'defend')
     expect(defend).toBeUndefined()
   })
 
-  it('defend частично поглощает — остаток остаётся', () => {
+  it('defend absorbs partially and the remainder stays', () => {
     const state = makeState({ heroHp: 45, heroDefend: 8 })
     const next = applyDamage(state, 'hero', 5)
-    // урон 5, defend 8 → поглотил 5, осталось 3
+    // damage 5, defend 8 → absorbed 5, 3 left
     const defend = next.hero.statuses.find(s => s.name === 'defend')
     expect(defend?.stacks).toBe(3)
-    expect(next.hero.hp).toBe(45) // HP не изменился
+    expect(next.hero.hp).toBe(45) // HP unchanged
   })
 
-  it('не меняет других врагов', () => {
+  it('leaves the other enemies alone', () => {
     const state = makeState({ enemyHp: 25 })
     const next = applyDamage(state, 'goblin-0', 10)
     expect(next.hero.hp).toBe(state.hero.hp)
   })
 
-  it('death_door → dead при повторном ударе', () => {
+  it('death_door → dead on the next hit', () => {
     const state = makeState({ enemyHp: 0 })
     const atDoor = { ...state, enemies: [{ ...state.enemies[0], state: 'death_door' as const }] }
     const next = applyDamage(atDoor, 'goblin-0', 5)
     expect(next.enemies[0].state).toBe('dead')
   })
 
-  it('мёртвая сущность не получает урон', () => {
+  it('a dead entity takes no damage', () => {
     const state = makeState({ enemyHp: 5 })
     const dead = { ...state, enemies: [{ ...state.enemies[0], state: 'dead' as const }] }
     const next = applyDamage(dead, 'goblin-0', 10)
@@ -112,19 +112,19 @@ describe('applyDamage', () => {
 // ─── applyHeal ────────────────────────────────────────────────────────────────
 
 describe('applyHeal', () => {
-  it('восстанавливает HP', () => {
+  it('restores HP', () => {
     const state = makeState({ heroHp: 30 })
     const next = applyHeal(state, 'hero', 20)
     expect(next.hero.hp).toBe(50)
   })
 
-  it('HP не превышает maxHp', () => {
+  it('HP never exceeds maxHp', () => {
     const state = makeState({ heroHp: 85 })
     const next = applyHeal(state, 'hero', 100)
     expect(next.hero.hp).toBe(90) // maxHp = 90
   })
 
-  it('death_door → alive при лечении', () => {
+  it('death_door → alive when healed', () => {
     const state = makeState({ heroHp: 0 })
     const withDoor = { ...state, hero: { ...state.hero, state: 'death_door' as const } }
     const next = applyHeal(withDoor, 'hero', 10)

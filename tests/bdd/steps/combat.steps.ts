@@ -23,14 +23,14 @@ function makeTestHero(heroClass: HeroClass, hp: number, maxHp: number): Hero {
 
 // ─── Parameter types ─────────────────────────────────────────────────────────
 //
-// Имена героев и врагов объявлены как типы параметров, а не как {word}.
-// Причина конкретная: {word} матчит ровно одно слово, поэтому сценарий с
-// «Blood Mage» не находил ни одного определения шага и оставался undefined —
-// Cucumber помечал его жёлтым и шёл дальше, а прогон при этом завершался
-// успешно. Единственный герой из двух слов молча выпадал из BDD-набора.
+// Hero and enemy names are declared as parameter types rather than as {word}.
+// The reason is specific: {word} matches exactly one word, so a scenario with
+// "Blood Mage" matched no step definition and stayed undefined —
+// Cucumber marked it yellow and moved on, while the run still finished
+// successfully. The only two-word hero silently dropped out of the BDD set.
 //
-// Явный тип параметра закрывает и обратную задачу: опечатка в имени героя
-// теперь тоже даёт undefined вместо тихого отката к 'paladin' через `?? `.
+// An explicit parameter type also closes the reverse problem: a typo in a hero name
+// now also yields undefined instead of silently falling back to 'paladin' via `?? `.
 
 defineParameterType({
   name: 'hero',

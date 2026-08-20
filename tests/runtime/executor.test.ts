@@ -128,6 +128,35 @@ describe('endTurn', () => {
     expect(game.getState().hero.hp).toBeLessThanOrEqual(hpAfterBleed)
   })
 
+  it('enemy killed by lethal bleed is dead (not death_door) after endTurn', () => {
+    // Regression: tickStatuses puts enemy in death_door; resolveAndCheckWin must convert
+    // to dead immediately. If this step is missing, enemy stays in death_door for one more
+    // turn — the bug that caused the death_door glow in game UI.
+    //
+    // Setup: bloodmage vs goblin (20 HP)
+    // Turn 1 cards: chaos_bolt (5) + bloodrite (8) = 13 dmg → goblin at 7 HP
+    // Turn 1 endTurn: goblin attacks
+    // Turn 2 cards: open_the_wound (3 bleed) + chaos_bolt (5 dmg) → goblin at 2 HP
+    // Turn 2 endTurn: goblin attacks, then bleed tick (3) → goblin 0 HP → dead
+
+    const game = createGame({ seed: 42, heroClass: 'bloodmage', enemyType: 'goblin' })
+
+    // Turn 1: reduce goblin to 7 HP
+    game.playCard('chaos_bolt')  // 5 dmg → goblin 15 HP
+    game.playCard('bloodrite')   // 8 dmg → goblin 7 HP, self 3 dmg
+    game.endTurn()               // goblin attacks hero for 6
+
+    // Turn 2: apply bleed + finish setup for lethal tick
+    game.playCard('open_the_wound') // 3 bleed on goblin (no direct dmg)
+    game.playCard('chaos_bolt')     // 5 dmg → goblin 2 HP
+    const final = game.endTurn()    // goblin attacks, then bleed(3) → goblin 0 HP → dead
+
+    expect(final.isOver).toBe(true)
+    expect(final.winner).toBe('hero')
+    expect(final.enemies[0].hp).toBe(0)
+    expect(final.enemies[0].state).toBe('dead')  // Kill: death_door not converted by resolveAndCheckWin
+  })
+
   it('guardian stun prevents hero from acting', () => {
     const game = createGame({ seed: 42, heroClass: 'paladin', enemyType: 'guardian' })
     game.endTurn() // turn 1: guardian shields

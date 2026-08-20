@@ -1,6 +1,6 @@
-// Статистика для симуляционных отчётов.
-// Отдельно от harness.ts: это чистые функции над числами, они не знают ни про
-// игру, ни про seed. Их можно проверять в отрыве от движка.
+// Statistics for the simulation reports.
+// Kept apart from harness.ts: these are pure functions over numbers, they know nothing about
+// the game or the seed. They can be tested in isolation from the engine.
 
 export interface Interval {
   low: number
@@ -12,7 +12,7 @@ export function mean(xs: readonly number[]): number {
   return xs.reduce((a, b) => a + b, 0) / xs.length
 }
 
-// Выборочная дисперсия (несмещённая, делитель n − 1).
+// Sample variance (unbiased, divisor n − 1).
 export function variance(xs: readonly number[]): number {
   if (xs.length < 2) return NaN
   const m = mean(xs)
@@ -30,14 +30,14 @@ export function percentile(xs: readonly number[], p: number): number {
   return sorted[idx]
 }
 
-// ─── Доверительный интервал для доли ──────────────────────────────────────────
+// ─── Confidence interval for a proportion ────────────────────────────────────
 //
-// Интервал Уилсона, а не обычный нормальный. Причина прикладная: винрейты в
-// этом проекте прижаты к единице (класс выигрывает 99.8% боёв). Нормальный
-// интервал в такой зоне даёт верхнюю границу больше 100% — то есть отчёт
-// сообщает невозможное значение и выглядит сломанным ровно там, где на него
-// смотрят внимательнее всего. Уилсон остаётся внутри [0, 1] при любой доле,
-// включая 0 и 1, и не требует отдельной обработки крайних случаев.
+// A Wilson interval rather than the plain normal one. The reason is practical: win rates in
+// this project sit close to one (a class wins 99.8% of its battles). The normal
+// interval in that zone gives an upper bound above 100% — that is, the report
+// reports an impossible value and looks broken in exactly the place where it
+// is looked at most closely. Wilson stays inside [0, 1] for any proportion,
+// including 0 and 1, and needs no special handling of the edge cases.
 
 export function wilsonInterval(successes: number, total: number, z = 1.96): Interval {
   if (total === 0) return { low: NaN, high: NaN }
@@ -55,13 +55,13 @@ export function wilsonInterval(successes: number, total: number, z = 1.96): Inte
   }
 }
 
-// Полуширина интервала — насколько ещё «плавает» оценка при данном числе прогонов.
+// Interval half-width — how much the estimate still floats at this number of runs.
 export function marginOfError(successes: number, total: number, z = 1.96): number {
   const { low, high } = wilsonInterval(successes, total, z)
   return (high - low) / 2
 }
 
-// ─── Коридоры ─────────────────────────────────────────────────────────────────
+// ─── Corridors ───────────────────────────────────────────────────────────────
 
 export interface Corridor {
   min: number
@@ -70,21 +70,21 @@ export interface Corridor {
 
 export type Verdict = 'PASS' | 'FAIL' | 'INCONCLUSIVE'
 
-// Вердикт по доверительному интервалу, а не по точечной оценке.
+// The verdict comes from the confidence interval, not from the point estimate.
 //
-// Точечная оценка на границе коридора ничего не значит: при 100 прогонах она
-// шумит на десятки процентов. Поэтому:
-//   PASS         — весь интервал внутри коридора
-//   FAIL         — весь интервал снаружи, промах доказан
-//   INCONCLUSIVE — интервал пересекает границу: прогонов не хватает, чтобы
-//                  утверждать что-либо. Это не «почти PASS», это «не измерено».
+// A point estimate on the corridor boundary means nothing: at 100 runs it
+// swings by tens of percent. Hence:
+//   PASS         — the whole interval sits inside the corridor
+//   FAIL         — the whole interval sits outside, the miss is proven
+//   INCONCLUSIVE — the interval crosses the boundary: there are not enough runs to
+//                  say anything. This is not "almost PASS", it is "not measured".
 export function verdictFor(value: Interval, corridor: Corridor): Verdict {
   if (value.low >= corridor.min && value.high <= corridor.max) return 'PASS'
   if (value.high < corridor.min || value.low > corridor.max) return 'FAIL'
   return 'INCONCLUSIVE'
 }
 
-// ─── Гистограмма ──────────────────────────────────────────────────────────────
+// ─── Histogram ───────────────────────────────────────────────────────────────
 
 export function histogram(xs: readonly number[]): Map<number, number> {
   const result = new Map<number, number>()
@@ -92,7 +92,7 @@ export function histogram(xs: readonly number[]): Map<number, number> {
   return new Map([...result.entries()].sort((a, b) => a[0] - b[0]))
 }
 
-// ─── Форматирование ───────────────────────────────────────────────────────────
+// ─── Formatting ──────────────────────────────────────────────────────────────
 
 export function pct(x: number, digits = 1): string {
   return `${(x * 100).toFixed(digits)}%`

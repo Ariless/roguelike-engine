@@ -66,6 +66,86 @@ test.describe('Necromancer — raise dead mechanic', () => {
   })
 })
 
+// ─── Enemy death from bleed (regression: ROG-42) ─────────────────────────────
+// Bug: tickStatuses in the game UI did not convert death_door → dead for enemies.
+// An enemy at HP=0 from bleed played the death-door-archive animation and only died
+// a turn later. Fix: added the same conversion as dealDamage line 1901.
+
+test.describe('Enemy death — bleed kills immediately (ROG-42 regression)', () => {
+  // seed 0 % 7 = 0 → single goblin encounter; bloodmage is default hero
+  // Turn 1: Chaos Bolt (5 dmg) + Bloodrite (8 dmg) → goblin 7 HP. End turn.
+  // Turn 2: Open the Wound (3 bleed) + Chaos Bolt (5 dmg) → goblin 2 HP. End turn.
+  //   endTurn: goblin attacks, then bleed tick 3 → goblin 0 HP → dead.
+
+  async function playCard(page: any, cardName: string, enemyId?: string) {
+    const card = page.locator('.hand-card').filter({ hasText: cardName })
+    await card.first().click()
+    await page.waitForTimeout(80)
+    if (enemyId) {
+      await page.locator(`#enemy-panel-${enemyId}`).click()
+      await page.waitForTimeout(80)
+    }
+  }
+
+  test('enemy killed by bleed gets dead class, not death-door-archive', async ({ page }) => {
+    await openGame(page, 0)  // single goblin
+
+    // Turn 1: deal 13 damage (chaos_bolt random-targets automatically)
+    await playCard(page, 'Chaos Bolt')        // 5 dmg → goblin 15 HP
+    await playCard(page, 'Bloodrite', 'e0')   // 8 dmg → goblin 7 HP, self 3
+    await page.click('#endTurnBtn')
+    await page.waitForTimeout(300)
+
+    // Turn 2: apply bleed + 5 dmg → goblin 2 HP with 3 bleed
+    await playCard(page, 'Open the Wound', 'e0')  // 3 bleed stacks
+    await playCard(page, 'Chaos Bolt')             // 5 dmg → goblin 2 HP
+    await page.click('#endTurnBtn')
+    await page.waitForTimeout(400)  // wait for bleed tick animation
+
+    const portrait = page.locator('#enemy-portrait-e0')
+
+    // Regression assertion: portrait must have 'dead' class — not 'death-door-archive'
+    await expect(portrait).toHaveClass(/dead/)
+    await expect(portrait).not.toHaveClass(/death-door-archive/)
+  })
+
+  test('game shows victory overlay immediately after bleed kill — not after next end turn', async ({ page }) => {
+    await openGame(page, 0)
+
+    await playCard(page, 'Chaos Bolt')
+    await playCard(page, 'Bloodrite', 'e0')
+    await page.click('#endTurnBtn')
+    await page.waitForTimeout(300)
+
+    await playCard(page, 'Open the Wound', 'e0')
+    await playCard(page, 'Chaos Bolt')
+    await page.click('#endTurnBtn')
+    await page.waitForTimeout(400)
+
+    // Victory must appear THIS turn — before any additional endTurn
+    await expect(page.locator('#overlayGameover')).toBeVisible()
+    const label = await page.locator('.gameover-title').textContent()
+    expect(label).toMatch(/containment|archived|timeline|victory/i)
+  })
+
+  test('enemy HP text shows 0 and intent shows Archived after bleed kill', async ({ page }) => {
+    await openGame(page, 0)
+
+    await playCard(page, 'Chaos Bolt')
+    await playCard(page, 'Bloodrite', 'e0')
+    await page.click('#endTurnBtn')
+    await page.waitForTimeout(300)
+
+    await playCard(page, 'Open the Wound', 'e0')
+    await playCard(page, 'Chaos Bolt')
+    await page.click('#endTurnBtn')
+    await page.waitForTimeout(400)
+
+    await expect(page.locator('#enemy-hptext-e0')).toHaveText('0/20')
+    await expect(page.locator('#enemy-intent-e0')).toHaveText('✦ Archived')
+  })
+})
+
 // ─── Multi-enemy UI ───────────────────────────────────────────────────────────
 
 test.describe('Multi-enemy encounter UI', () => {

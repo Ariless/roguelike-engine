@@ -38,18 +38,18 @@ function makeState(heroHp = 30, enemyHp = 20, heroState: EntityState = 'alive'):
   }
 }
 
-// Arbitrary: hp в пределах [0, maxHp], maxHp в [1, 50]
+// Arbitrary: hp within [0, maxHp], maxHp within [1, 50]
 const hpArb = fc.integer({ min: 1, max: 50 }).chain(maxHp =>
   fc.integer({ min: 0, max: maxHp }).map(hp => ({ hp, maxHp }))
 )
 
-// Arbitrary: произвольный урон [0, 30]
+// Arbitrary: arbitrary damage [0, 30]
 const damageArb = fc.integer({ min: 0, max: 30 })
 
 // ─── HP invariants ────────────────────────────────────────────────────────────
 
-describe('property: HP никогда не выходит за [0, maxHp]', () => {
-  it('applyDamage: hp >= 0 при любом уроне', () => {
+describe('property: HP never leaves [0, maxHp]', () => {
+  it('applyDamage: hp >= 0 for any amount of damage', () => {
     fc.assert(fc.property(hpArb, damageArb, ({ hp, maxHp }, dmg) => {
       const s = makeState(hp)
       s.hero.maxHp = maxHp
@@ -58,7 +58,7 @@ describe('property: HP никогда не выходит за [0, maxHp]', () =
     }))
   })
 
-  it('applyHeal: hp <= maxHp после любого лечения', () => {
+  it('applyHeal: hp <= maxHp after any amount of healing', () => {
     fc.assert(fc.property(hpArb, fc.integer({ min: 0, max: 30 }), ({ hp, maxHp }, heal) => {
       const s = makeState(hp)
       s.hero.maxHp = maxHp
@@ -67,7 +67,7 @@ describe('property: HP никогда не выходит за [0, maxHp]', () =
     }))
   })
 
-  it('applyHeal: hp никогда не уменьшается', () => {
+  it('applyHeal: hp never decreases', () => {
     fc.assert(fc.property(hpArb, fc.integer({ min: 0, max: 30 }), ({ hp, maxHp }, heal) => {
       const s = makeState(hp)
       s.hero.maxHp = maxHp
@@ -76,7 +76,7 @@ describe('property: HP никогда не выходит за [0, maxHp]', () =
     }))
   })
 
-  it('applyDamage: hp никогда не увеличивается', () => {
+  it('applyDamage: hp never increases', () => {
     fc.assert(fc.property(hpArb, damageArb, ({ hp, maxHp }, dmg) => {
       const s = makeState(hp)
       s.hero.maxHp = maxHp
@@ -88,8 +88,8 @@ describe('property: HP никогда не выходит за [0, maxHp]', () =
 
 // ─── State machine: alive → death_door → dead ─────────────────────────────────
 
-describe('property: state machine — только валидные переходы', () => {
-  it('dead entity остаётся dead после урона', () => {
+describe('property: state machine — valid transitions only', () => {
+  it('a dead entity stays dead after taking damage', () => {
     fc.assert(fc.property(damageArb, (dmg) => {
       const s = makeState(0)
       const dead = { ...s, hero: { ...s.hero, state: 'dead' as const } }
@@ -98,20 +98,20 @@ describe('property: state machine — только валидные перехо
     }))
   })
 
-  it('alive entity с hp > 0 после урона остаётся alive или death_door, но не dead', () => {
+  it('an alive entity with hp > 0 stays alive or goes to death_door, never straight to dead', () => {
     fc.assert(fc.property(
       fc.integer({ min: 1, max: 30 }),
       fc.integer({ min: 0, max: 5 }),
       (hp, dmg) => {
         const s = makeState(hp)
         const next = applyDamage(s, 'hero', dmg)
-        // Если hp > dmg → alive; если hp <= dmg → death_door; никогда dead
+        // hp > dmg → alive; hp <= dmg → death_door; never dead
         expect(next.hero.state).not.toBe('dead')
       }
     ))
   })
 
-  it('death_door entity умирает от любого ненулевого урона', () => {
+  it('an entity at death_door dies from any non-zero damage', () => {
     fc.assert(fc.property(fc.integer({ min: 1, max: 30 }), (dmg) => {
       const s = { ...makeState(0), hero: { ...makeState(0).hero, state: 'death_door' as const } }
       const next = applyDamage(s, 'hero', dmg)
@@ -119,7 +119,7 @@ describe('property: state machine — только валидные перехо
     }))
   })
 
-  it('applyHeal переводит death_door → alive', () => {
+  it('applyHeal moves death_door → alive', () => {
     fc.assert(fc.property(fc.integer({ min: 1, max: 30 }), (heal) => {
       const s = { ...makeState(0), hero: { ...makeState(0).hero, state: 'death_door' as const } }
       const next = applyHeal(s, 'hero', heal)
@@ -128,10 +128,10 @@ describe('property: state machine — только валидные перехо
   })
 })
 
-// ─── Bleed: стаки ограничены 10 ──────────────────────────────────────────────
+// ─── Bleed: stacks capped at 10 ───────────────────────────────────────────────
 
 describe('property: bleed stacks <= 10 (cap invariant)', () => {
-  it('bleed никогда не превышает 10 при любом количестве применений', () => {
+  it('bleed never exceeds 10 regardless of how many times it is applied', () => {
     fc.assert(fc.property(
       fc.array(fc.integer({ min: 1, max: 8 }), { minLength: 1, maxLength: 10 }),
       (applications) => {
@@ -145,7 +145,7 @@ describe('property: bleed stacks <= 10 (cap invariant)', () => {
     ))
   })
 
-  it('bleed tick не уходит в минус', () => {
+  it('a bleed tick never pushes hp below zero', () => {
     fc.assert(fc.property(
       fc.integer({ min: 1, max: 10 }),
       fc.integer({ min: 1, max: 30 }),
@@ -159,10 +159,10 @@ describe('property: bleed stacks <= 10 (cap invariant)', () => {
   })
 })
 
-// ─── Defend: никогда не увеличивает входящий урон ────────────────────────────
+// ─── Defend: never increases incoming damage ──────────────────────────────────
 
-describe('property: defend никогда не увеличивает урон', () => {
-  it('герой с defend получает меньше или столько же урона', () => {
+describe('property: defend never increases damage taken', () => {
+  it('a hero with defend takes the same amount of damage or less', () => {
     fc.assert(fc.property(
       fc.integer({ min: 1, max: 30 }),
       fc.integer({ min: 1, max: 10 }),
@@ -176,10 +176,10 @@ describe('property: defend никогда не увеличивает урон',
   })
 })
 
-// ─── Paladin: charge стаки [0, 3] ────────────────────────────────────────────
+// ─── Paladin: charge stacks [0, 3] ────────────────────────────────────────────
 
-describe('property: Paladin chargeStacks никогда не превышает 3', () => {
-  it('многократный Divine Charge не превышает 3', () => {
+describe('property: Paladin chargeStacks never exceeds 3', () => {
+  it('repeated Divine Charge does not go above 3', () => {
     fc.assert(fc.property(
       fc.integer({ min: 1, max: 10 }),
       (casts) => {
@@ -192,24 +192,24 @@ describe('property: Paladin chargeStacks никогда не превышает 
     ))
   })
 
-  it('Righteous Strike сбрасывает заряды до 0 при активации', () => {
+  it('Righteous Strike resets charges to 0 when it triggers', () => {
     fc.assert(fc.property(
       fc.integer({ min: 0, max: 2 }),
       (extraCharges) => {
         let s = makeState()
         s = { ...s, hero: { ...s.hero, chargeStacks: 3 } }
-        // добавим extra charges через Divine Charge перед сбросом — они уже на cap
+        // extra charges would come from Divine Charge before the reset — already at cap
         const next = playRighteousStrike(s, 'enemy')
-        expect(next.hero.chargeStacks ?? 0).toBeLessThanOrEqual(1) // 0 или +1 если vulnerable
+        expect(next.hero.chargeStacks ?? 0).toBeLessThanOrEqual(1) // 0, or +1 if vulnerable
       }
     ))
   })
 })
 
-// ─── Blood Mage: vulnerable только при pre-existing bleed ────────────────────
+// ─── Blood Mage: vulnerable only on pre-existing bleed ────────────────────────
 
-describe('property: Open the Wound — vulnerable только если цель уже кровоточила', () => {
-  it('без bleed: vulnerable не применяется', () => {
+describe('property: Open the Wound — vulnerable only if the target was already bleeding', () => {
+  it('without bleed: vulnerable is not applied', () => {
     fc.assert(fc.property(
       fc.integer({ min: 5, max: 20 }),
       (enemyHp) => {
@@ -221,7 +221,7 @@ describe('property: Open the Wound — vulnerable только если цель
     ))
   })
 
-  it('с pre-existing bleed: vulnerable применяется', () => {
+  it('with pre-existing bleed: vulnerable is applied', () => {
     fc.assert(fc.property(
       fc.integer({ min: 1, max: 5 }),
       (existingBleed) => {
@@ -235,10 +235,10 @@ describe('property: Open the Wound — vulnerable только если цель
   })
 })
 
-// ─── Berserker: rage mode — бинарный триггер ─────────────────────────────────
+// ─── Berserker: rage mode — a binary trigger ──────────────────────────────────
 
-describe('property: Berserker rage — только при HP ≤ 25%', () => {
-  it('HP > 25% → rage неактивна, базовый урон', () => {
+describe('property: Berserker rage — only at HP <= 25%', () => {
+  it('HP > 25% → rage inactive, base damage', () => {
     fc.assert(fc.property(
       fc.integer({ min: 4, max: 50 }).chain(maxHp =>
         fc.integer({ min: Math.floor(maxHp * 0.25) + 1, max: maxHp }).map(hp => ({ hp, maxHp }))
@@ -251,7 +251,7 @@ describe('property: Berserker rage — только при HP ≤ 25%', () => {
     ))
   })
 
-  it('HP ≤ 25% → урон × 1.5', () => {
+  it('HP <= 25% → damage × 1.5', () => {
     fc.assert(fc.property(
       fc.integer({ min: 4, max: 50 }).chain(maxHp =>
         fc.integer({ min: 1, max: Math.floor(maxHp * 0.25) || 1 }).map(hp => ({ hp, maxHp }))
@@ -265,10 +265,10 @@ describe('property: Berserker rage — только при HP ≤ 25%', () => {
   })
 })
 
-// ─── Werewolf: wolf passive — урон монотонен ─────────────────────────────────
+// ─── Werewolf: wolf passive — damage is monotonic ─────────────────────────────
 
-describe('property: Werewolf wolfDamage — чем меньше HP, тем больше урон', () => {
-  it('wolfDamage монотонно убывает с ростом HP', () => {
+describe('property: Werewolf wolfDamage — the lower the HP, the higher the damage', () => {
+  it('wolfDamage decreases monotonically as HP rises', () => {
     fc.assert(fc.property(
       fc.integer({ min: 1, max: 50 }).chain(maxHp =>
         fc.tuple(
@@ -285,7 +285,7 @@ describe('property: Werewolf wolfDamage — чем меньше HP, тем бо�
     ))
   })
 
-  it('wolfDamage >= base при любом HP', () => {
+  it('wolfDamage >= base at any HP', () => {
     fc.assert(fc.property(hpArb, fc.integer({ min: 1, max: 20 }), ({ hp, maxHp }, base) => {
       const hero = makeHero({ hp, maxHp, heroClass: 'werewolf' })
       expect(wolfDamage(hero, base)).toBeGreaterThanOrEqual(base)
@@ -293,10 +293,10 @@ describe('property: Werewolf wolfDamage — чем меньше HP, тем бо�
   })
 })
 
-// ─── Werewolf: трансформация только при HP ≤ 50% ─────────────────────────────
+// ─── Werewolf: transformation only at HP <= 50% ───────────────────────────────
 
-describe('property: Werewolf transform — только при HP ≤ 50%', () => {
-  it('HP > 50%: трансформации нет', () => {
+describe('property: Werewolf transform — only at HP <= 50%', () => {
+  it('HP > 50%: no transformation', () => {
     fc.assert(fc.property(
       fc.integer({ min: 2, max: 50 }).chain(maxHp =>
         fc.integer({ min: Math.floor(maxHp / 2) + 1, max: maxHp })
@@ -311,7 +311,7 @@ describe('property: Werewolf transform — только при HP ≤ 50%', () =
     ))
   })
 
-  it('HP ≤ 50% и alive: всегда трансформируется', () => {
+  it('HP <= 50% and alive: always transforms', () => {
     fc.assert(fc.property(
       fc.integer({ min: 2, max: 50 }).chain(maxHp =>
         fc.integer({ min: 1, max: Math.floor(maxHp / 2) })
@@ -326,7 +326,7 @@ describe('property: Werewolf transform — только при HP ≤ 50%', () =
     ))
   })
 
-  it('статусы выживают при трансформации', () => {
+  it('statuses survive the transformation', () => {
     fc.assert(fc.property(
       fc.integer({ min: 1, max: 10 }),
       (bleedStacks) => {
@@ -341,74 +341,74 @@ describe('property: Werewolf transform — только при HP ≤ 50%', () =
   })
 })
 
-// ─── Ложный инвариант: лечение Werewolf ослабляет его ────────────────────────
-// Намеренно падающий тест — Paladin лечит Werewolf выше 50% HP →
-// wolf passive теряет бонус. HP растёт, но урон падает.
+// ─── False invariant: healing the Werewolf weakens it ─────────────────────────
+// A deliberately failing test — a Paladin heals the Werewolf above 50% HP and
+// the wolf passive loses its bonus. HP goes up, damage goes down.
 
 describe('false invariant: healing Werewolf above 50% reduces damage', () => {
-  it.fails('heal всегда увеличивает боевую эффективность вервольфа', () => {
+  it.fails('healing always improves the werewolf\'s combat output', () => {
     const maxHp = 30
     const hp = Math.floor(maxHp * 0.45) // 13 — wolf passive active
     const base = 8
     const heroBefore = makeHero({ hp, maxHp, heroClass: 'werewolf' })
     const heroAfter  = makeHero({ hp: 16, maxHp, heroClass: 'werewolf' }) // healed above 50%
-    // Этот assert намеренно ложный: лечение снижает wolf damage bonus
+    // This assertion is deliberately false: healing reduces the wolf damage bonus
     expect(wolfDamage(heroAfter, base)).toBeGreaterThanOrEqual(wolfDamage(heroBefore, base))
   })
 })
 
-// ─── Ложные инварианты: курсовые задания ─────────────────────────────────────
-// Эти тесты проходят только когда assertion ЛОЖНЫЙ.
-// Учебная цель: распознать что "кажется очевидным" ≠ "всегда верно".
+// ─── False invariants: teaching cases ─────────────────────────────────────────
+// These tests only pass while the assertion is FALSE.
+// The point is to recognise that "seems obvious" is not the same as "always true".
 
-describe('false invariant: высокий HP всегда безопаснее для Berserker', () => {
-  it.fails('больше HP = больше урон у берсеркера', () => {
+describe('false invariant: more HP is always safer for the Berserker', () => {
+  it.fails('more HP means more damage for the berserker', () => {
     // Berserker passive: damage * (1 + missingHp / maxHp)
-    // Больше HP → меньше missing HP → меньше урон
-    // "Безопаснее по HP" означает "слабее как атакующий"
+    // More HP → less missing HP → less damage
+    // "Safer on HP" means "weaker as an attacker"
     const maxHp = 28
-    const highHp = makeHero({ hp: 28, maxHp, heroClass: 'berserker' })  // полный HP
+    const highHp = makeHero({ hp: 28, maxHp, heroClass: 'berserker' })  // full HP
     const lowHp  = makeHero({ hp: 7,  maxHp, heroClass: 'berserker' })  // 25% HP
 
-    // Этот assert намеренно ложный: больше HP → меньше урон
+    // This assertion is deliberately false: more HP → less damage
     expect(rageDamage(highHp, 8)).toBeGreaterThan(rageDamage(lowHp, 8))
   })
 })
 
-describe('false invariant: Chaos Bolt всегда бьёт случайно', () => {
-  it.fails('разные seeds всегда дают разные цели для Chaos Bolt', () => {
-    // С одним живым врагом RNG потребляется, но результат всегда тот же
-    // "Случайность" не имеет эффекта без выбора между несколькими целями
+describe('false invariant: Chaos Bolt always hits at random', () => {
+  it.fails('different seeds always give Chaos Bolt different targets', () => {
+    // With a single living enemy the RNG is consumed but the outcome is always the same.
+    // "Randomness" has no effect without a choice between several targets.
     const s1 = makeState(25, 20)
     s1.hero = makeHero({ hp: 25, maxHp: 25, heroClass: 'bloodmage' })
     const s2 = { ...s1 }
 
-    const r1 = playChaosBolt(s1, 'enemy')  // seed не влияет — 1 враг
+    const r1 = playChaosBolt(s1, 'enemy')  // seed is irrelevant — one enemy
     const r2 = playChaosBolt(s2, 'enemy')
 
-    // Этот assert намеренно ложный: при одном враге результат всегда тот же
+    // This assertion is deliberately false: with one enemy the result is always the same
     expect(r1.enemies[0].hp).not.toBe(r2.enemies[0].hp)
   })
 })
 
-describe('false invariant: Open the Wound всегда угрожает vulnerable', () => {
-  it.fails('Open the Wound всегда применяет vulnerable', () => {
-    // Vulnerable применяется ТОЛЬКО если цель уже кровоточила ДО броска карты
-    // Без pre-existing bleed — только bleed, без vulnerable
+describe('false invariant: Open the Wound always threatens vulnerable', () => {
+  it.fails('Open the Wound always applies vulnerable', () => {
+    // Vulnerable is applied ONLY if the target was already bleeding BEFORE the card was played.
+    // With no pre-existing bleed there is bleed only, and no vulnerable.
     const s = makeState(25, 20)
     s.hero = makeHero({ hp: 25, maxHp: 25, heroClass: 'bloodmage' })
-    // Цель без bleed
+    // Target has no bleed
     const next = playOpenTheWound(s, 'enemy')
 
-    // Этот assert намеренно ложный: vulnerable не применяется без pre-existing bleed
+    // This assertion is deliberately false: no vulnerable without pre-existing bleed
     expect(next.enemies[0].statuses.some(st => st.name === 'vulnerable')).toBe(true)
   })
 })
 
-// ─── Rend: bleed применяется ПОСЛЕ урона ─────────────────────────────────────
+// ─── Rend: bleed is applied AFTER the damage ──────────────────────────────────
 
-describe('property: Rend — порядок операций (damage before bleed)', () => {
-  it('HP после Rend отражает только урон, не bleed', () => {
+describe('property: Rend — order of operations (damage before bleed)', () => {
+  it('HP after Rend reflects the damage only, not the bleed', () => {
     fc.assert(fc.property(
       fc.integer({ min: 15, max: 30 }),
       (enemyHp) => {
@@ -419,10 +419,10 @@ describe('property: Rend — порядок операций (damage before blee
         const before = s.enemies[0].hp
         const next = playRend(s, 'enemy')
         const dmgDealt = before - next.enemies[0].hp
-        // bleed не должен включаться в урон этого хода
+        // bleed must not be counted in this turn's damage
         const bleed = next.enemies[0].statuses.find(st => st.name === 'bleed')
         expect(bleed?.stacks).toBe(2)
-        expect(dmgDealt).toBeGreaterThan(0) // урон нанесён
+        expect(dmgDealt).toBeGreaterThan(0) // damage was dealt
       }
     ))
   })

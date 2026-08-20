@@ -1,7 +1,7 @@
 {
   "seed": 14,
   "heroClass": "berserker",
-  "enemyType": "vampire",
+  "enemyType": "necromancer",
   "faults": {
     "bleedOffByOne": false,
     "ignoreStun": false
@@ -10,119 +10,111 @@
     {
       "type": "play_card",
       "turn": 1,
-      "preStateHash": "5d3126",
-      "postStateHash": "b20881",
+      "preStateHash": "ebab44",
+      "postStateHash": "d47ec9",
       "cardId": "savage_lunge",
       "targetId": "enemy"
     },
     {
       "type": "play_card",
       "turn": 1,
-      "preStateHash": "b20881",
-      "postStateHash": "484196",
+      "preStateHash": "d47ec9",
+      "postStateHash": "656ef4",
       "cardId": "primal_fury",
       "targetId": "enemy"
     },
     {
       "type": "play_card",
       "turn": 1,
-      "preStateHash": "484196",
-      "postStateHash": "84d65d",
+      "preStateHash": "656ef4",
+      "postStateHash": "437219",
       "cardId": "primal_dodge",
       "targetId": "enemy"
     },
     {
       "type": "status_tick",
       "turn": 1,
-      "preStateHash": "84d65d",
-      "postStateHash": "84d65d",
+      "preStateHash": "437219",
+      "postStateHash": "437219",
       "targetId": "hero"
     },
     {
       "type": "enemy_action",
       "turn": 1,
-      "preStateHash": "84d65d",
-      "postStateHash": "a245b2",
+      "preStateHash": "437219",
+      "postStateHash": "d2cd63",
       "targetId": "hero"
     },
     {
       "type": "status_tick",
       "turn": 1,
-      "preStateHash": "a245b2",
-      "postStateHash": "a245b2",
+      "preStateHash": "d2cd63",
+      "postStateHash": "d2cd63",
       "targetId": "enemy"
     },
     {
       "type": "turn_end",
       "turn": 2,
-      "preStateHash": "84d65d",
-      "postStateHash": "893dad"
+      "preStateHash": "437219",
+      "postStateHash": "a87de2"
     },
     {
       "type": "play_card",
       "turn": 2,
-      "preStateHash": "893dad",
-      "postStateHash": "bc6bac",
+      "preStateHash": "a87de2",
+      "postStateHash": "f3f22a",
       "cardId": "savage_lunge",
       "targetId": "enemy"
     },
     {
       "type": "play_card",
       "turn": 2,
-      "preStateHash": "bc6bac",
-      "postStateHash": "e24c7b",
+      "preStateHash": "f3f22a",
+      "postStateHash": "d9c4cb",
       "cardId": "primal_fury",
       "targetId": "enemy"
     },
     {
       "type": "play_card",
       "turn": 2,
-      "preStateHash": "e24c7b",
-      "postStateHash": "f9a05d",
+      "preStateHash": "d9c4cb",
+      "postStateHash": "350171",
       "cardId": "primal_dodge",
       "targetId": "enemy"
     },
     {
       "type": "status_tick",
       "turn": 2,
-      "preStateHash": "f9a05d",
-      "postStateHash": "f9a05d",
+      "preStateHash": "350171",
+      "postStateHash": "69f134",
       "targetId": "hero"
     },
     {
       "type": "enemy_action",
       "turn": 2,
-      "preStateHash": "f9a05d",
-      "postStateHash": "881de0",
+      "preStateHash": "69f134",
+      "postStateHash": "5ac6ef",
       "targetId": "hero"
     },
     {
       "type": "status_tick",
       "turn": 2,
-      "preStateHash": "881de0",
-      "postStateHash": "881de0",
+      "preStateHash": "5ac6ef",
+      "postStateHash": "5ac6ef",
       "targetId": "enemy"
     },
     {
       "type": "turn_end",
       "turn": 3,
-      "preStateHash": "f9a05d",
-      "postStateHash": "354a73"
+      "preStateHash": "350171",
+      "postStateHash": "e5cca1"
     },
     {
       "type": "play_card",
       "turn": 3,
-      "preStateHash": "354a73",
-      "postStateHash": "39cf06",
+      "preStateHash": "e5cca1",
+      "postStateHash": "2ab167",
       "cardId": "savage_lunge",
-      "targetId": "enemy"
-    },
-    {
-      "type": "play_card",
-      "turn": 3,
-      "preStateHash": "39cf06",
-      "postStateHash": "285d02",
-      "cardId": "primal_fury",
       "targetId": "enemy"
     }
   ],
@@ -132,83 +124,7 @@
       "hero": {
         "id": "hero",
         "name": "Berserker",
-        "hp": 26,
-        "maxHp": 28,
-        "state": "alive",
-        "statuses": [],
-        "formState": "human"
-      },
-      "enemies": [
-        {
-          "id": "enemy",
-          "name": "Vampire",
-          "hp": 20,
-          "maxHp": 30,
-          "state": "alive",
-          "statuses": []
-        }
-      ],
-      "events": [
-        {
-          "type": "play_card",
-          "turn": 1,
-          "preStateHash": "5d3126",
-          "postStateHash": "b20881",
-          "cardId": "savage_lunge",
-          "targetId": "enemy"
-        },
-        {
-          "type": "play_card",
-          "turn": 1,
-          "preStateHash": "b20881",
-          "postStateHash": "484196",
-          "cardId": "primal_fury",
-          "targetId": "enemy"
-        },
-        {
-          "type": "play_card",
-          "turn": 1,
-          "preStateHash": "484196",
-          "postStateHash": "84d65d",
-          "cardId": "primal_dodge",
-          "targetId": "enemy"
-        },
-        {
-          "type": "status_tick",
-          "turn": 1,
-          "preStateHash": "84d65d",
-          "postStateHash": "84d65d",
-          "targetId": "hero"
-        },
-        {
-          "type": "enemy_action",
-          "turn": 1,
-          "preStateHash": "84d65d",
-          "postStateHash": "a245b2",
-          "targetId": "hero"
-        },
-        {
-          "type": "status_tick",
-          "turn": 1,
-          "preStateHash": "a245b2",
-          "postStateHash": "a245b2",
-          "targetId": "enemy"
-        },
-        {
-          "type": "turn_end",
-          "turn": 2,
-          "preStateHash": "84d65d",
-          "postStateHash": "893dad"
-        }
-      ],
-      "hashValid": true
-    },
-    {
-      "turn": 3,
-      "hero": {
-        "id": "hero",
-        "name": "Berserker",
-        "hp": 26,
+        "hp": 28,
         "maxHp": 28,
         "state": "alive",
         "statuses": [
@@ -218,7 +134,7 @@
           },
           {
             "name": "bleed",
-            "stacks": 2
+            "stacks": 3
           }
         ],
         "formState": "human"
@@ -226,9 +142,94 @@
       "enemies": [
         {
           "id": "enemy",
-          "name": "Vampire",
-          "hp": 10,
-          "maxHp": 30,
+          "name": "Necromancer",
+          "hp": 15,
+          "maxHp": 25,
+          "state": "alive",
+          "statuses": []
+        }
+      ],
+      "events": [
+        {
+          "type": "play_card",
+          "turn": 1,
+          "preStateHash": "ebab44",
+          "postStateHash": "d47ec9",
+          "cardId": "savage_lunge",
+          "targetId": "enemy"
+        },
+        {
+          "type": "play_card",
+          "turn": 1,
+          "preStateHash": "d47ec9",
+          "postStateHash": "656ef4",
+          "cardId": "primal_fury",
+          "targetId": "enemy"
+        },
+        {
+          "type": "play_card",
+          "turn": 1,
+          "preStateHash": "656ef4",
+          "postStateHash": "437219",
+          "cardId": "primal_dodge",
+          "targetId": "enemy"
+        },
+        {
+          "type": "status_tick",
+          "turn": 1,
+          "preStateHash": "437219",
+          "postStateHash": "437219",
+          "targetId": "hero"
+        },
+        {
+          "type": "enemy_action",
+          "turn": 1,
+          "preStateHash": "437219",
+          "postStateHash": "d2cd63",
+          "targetId": "hero"
+        },
+        {
+          "type": "status_tick",
+          "turn": 1,
+          "preStateHash": "d2cd63",
+          "postStateHash": "d2cd63",
+          "targetId": "enemy"
+        },
+        {
+          "type": "turn_end",
+          "turn": 2,
+          "preStateHash": "437219",
+          "postStateHash": "a87de2"
+        }
+      ],
+      "hashValid": true
+    },
+    {
+      "turn": 3,
+      "hero": {
+        "id": "hero",
+        "name": "Berserker",
+        "hp": 25,
+        "maxHp": 28,
+        "state": "alive",
+        "statuses": [
+          {
+            "name": "defend",
+            "stacks": 8
+          },
+          {
+            "name": "bleed",
+            "stacks": 6
+          }
+        ],
+        "formState": "human"
+      },
+      "enemies": [
+        {
+          "id": "enemy",
+          "name": "Necromancer",
+          "hp": 5,
+          "maxHp": 25,
           "state": "alive",
           "statuses": []
         }
@@ -237,53 +238,53 @@
         {
           "type": "play_card",
           "turn": 2,
-          "preStateHash": "893dad",
-          "postStateHash": "bc6bac",
+          "preStateHash": "a87de2",
+          "postStateHash": "f3f22a",
           "cardId": "savage_lunge",
           "targetId": "enemy"
         },
         {
           "type": "play_card",
           "turn": 2,
-          "preStateHash": "bc6bac",
-          "postStateHash": "e24c7b",
+          "preStateHash": "f3f22a",
+          "postStateHash": "d9c4cb",
           "cardId": "primal_fury",
           "targetId": "enemy"
         },
         {
           "type": "play_card",
           "turn": 2,
-          "preStateHash": "e24c7b",
-          "postStateHash": "f9a05d",
+          "preStateHash": "d9c4cb",
+          "postStateHash": "350171",
           "cardId": "primal_dodge",
           "targetId": "enemy"
         },
         {
           "type": "status_tick",
           "turn": 2,
-          "preStateHash": "f9a05d",
-          "postStateHash": "f9a05d",
+          "preStateHash": "350171",
+          "postStateHash": "69f134",
           "targetId": "hero"
         },
         {
           "type": "enemy_action",
           "turn": 2,
-          "preStateHash": "f9a05d",
-          "postStateHash": "881de0",
+          "preStateHash": "69f134",
+          "postStateHash": "5ac6ef",
           "targetId": "hero"
         },
         {
           "type": "status_tick",
           "turn": 2,
-          "preStateHash": "881de0",
-          "postStateHash": "881de0",
+          "preStateHash": "5ac6ef",
+          "postStateHash": "5ac6ef",
           "targetId": "enemy"
         },
         {
           "type": "turn_end",
           "turn": 3,
-          "preStateHash": "f9a05d",
-          "postStateHash": "354a73"
+          "preStateHash": "350171",
+          "postStateHash": "e5cca1"
         }
       ],
       "hashValid": true
@@ -291,9 +292,9 @@
   ],
   "outcome": "hero_wins",
   "_meta": {
-    "savedAt": "2026-05-30T19:32:06.742Z",
+    "savedAt": "2026-08-20T14:14:17.864Z",
     "divergedAt": null,
     "divergedTurn": null,
-    "eventsReplayed": 16
+    "eventsReplayed": 15
   }
 }

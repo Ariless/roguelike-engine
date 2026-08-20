@@ -1,51 +1,51 @@
-// Целевые коридоры баланса.
+// Target balance corridors.
 //
-// ВАЖНО про происхождение этих чисел. Коридор — это НАМЕРЕНИЕ дизайна,
-// зафиксированное до прогона. Он не выводится из результатов симуляции.
-// Коридор, подогнанный под измеренное, всегда даёт PASS и не сообщает ничего:
-// проверка «система ведёт себя так, как она себя ведёт» тавтологична.
+// IMPORTANT, on where these numbers come from. A corridor is design INTENT,
+// fixed before the run. It is not derived from the simulation results.
+// A corridor fitted to the measurement always passes and therefore says nothing:
+// the check "the system behaves the way it behaves" is a tautology.
 //
-// Поэтому эти границы поставлены от игрового смысла, и симуляция имеет полное
-// право их не пройти. FAIL здесь означает «баланс разошёлся с намерением», а не
-// «скрипт сломался». Расхождение — это результат, ради которого прогон и нужен.
+// So these bounds are set from what the game means, and the simulation is fully entitled
+// to fail them. FAIL here means "balance diverged from intent", not
+// "the script broke". A divergence is the result the run exists to produce.
 //
-// Тот же подход применён в balance_sim.py другого проекта: там коридоры на типы
-// боёв (обычный 45–80%, элита 20–45%, босс 30–55%) тоже заданы дизайном.
+// The same approach is used in balance_sim.py on another project, where corridors on
+// battle types (normal 45–80%, elite 20–45%, boss 30–55%) are also set by design.
 
 import type { Corridor } from './stats'
 
-// ─── Винрейт класса ───────────────────────────────────────────────────────────
+// ─── Class win rate ──────────────────────────────────────────────────────────
 //
-// Мерится на случайно-жадном автоплеере, который играет заведомо неоптимально.
+// Measured with a random-greedy auto-player that plays deliberately sub-optimally.
 //
-// Нижняя граница 45%: если даже при неоптимальной игре герой проигрывает чаще,
-// чем выигрывает, бой не даёт игроку опоры — исход решает раздача, а не решения.
+// Lower bound 45%: if the hero loses more often than they win even with sub-optimal play,
+// the fight gives the player nothing to stand on — the draw decides the outcome, not their decisions.
 //
-// Верхняя граница 80%: если случайная игра выигрывает чаще, чем в 4 боях из 5,
-// то в бою нет вызова и решения игрока ни на что не влияют. Это худший из двух
-// провалов: сломанную сложность видно сразу, а отсутствие вызова читается как
-// скука без понятной причины.
+// Upper bound 80%: if random play wins more often than 4 battles out of 5,
+// then the fight has no challenge and the player's decisions change nothing. That is the worse of the two
+// failures: broken difficulty is obvious immediately, while an absent challenge reads as
+// boredom with no obvious cause.
 export const CLASS_WINRATE: Corridor = { min: 0.45, max: 0.80 }
 
-// ─── Винрейт отдельной пары герой/враг ────────────────────────────────────────
+// ─── Win rate of an individual hero/enemy pair ───────────────────────────────
 //
-// Коридор шире: асимметрия конкретной пары — нормальная часть дизайна, у героев
-// должны быть удобные и неудобные противники. Но пара за пределами 15–95%
-// означает, что одна из сторон не участвует в бою.
+// A wider corridor: asymmetry within a pair is a normal part of design, heroes are meant
+// to have comfortable and awkward opponents. But a pair outside 15–95%
+// means one of the two sides is not taking part in the fight.
 export const MATCHUP_WINRATE: Corridor = { min: 0.15, max: 0.95 }
 
-// ─── Длительность боя ─────────────────────────────────────────────────────────
+// ─── Battle duration ─────────────────────────────────────────────────────────
 //
-// Ниже 3 ходов механики не успевают отработать: bleed не тикает, у берсеркера
-// не набирается недостача HP, вервольф не превращается. Выше 12 — бой на
-// одинаковых ходах, ничего нового уже не происходит.
+// Below 3 turns the mechanics never get to fire: bleed does not tick, the berserker
+// never accumulates missing HP, the werewolf never transforms. Above 12 the fight is
+// the same turn repeated, with nothing new happening.
 export const BATTLE_DURATION: Corridor = { min: 3, max: 12 }
 
-// ─── Стабильность между батчами ───────────────────────────────────────────────
+// ─── Cross-batch stability ───────────────────────────────────────────────────
 //
-// Разброс винрейта между батчами на разных базовых seed. Внутрибатчевый шум
-// оценивается доверительным интервалом; здесь проверяется другое — что оценка
-// не зависит от того, с какого seed начали. Разброс больше 5 процентных пунктов
-// при десятках тысяч прогонов означает, что seed выбирает исход, а результат
-// одного батча нельзя предъявлять как характеристику системы.
+// Win-rate spread across batches on different base seeds. Within-batch noise
+// is estimated by the confidence interval; what is checked here is different — that the estimate
+// does not depend on which seed sampling started from. A spread above 5 percentage points
+// across tens of thousands of runs means the seed picks the outcome, and the result of
+// a single batch cannot be presented as a property of the system.
 export const CROSS_BATCH_SPREAD_MAX = 0.05

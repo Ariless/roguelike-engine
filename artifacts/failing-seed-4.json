@@ -1,0 +1,2126 @@
+{
+  "seed": 4,
+  "heroClass": "paladin",
+  "enemyType": "guardian",
+  "faults": {
+    "bleedOffByOne": false,
+    "ignoreStun": false
+  },
+  "events": [
+    {
+      "type": "play_card",
+      "turn": 1,
+      "preStateHash": "d4e3d9",
+      "postStateHash": "aa3dff",
+      "cardId": "righteous_strike",
+      "targetId": "enemy"
+    },
+    {
+      "type": "play_card",
+      "turn": 1,
+      "preStateHash": "aa3dff",
+      "postStateHash": "eabf4f",
+      "cardId": "divine_charge",
+      "targetId": "enemy"
+    },
+    {
+      "type": "play_card",
+      "turn": 1,
+      "preStateHash": "eabf4f",
+      "postStateHash": "49433e",
+      "cardId": "stubborn_recovery",
+      "targetId": "enemy"
+    },
+    {
+      "type": "status_tick",
+      "turn": 1,
+      "preStateHash": "49433e",
+      "postStateHash": "49433e",
+      "targetId": "hero"
+    },
+    {
+      "type": "enemy_action",
+      "turn": 1,
+      "preStateHash": "49433e",
+      "postStateHash": "cf1447",
+      "targetId": "hero"
+    },
+    {
+      "type": "status_tick",
+      "turn": 1,
+      "preStateHash": "cf1447",
+      "postStateHash": "cf1447",
+      "targetId": "enemy"
+    },
+    {
+      "type": "turn_end",
+      "turn": 2,
+      "preStateHash": "49433e",
+      "postStateHash": "aa5233"
+    },
+    {
+      "type": "play_card",
+      "turn": 2,
+      "preStateHash": "aa5233",
+      "postStateHash": "b60a07",
+      "cardId": "righteous_strike",
+      "targetId": "enemy"
+    },
+    {
+      "type": "play_card",
+      "turn": 2,
+      "preStateHash": "b60a07",
+      "postStateHash": "6ad087",
+      "cardId": "divine_charge",
+      "targetId": "enemy"
+    },
+    {
+      "type": "play_card",
+      "turn": 2,
+      "preStateHash": "6ad087",
+      "postStateHash": "84ae49",
+      "cardId": "stubborn_recovery",
+      "targetId": "enemy"
+    },
+    {
+      "type": "status_tick",
+      "turn": 2,
+      "preStateHash": "84ae49",
+      "postStateHash": "84ae49",
+      "targetId": "hero"
+    },
+    {
+      "type": "enemy_action",
+      "turn": 2,
+      "preStateHash": "84ae49",
+      "postStateHash": "33a801",
+      "targetId": "hero"
+    },
+    {
+      "type": "status_tick",
+      "turn": 2,
+      "preStateHash": "33a801",
+      "postStateHash": "33a801",
+      "targetId": "enemy"
+    },
+    {
+      "type": "turn_end",
+      "turn": 3,
+      "preStateHash": "84ae49",
+      "postStateHash": "b5f16f"
+    },
+    {
+      "type": "status_tick",
+      "turn": 3,
+      "preStateHash": "b5f16f",
+      "postStateHash": "4cb647",
+      "targetId": "hero"
+    },
+    {
+      "type": "enemy_action",
+      "turn": 3,
+      "preStateHash": "4cb647",
+      "postStateHash": "e3bc3e",
+      "targetId": "hero"
+    },
+    {
+      "type": "status_tick",
+      "turn": 3,
+      "preStateHash": "e3bc3e",
+      "postStateHash": "e3bc3e",
+      "targetId": "enemy"
+    },
+    {
+      "type": "turn_end",
+      "turn": 4,
+      "preStateHash": "b5f16f",
+      "postStateHash": "f9e2f5"
+    },
+    {
+      "type": "play_card",
+      "turn": 4,
+      "preStateHash": "f9e2f5",
+      "postStateHash": "dd95f5",
+      "cardId": "righteous_strike",
+      "targetId": "enemy"
+    },
+    {
+      "type": "play_card",
+      "turn": 4,
+      "preStateHash": "dd95f5",
+      "postStateHash": "4203eb",
+      "cardId": "divine_charge",
+      "targetId": "enemy"
+    },
+    {
+      "type": "play_card",
+      "turn": 4,
+      "preStateHash": "4203eb",
+      "postStateHash": "35f12a",
+      "cardId": "stubborn_recovery",
+      "targetId": "enemy"
+    },
+    {
+      "type": "status_tick",
+      "turn": 4,
+      "preStateHash": "35f12a",
+      "postStateHash": "35f12a",
+      "targetId": "hero"
+    },
+    {
+      "type": "enemy_action",
+      "turn": 4,
+      "preStateHash": "35f12a",
+      "postStateHash": "482b35",
+      "targetId": "hero"
+    },
+    {
+      "type": "status_tick",
+      "turn": 4,
+      "preStateHash": "482b35",
+      "postStateHash": "482b35",
+      "targetId": "enemy"
+    },
+    {
+      "type": "turn_end",
+      "turn": 5,
+      "preStateHash": "35f12a",
+      "postStateHash": "5f534a"
+    },
+    {
+      "type": "play_card",
+      "turn": 5,
+      "preStateHash": "5f534a",
+      "postStateHash": "f6c5f0",
+      "cardId": "righteous_strike",
+      "targetId": "enemy"
+    },
+    {
+      "type": "play_card",
+      "turn": 5,
+      "preStateHash": "f6c5f0",
+      "postStateHash": "789bf6",
+      "cardId": "divine_charge",
+      "targetId": "enemy"
+    },
+    {
+      "type": "play_card",
+      "turn": 5,
+      "preStateHash": "789bf6",
+      "postStateHash": "4c3b64",
+      "cardId": "stubborn_recovery",
+      "targetId": "enemy"
+    },
+    {
+      "type": "status_tick",
+      "turn": 5,
+      "preStateHash": "4c3b64",
+      "postStateHash": "4c3b64",
+      "targetId": "hero"
+    },
+    {
+      "type": "enemy_action",
+      "turn": 5,
+      "preStateHash": "4c3b64",
+      "postStateHash": "bda4b0",
+      "targetId": "hero"
+    },
+    {
+      "type": "status_tick",
+      "turn": 5,
+      "preStateHash": "bda4b0",
+      "postStateHash": "bda4b0",
+      "targetId": "enemy"
+    },
+    {
+      "type": "turn_end",
+      "turn": 6,
+      "preStateHash": "4c3b64",
+      "postStateHash": "e91fe4"
+    },
+    {
+      "type": "status_tick",
+      "turn": 6,
+      "preStateHash": "e91fe4",
+      "postStateHash": "3b2d6f",
+      "targetId": "hero"
+    },
+    {
+      "type": "enemy_action",
+      "turn": 6,
+      "preStateHash": "3b2d6f",
+      "postStateHash": "382292",
+      "targetId": "hero"
+    },
+    {
+      "type": "status_tick",
+      "turn": 6,
+      "preStateHash": "382292",
+      "postStateHash": "382292",
+      "targetId": "enemy"
+    },
+    {
+      "type": "turn_end",
+      "turn": 7,
+      "preStateHash": "e91fe4",
+      "postStateHash": "b70f8a"
+    },
+    {
+      "type": "play_card",
+      "turn": 7,
+      "preStateHash": "b70f8a",
+      "postStateHash": "8c69af",
+      "cardId": "righteous_strike",
+      "targetId": "enemy"
+    },
+    {
+      "type": "play_card",
+      "turn": 7,
+      "preStateHash": "8c69af",
+      "postStateHash": "f0d7a5",
+      "cardId": "divine_charge",
+      "targetId": "enemy"
+    },
+    {
+      "type": "play_card",
+      "turn": 7,
+      "preStateHash": "f0d7a5",
+      "postStateHash": "e4c4e5",
+      "cardId": "stubborn_recovery",
+      "targetId": "enemy"
+    },
+    {
+      "type": "status_tick",
+      "turn": 7,
+      "preStateHash": "e4c4e5",
+      "postStateHash": "e4c4e5",
+      "targetId": "hero"
+    },
+    {
+      "type": "enemy_action",
+      "turn": 7,
+      "preStateHash": "e4c4e5",
+      "postStateHash": "b5f70b",
+      "targetId": "hero"
+    },
+    {
+      "type": "status_tick",
+      "turn": 7,
+      "preStateHash": "b5f70b",
+      "postStateHash": "b5f70b",
+      "targetId": "enemy"
+    },
+    {
+      "type": "turn_end",
+      "turn": 8,
+      "preStateHash": "e4c4e5",
+      "postStateHash": "20925e"
+    },
+    {
+      "type": "play_card",
+      "turn": 8,
+      "preStateHash": "20925e",
+      "postStateHash": "2c4a33",
+      "cardId": "righteous_strike",
+      "targetId": "enemy"
+    },
+    {
+      "type": "play_card",
+      "turn": 8,
+      "preStateHash": "2c4a33",
+      "postStateHash": "e110b2",
+      "cardId": "divine_charge",
+      "targetId": "enemy"
+    },
+    {
+      "type": "play_card",
+      "turn": 8,
+      "preStateHash": "e110b2",
+      "postStateHash": "3cd3f5",
+      "cardId": "stubborn_recovery",
+      "targetId": "enemy"
+    },
+    {
+      "type": "status_tick",
+      "turn": 8,
+      "preStateHash": "3cd3f5",
+      "postStateHash": "3cd3f5",
+      "targetId": "hero"
+    },
+    {
+      "type": "enemy_action",
+      "turn": 8,
+      "preStateHash": "3cd3f5",
+      "postStateHash": "ebcdad",
+      "targetId": "hero"
+    },
+    {
+      "type": "status_tick",
+      "turn": 8,
+      "preStateHash": "ebcdad",
+      "postStateHash": "ebcdad",
+      "targetId": "enemy"
+    },
+    {
+      "type": "turn_end",
+      "turn": 9,
+      "preStateHash": "3cd3f5",
+      "postStateHash": "28ec35"
+    },
+    {
+      "type": "status_tick",
+      "turn": 9,
+      "preStateHash": "28ec35",
+      "postStateHash": "bfb10d",
+      "targetId": "hero"
+    },
+    {
+      "type": "enemy_action",
+      "turn": 9,
+      "preStateHash": "bfb10d",
+      "postStateHash": "56b704",
+      "targetId": "hero"
+    },
+    {
+      "type": "status_tick",
+      "turn": 9,
+      "preStateHash": "56b704",
+      "postStateHash": "56b704",
+      "targetId": "enemy"
+    },
+    {
+      "type": "turn_end",
+      "turn": 10,
+      "preStateHash": "28ec35",
+      "postStateHash": "3f4a63"
+    },
+    {
+      "type": "play_card",
+      "turn": 10,
+      "preStateHash": "3f4a63",
+      "postStateHash": "c53c9d",
+      "cardId": "righteous_strike",
+      "targetId": "enemy"
+    },
+    {
+      "type": "play_card",
+      "turn": 10,
+      "preStateHash": "c53c9d",
+      "postStateHash": "29aa93",
+      "cardId": "divine_charge",
+      "targetId": "enemy"
+    },
+    {
+      "type": "play_card",
+      "turn": 10,
+      "preStateHash": "29aa93",
+      "postStateHash": "1d97d3",
+      "cardId": "stubborn_recovery",
+      "targetId": "enemy"
+    },
+    {
+      "type": "status_tick",
+      "turn": 10,
+      "preStateHash": "1d97d3",
+      "postStateHash": "1d97d3",
+      "targetId": "hero"
+    },
+    {
+      "type": "enemy_action",
+      "turn": 10,
+      "preStateHash": "1d97d3",
+      "postStateHash": "f82c17",
+      "targetId": "hero"
+    },
+    {
+      "type": "status_tick",
+      "turn": 10,
+      "preStateHash": "f82c17",
+      "postStateHash": "f82c17",
+      "targetId": "enemy"
+    },
+    {
+      "type": "turn_end",
+      "turn": 11,
+      "preStateHash": "1d97d3",
+      "postStateHash": "f648e6"
+    },
+    {
+      "type": "play_card",
+      "turn": 11,
+      "preStateHash": "f648e6",
+      "postStateHash": "200bb6",
+      "cardId": "righteous_strike",
+      "targetId": "enemy"
+    },
+    {
+      "type": "play_card",
+      "turn": 11,
+      "preStateHash": "200bb6",
+      "postStateHash": "b6c73a",
+      "cardId": "divine_charge",
+      "targetId": "enemy"
+    },
+    {
+      "type": "play_card",
+      "turn": 11,
+      "preStateHash": "b6c73a",
+      "postStateHash": "128a7d",
+      "cardId": "stubborn_recovery",
+      "targetId": "enemy"
+    },
+    {
+      "type": "status_tick",
+      "turn": 11,
+      "preStateHash": "128a7d",
+      "postStateHash": "128a7d",
+      "targetId": "hero"
+    },
+    {
+      "type": "enemy_action",
+      "turn": 11,
+      "preStateHash": "128a7d",
+      "postStateHash": "c18435",
+      "targetId": "hero"
+    },
+    {
+      "type": "status_tick",
+      "turn": 11,
+      "preStateHash": "c18435",
+      "postStateHash": "c18435",
+      "targetId": "enemy"
+    },
+    {
+      "type": "turn_end",
+      "turn": 12,
+      "preStateHash": "128a7d",
+      "postStateHash": "7f653e"
+    },
+    {
+      "type": "status_tick",
+      "turn": 12,
+      "preStateHash": "7f653e",
+      "postStateHash": "162a15",
+      "targetId": "hero"
+    },
+    {
+      "type": "enemy_action",
+      "turn": 12,
+      "preStateHash": "162a15",
+      "postStateHash": "ad300d",
+      "targetId": "hero"
+    },
+    {
+      "type": "status_tick",
+      "turn": 12,
+      "preStateHash": "ad300d",
+      "postStateHash": "ad300d",
+      "targetId": "enemy"
+    },
+    {
+      "type": "turn_end",
+      "turn": 13,
+      "preStateHash": "7f653e",
+      "postStateHash": "817f6e"
+    },
+    {
+      "type": "play_card",
+      "turn": 13,
+      "preStateHash": "817f6e",
+      "postStateHash": "56d180",
+      "cardId": "righteous_strike",
+      "targetId": "enemy"
+    },
+    {
+      "type": "play_card",
+      "turn": 13,
+      "preStateHash": "56d180",
+      "postStateHash": "bb3f76",
+      "cardId": "divine_charge",
+      "targetId": "enemy"
+    },
+    {
+      "type": "play_card",
+      "turn": 13,
+      "preStateHash": "bb3f76",
+      "postStateHash": "af2cb6",
+      "cardId": "stubborn_recovery",
+      "targetId": "enemy"
+    },
+    {
+      "type": "status_tick",
+      "turn": 13,
+      "preStateHash": "af2cb6",
+      "postStateHash": "af2cb6",
+      "targetId": "hero"
+    },
+    {
+      "type": "enemy_action",
+      "turn": 13,
+      "preStateHash": "af2cb6",
+      "postStateHash": "fb5e7a",
+      "targetId": "hero"
+    },
+    {
+      "type": "status_tick",
+      "turn": 13,
+      "preStateHash": "fb5e7a",
+      "postStateHash": "fb5e7a",
+      "targetId": "enemy"
+    },
+    {
+      "type": "turn_end",
+      "turn": 14,
+      "preStateHash": "af2cb6",
+      "postStateHash": "d8b809"
+    },
+    {
+      "type": "play_card",
+      "turn": 14,
+      "preStateHash": "d8b809",
+      "postStateHash": "b09296",
+      "cardId": "righteous_strike",
+      "targetId": "enemy"
+    },
+    {
+      "type": "play_card",
+      "turn": 14,
+      "preStateHash": "b09296",
+      "postStateHash": "32689c",
+      "cardId": "divine_charge",
+      "targetId": "enemy"
+    },
+    {
+      "type": "play_card",
+      "turn": 14,
+      "preStateHash": "32689c",
+      "postStateHash": "6080b1",
+      "cardId": "stubborn_recovery",
+      "targetId": "enemy"
+    },
+    {
+      "type": "status_tick",
+      "turn": 14,
+      "preStateHash": "6080b1",
+      "postStateHash": "6080b1",
+      "targetId": "hero"
+    },
+    {
+      "type": "enemy_action",
+      "turn": 14,
+      "preStateHash": "6080b1",
+      "postStateHash": "777156",
+      "targetId": "hero"
+    },
+    {
+      "type": "status_tick",
+      "turn": 14,
+      "preStateHash": "777156",
+      "postStateHash": "777156",
+      "targetId": "enemy"
+    },
+    {
+      "type": "turn_end",
+      "turn": 15,
+      "preStateHash": "6080b1",
+      "postStateHash": "1df542"
+    },
+    {
+      "type": "status_tick",
+      "turn": 15,
+      "preStateHash": "1df542",
+      "postStateHash": "7002cc",
+      "targetId": "hero"
+    },
+    {
+      "type": "enemy_action",
+      "turn": 15,
+      "preStateHash": "7002cc",
+      "postStateHash": "6cf7ef",
+      "targetId": "hero"
+    },
+    {
+      "type": "status_tick",
+      "turn": 15,
+      "preStateHash": "6cf7ef",
+      "postStateHash": "6cf7ef",
+      "targetId": "enemy"
+    },
+    {
+      "type": "turn_end",
+      "turn": 16,
+      "preStateHash": "1df542",
+      "postStateHash": "304b15"
+    },
+    {
+      "type": "play_card",
+      "turn": 16,
+      "preStateHash": "304b15",
+      "postStateHash": "ff1359",
+      "cardId": "righteous_strike",
+      "targetId": "enemy"
+    },
+    {
+      "type": "play_card",
+      "turn": 16,
+      "preStateHash": "ff1359",
+      "postStateHash": "b7fe1f",
+      "cardId": "divine_charge",
+      "targetId": "enemy"
+    },
+    {
+      "type": "play_card",
+      "turn": 16,
+      "preStateHash": "b7fe1f",
+      "postStateHash": "1ed007",
+      "cardId": "stubborn_recovery",
+      "targetId": "enemy"
+    },
+    {
+      "type": "status_tick",
+      "turn": 16,
+      "preStateHash": "1ed007",
+      "postStateHash": "1ed007",
+      "targetId": "hero"
+    },
+    {
+      "type": "enemy_action",
+      "turn": 16,
+      "preStateHash": "1ed007",
+      "postStateHash": "6550b4",
+      "targetId": "hero"
+    },
+    {
+      "type": "status_tick",
+      "turn": 16,
+      "preStateHash": "6550b4",
+      "postStateHash": "6550b4",
+      "targetId": "enemy"
+    },
+    {
+      "type": "turn_end",
+      "turn": 17,
+      "preStateHash": "1ed007",
+      "postStateHash": "158a29"
+    },
+    {
+      "type": "play_card",
+      "turn": 17,
+      "preStateHash": "158a29",
+      "postStateHash": "ad6320",
+      "cardId": "righteous_strike",
+      "targetId": "enemy"
+    },
+    {
+      "type": "play_card",
+      "turn": 17,
+      "preStateHash": "ad6320",
+      "postStateHash": "cbfe2d",
+      "cardId": "divine_charge",
+      "targetId": "enemy"
+    },
+    {
+      "type": "play_card",
+      "turn": 17,
+      "preStateHash": "cbfe2d",
+      "postStateHash": "5314fd",
+      "cardId": "stubborn_recovery",
+      "targetId": "enemy"
+    },
+    {
+      "type": "status_tick",
+      "turn": 17,
+      "preStateHash": "5314fd",
+      "postStateHash": "5314fd",
+      "targetId": "hero"
+    },
+    {
+      "type": "enemy_action",
+      "turn": 17,
+      "preStateHash": "5314fd",
+      "postStateHash": "ed5f1c",
+      "targetId": "hero"
+    },
+    {
+      "type": "status_tick",
+      "turn": 17,
+      "preStateHash": "ed5f1c",
+      "postStateHash": "ed5f1c",
+      "targetId": "enemy"
+    },
+    {
+      "type": "turn_end",
+      "turn": 18,
+      "preStateHash": "5314fd",
+      "postStateHash": "bc4bd1"
+    },
+    {
+      "type": "status_tick",
+      "turn": 18,
+      "preStateHash": "bc4bd1",
+      "postStateHash": "3d07d8",
+      "targetId": "hero"
+    },
+    {
+      "type": "enemy_action",
+      "turn": 18,
+      "preStateHash": "3d07d8",
+      "postStateHash": "39a4f0",
+      "targetId": "hero"
+    },
+    {
+      "type": "status_tick",
+      "turn": 18,
+      "preStateHash": "39a4f0",
+      "postStateHash": "39a4f0",
+      "targetId": "enemy"
+    },
+    {
+      "type": "turn_end",
+      "turn": 19,
+      "preStateHash": "bc4bd1",
+      "postStateHash": "8815b1"
+    },
+    {
+      "type": "play_card",
+      "turn": 19,
+      "preStateHash": "8815b1",
+      "postStateHash": "45fda4",
+      "cardId": "righteous_strike",
+      "targetId": "enemy"
+    }
+  ],
+  "snapshots": [
+    {
+      "turn": 2,
+      "hero": {
+        "id": "hero",
+        "name": "Paladin",
+        "hp": 30,
+        "maxHp": 30,
+        "state": "alive",
+        "statuses": [],
+        "formState": "human"
+      },
+      "enemies": [
+        {
+          "id": "enemy",
+          "name": "Guardian",
+          "hp": 30,
+          "maxHp": 35,
+          "state": "alive",
+          "statuses": [
+            {
+              "name": "defend",
+              "stacks": 8
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "play_card",
+          "turn": 1,
+          "preStateHash": "d4e3d9",
+          "postStateHash": "aa3dff",
+          "cardId": "righteous_strike",
+          "targetId": "enemy"
+        },
+        {
+          "type": "play_card",
+          "turn": 1,
+          "preStateHash": "aa3dff",
+          "postStateHash": "eabf4f",
+          "cardId": "divine_charge",
+          "targetId": "enemy"
+        },
+        {
+          "type": "play_card",
+          "turn": 1,
+          "preStateHash": "eabf4f",
+          "postStateHash": "49433e",
+          "cardId": "stubborn_recovery",
+          "targetId": "enemy"
+        },
+        {
+          "type": "status_tick",
+          "turn": 1,
+          "preStateHash": "49433e",
+          "postStateHash": "49433e",
+          "targetId": "hero"
+        },
+        {
+          "type": "enemy_action",
+          "turn": 1,
+          "preStateHash": "49433e",
+          "postStateHash": "cf1447",
+          "targetId": "hero"
+        },
+        {
+          "type": "status_tick",
+          "turn": 1,
+          "preStateHash": "cf1447",
+          "postStateHash": "cf1447",
+          "targetId": "enemy"
+        },
+        {
+          "type": "turn_end",
+          "turn": 2,
+          "preStateHash": "49433e",
+          "postStateHash": "aa5233"
+        }
+      ],
+      "hashValid": true
+    },
+    {
+      "turn": 3,
+      "hero": {
+        "id": "hero",
+        "name": "Paladin",
+        "hp": 30,
+        "maxHp": 30,
+        "state": "alive",
+        "statuses": [
+          {
+            "name": "stun",
+            "stacks": 1
+          }
+        ],
+        "formState": "human"
+      },
+      "enemies": [
+        {
+          "id": "enemy",
+          "name": "Guardian",
+          "hp": 30,
+          "maxHp": 35,
+          "state": "alive",
+          "statuses": [
+            {
+              "name": "defend",
+              "stacks": 3
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "play_card",
+          "turn": 2,
+          "preStateHash": "aa5233",
+          "postStateHash": "b60a07",
+          "cardId": "righteous_strike",
+          "targetId": "enemy"
+        },
+        {
+          "type": "play_card",
+          "turn": 2,
+          "preStateHash": "b60a07",
+          "postStateHash": "6ad087",
+          "cardId": "divine_charge",
+          "targetId": "enemy"
+        },
+        {
+          "type": "play_card",
+          "turn": 2,
+          "preStateHash": "6ad087",
+          "postStateHash": "84ae49",
+          "cardId": "stubborn_recovery",
+          "targetId": "enemy"
+        },
+        {
+          "type": "status_tick",
+          "turn": 2,
+          "preStateHash": "84ae49",
+          "postStateHash": "84ae49",
+          "targetId": "hero"
+        },
+        {
+          "type": "enemy_action",
+          "turn": 2,
+          "preStateHash": "84ae49",
+          "postStateHash": "33a801",
+          "targetId": "hero"
+        },
+        {
+          "type": "status_tick",
+          "turn": 2,
+          "preStateHash": "33a801",
+          "postStateHash": "33a801",
+          "targetId": "enemy"
+        },
+        {
+          "type": "turn_end",
+          "turn": 3,
+          "preStateHash": "84ae49",
+          "postStateHash": "b5f16f"
+        }
+      ],
+      "hashValid": true
+    },
+    {
+      "turn": 4,
+      "hero": {
+        "id": "hero",
+        "name": "Paladin",
+        "hp": 20,
+        "maxHp": 30,
+        "state": "alive",
+        "statuses": [],
+        "formState": "human"
+      },
+      "enemies": [
+        {
+          "id": "enemy",
+          "name": "Guardian",
+          "hp": 30,
+          "maxHp": 35,
+          "state": "alive",
+          "statuses": [
+            {
+              "name": "defend",
+              "stacks": 3
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "status_tick",
+          "turn": 3,
+          "preStateHash": "b5f16f",
+          "postStateHash": "4cb647",
+          "targetId": "hero"
+        },
+        {
+          "type": "enemy_action",
+          "turn": 3,
+          "preStateHash": "4cb647",
+          "postStateHash": "e3bc3e",
+          "targetId": "hero"
+        },
+        {
+          "type": "status_tick",
+          "turn": 3,
+          "preStateHash": "e3bc3e",
+          "postStateHash": "e3bc3e",
+          "targetId": "enemy"
+        },
+        {
+          "type": "turn_end",
+          "turn": 4,
+          "preStateHash": "b5f16f",
+          "postStateHash": "f9e2f5"
+        }
+      ],
+      "hashValid": true
+    },
+    {
+      "turn": 5,
+      "hero": {
+        "id": "hero",
+        "name": "Paladin",
+        "hp": 26,
+        "maxHp": 30,
+        "state": "alive",
+        "statuses": [],
+        "formState": "human"
+      },
+      "enemies": [
+        {
+          "id": "enemy",
+          "name": "Guardian",
+          "hp": 28,
+          "maxHp": 35,
+          "state": "alive",
+          "statuses": [
+            {
+              "name": "defend",
+              "stacks": 8
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "play_card",
+          "turn": 4,
+          "preStateHash": "f9e2f5",
+          "postStateHash": "dd95f5",
+          "cardId": "righteous_strike",
+          "targetId": "enemy"
+        },
+        {
+          "type": "play_card",
+          "turn": 4,
+          "preStateHash": "dd95f5",
+          "postStateHash": "4203eb",
+          "cardId": "divine_charge",
+          "targetId": "enemy"
+        },
+        {
+          "type": "play_card",
+          "turn": 4,
+          "preStateHash": "4203eb",
+          "postStateHash": "35f12a",
+          "cardId": "stubborn_recovery",
+          "targetId": "enemy"
+        },
+        {
+          "type": "status_tick",
+          "turn": 4,
+          "preStateHash": "35f12a",
+          "postStateHash": "35f12a",
+          "targetId": "hero"
+        },
+        {
+          "type": "enemy_action",
+          "turn": 4,
+          "preStateHash": "35f12a",
+          "postStateHash": "482b35",
+          "targetId": "hero"
+        },
+        {
+          "type": "status_tick",
+          "turn": 4,
+          "preStateHash": "482b35",
+          "postStateHash": "482b35",
+          "targetId": "enemy"
+        },
+        {
+          "type": "turn_end",
+          "turn": 5,
+          "preStateHash": "35f12a",
+          "postStateHash": "5f534a"
+        }
+      ],
+      "hashValid": true
+    },
+    {
+      "turn": 6,
+      "hero": {
+        "id": "hero",
+        "name": "Paladin",
+        "hp": 30,
+        "maxHp": 30,
+        "state": "alive",
+        "statuses": [
+          {
+            "name": "stun",
+            "stacks": 1
+          }
+        ],
+        "formState": "human"
+      },
+      "enemies": [
+        {
+          "id": "enemy",
+          "name": "Guardian",
+          "hp": 26,
+          "maxHp": 35,
+          "state": "alive",
+          "statuses": []
+        }
+      ],
+      "events": [
+        {
+          "type": "play_card",
+          "turn": 5,
+          "preStateHash": "5f534a",
+          "postStateHash": "f6c5f0",
+          "cardId": "righteous_strike",
+          "targetId": "enemy"
+        },
+        {
+          "type": "play_card",
+          "turn": 5,
+          "preStateHash": "f6c5f0",
+          "postStateHash": "789bf6",
+          "cardId": "divine_charge",
+          "targetId": "enemy"
+        },
+        {
+          "type": "play_card",
+          "turn": 5,
+          "preStateHash": "789bf6",
+          "postStateHash": "4c3b64",
+          "cardId": "stubborn_recovery",
+          "targetId": "enemy"
+        },
+        {
+          "type": "status_tick",
+          "turn": 5,
+          "preStateHash": "4c3b64",
+          "postStateHash": "4c3b64",
+          "targetId": "hero"
+        },
+        {
+          "type": "enemy_action",
+          "turn": 5,
+          "preStateHash": "4c3b64",
+          "postStateHash": "bda4b0",
+          "targetId": "hero"
+        },
+        {
+          "type": "status_tick",
+          "turn": 5,
+          "preStateHash": "bda4b0",
+          "postStateHash": "bda4b0",
+          "targetId": "enemy"
+        },
+        {
+          "type": "turn_end",
+          "turn": 6,
+          "preStateHash": "4c3b64",
+          "postStateHash": "e91fe4"
+        }
+      ],
+      "hashValid": true
+    },
+    {
+      "turn": 7,
+      "hero": {
+        "id": "hero",
+        "name": "Paladin",
+        "hp": 20,
+        "maxHp": 30,
+        "state": "alive",
+        "statuses": [],
+        "formState": "human"
+      },
+      "enemies": [
+        {
+          "id": "enemy",
+          "name": "Guardian",
+          "hp": 26,
+          "maxHp": 35,
+          "state": "alive",
+          "statuses": []
+        }
+      ],
+      "events": [
+        {
+          "type": "status_tick",
+          "turn": 6,
+          "preStateHash": "e91fe4",
+          "postStateHash": "3b2d6f",
+          "targetId": "hero"
+        },
+        {
+          "type": "enemy_action",
+          "turn": 6,
+          "preStateHash": "3b2d6f",
+          "postStateHash": "382292",
+          "targetId": "hero"
+        },
+        {
+          "type": "status_tick",
+          "turn": 6,
+          "preStateHash": "382292",
+          "postStateHash": "382292",
+          "targetId": "enemy"
+        },
+        {
+          "type": "turn_end",
+          "turn": 7,
+          "preStateHash": "e91fe4",
+          "postStateHash": "b70f8a"
+        }
+      ],
+      "hashValid": true
+    },
+    {
+      "turn": 8,
+      "hero": {
+        "id": "hero",
+        "name": "Paladin",
+        "hp": 26,
+        "maxHp": 30,
+        "state": "alive",
+        "statuses": [],
+        "formState": "human"
+      },
+      "enemies": [
+        {
+          "id": "enemy",
+          "name": "Guardian",
+          "hp": 21,
+          "maxHp": 35,
+          "state": "alive",
+          "statuses": [
+            {
+              "name": "defend",
+              "stacks": 8
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "play_card",
+          "turn": 7,
+          "preStateHash": "b70f8a",
+          "postStateHash": "8c69af",
+          "cardId": "righteous_strike",
+          "targetId": "enemy"
+        },
+        {
+          "type": "play_card",
+          "turn": 7,
+          "preStateHash": "8c69af",
+          "postStateHash": "f0d7a5",
+          "cardId": "divine_charge",
+          "targetId": "enemy"
+        },
+        {
+          "type": "play_card",
+          "turn": 7,
+          "preStateHash": "f0d7a5",
+          "postStateHash": "e4c4e5",
+          "cardId": "stubborn_recovery",
+          "targetId": "enemy"
+        },
+        {
+          "type": "status_tick",
+          "turn": 7,
+          "preStateHash": "e4c4e5",
+          "postStateHash": "e4c4e5",
+          "targetId": "hero"
+        },
+        {
+          "type": "enemy_action",
+          "turn": 7,
+          "preStateHash": "e4c4e5",
+          "postStateHash": "b5f70b",
+          "targetId": "hero"
+        },
+        {
+          "type": "status_tick",
+          "turn": 7,
+          "preStateHash": "b5f70b",
+          "postStateHash": "b5f70b",
+          "targetId": "enemy"
+        },
+        {
+          "type": "turn_end",
+          "turn": 8,
+          "preStateHash": "e4c4e5",
+          "postStateHash": "20925e"
+        }
+      ],
+      "hashValid": true
+    },
+    {
+      "turn": 9,
+      "hero": {
+        "id": "hero",
+        "name": "Paladin",
+        "hp": 30,
+        "maxHp": 30,
+        "state": "alive",
+        "statuses": [
+          {
+            "name": "stun",
+            "stacks": 1
+          }
+        ],
+        "formState": "human"
+      },
+      "enemies": [
+        {
+          "id": "enemy",
+          "name": "Guardian",
+          "hp": 21,
+          "maxHp": 35,
+          "state": "alive",
+          "statuses": [
+            {
+              "name": "defend",
+              "stacks": 3
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "play_card",
+          "turn": 8,
+          "preStateHash": "20925e",
+          "postStateHash": "2c4a33",
+          "cardId": "righteous_strike",
+          "targetId": "enemy"
+        },
+        {
+          "type": "play_card",
+          "turn": 8,
+          "preStateHash": "2c4a33",
+          "postStateHash": "e110b2",
+          "cardId": "divine_charge",
+          "targetId": "enemy"
+        },
+        {
+          "type": "play_card",
+          "turn": 8,
+          "preStateHash": "e110b2",
+          "postStateHash": "3cd3f5",
+          "cardId": "stubborn_recovery",
+          "targetId": "enemy"
+        },
+        {
+          "type": "status_tick",
+          "turn": 8,
+          "preStateHash": "3cd3f5",
+          "postStateHash": "3cd3f5",
+          "targetId": "hero"
+        },
+        {
+          "type": "enemy_action",
+          "turn": 8,
+          "preStateHash": "3cd3f5",
+          "postStateHash": "ebcdad",
+          "targetId": "hero"
+        },
+        {
+          "type": "status_tick",
+          "turn": 8,
+          "preStateHash": "ebcdad",
+          "postStateHash": "ebcdad",
+          "targetId": "enemy"
+        },
+        {
+          "type": "turn_end",
+          "turn": 9,
+          "preStateHash": "3cd3f5",
+          "postStateHash": "28ec35"
+        }
+      ],
+      "hashValid": true
+    },
+    {
+      "turn": 10,
+      "hero": {
+        "id": "hero",
+        "name": "Paladin",
+        "hp": 20,
+        "maxHp": 30,
+        "state": "alive",
+        "statuses": [],
+        "formState": "human"
+      },
+      "enemies": [
+        {
+          "id": "enemy",
+          "name": "Guardian",
+          "hp": 21,
+          "maxHp": 35,
+          "state": "alive",
+          "statuses": [
+            {
+              "name": "defend",
+              "stacks": 3
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "status_tick",
+          "turn": 9,
+          "preStateHash": "28ec35",
+          "postStateHash": "bfb10d",
+          "targetId": "hero"
+        },
+        {
+          "type": "enemy_action",
+          "turn": 9,
+          "preStateHash": "bfb10d",
+          "postStateHash": "56b704",
+          "targetId": "hero"
+        },
+        {
+          "type": "status_tick",
+          "turn": 9,
+          "preStateHash": "56b704",
+          "postStateHash": "56b704",
+          "targetId": "enemy"
+        },
+        {
+          "type": "turn_end",
+          "turn": 10,
+          "preStateHash": "28ec35",
+          "postStateHash": "3f4a63"
+        }
+      ],
+      "hashValid": true
+    },
+    {
+      "turn": 11,
+      "hero": {
+        "id": "hero",
+        "name": "Paladin",
+        "hp": 26,
+        "maxHp": 30,
+        "state": "alive",
+        "statuses": [],
+        "formState": "human"
+      },
+      "enemies": [
+        {
+          "id": "enemy",
+          "name": "Guardian",
+          "hp": 14,
+          "maxHp": 35,
+          "state": "alive",
+          "statuses": [
+            {
+              "name": "defend",
+              "stacks": 8
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "play_card",
+          "turn": 10,
+          "preStateHash": "3f4a63",
+          "postStateHash": "c53c9d",
+          "cardId": "righteous_strike",
+          "targetId": "enemy"
+        },
+        {
+          "type": "play_card",
+          "turn": 10,
+          "preStateHash": "c53c9d",
+          "postStateHash": "29aa93",
+          "cardId": "divine_charge",
+          "targetId": "enemy"
+        },
+        {
+          "type": "play_card",
+          "turn": 10,
+          "preStateHash": "29aa93",
+          "postStateHash": "1d97d3",
+          "cardId": "stubborn_recovery",
+          "targetId": "enemy"
+        },
+        {
+          "type": "status_tick",
+          "turn": 10,
+          "preStateHash": "1d97d3",
+          "postStateHash": "1d97d3",
+          "targetId": "hero"
+        },
+        {
+          "type": "enemy_action",
+          "turn": 10,
+          "preStateHash": "1d97d3",
+          "postStateHash": "f82c17",
+          "targetId": "hero"
+        },
+        {
+          "type": "status_tick",
+          "turn": 10,
+          "preStateHash": "f82c17",
+          "postStateHash": "f82c17",
+          "targetId": "enemy"
+        },
+        {
+          "type": "turn_end",
+          "turn": 11,
+          "preStateHash": "1d97d3",
+          "postStateHash": "f648e6"
+        }
+      ],
+      "hashValid": true
+    },
+    {
+      "turn": 12,
+      "hero": {
+        "id": "hero",
+        "name": "Paladin",
+        "hp": 30,
+        "maxHp": 30,
+        "state": "alive",
+        "statuses": [
+          {
+            "name": "stun",
+            "stacks": 1
+          }
+        ],
+        "formState": "human"
+      },
+      "enemies": [
+        {
+          "id": "enemy",
+          "name": "Guardian",
+          "hp": 14,
+          "maxHp": 35,
+          "state": "alive",
+          "statuses": [
+            {
+              "name": "defend",
+              "stacks": 3
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "play_card",
+          "turn": 11,
+          "preStateHash": "f648e6",
+          "postStateHash": "200bb6",
+          "cardId": "righteous_strike",
+          "targetId": "enemy"
+        },
+        {
+          "type": "play_card",
+          "turn": 11,
+          "preStateHash": "200bb6",
+          "postStateHash": "b6c73a",
+          "cardId": "divine_charge",
+          "targetId": "enemy"
+        },
+        {
+          "type": "play_card",
+          "turn": 11,
+          "preStateHash": "b6c73a",
+          "postStateHash": "128a7d",
+          "cardId": "stubborn_recovery",
+          "targetId": "enemy"
+        },
+        {
+          "type": "status_tick",
+          "turn": 11,
+          "preStateHash": "128a7d",
+          "postStateHash": "128a7d",
+          "targetId": "hero"
+        },
+        {
+          "type": "enemy_action",
+          "turn": 11,
+          "preStateHash": "128a7d",
+          "postStateHash": "c18435",
+          "targetId": "hero"
+        },
+        {
+          "type": "status_tick",
+          "turn": 11,
+          "preStateHash": "c18435",
+          "postStateHash": "c18435",
+          "targetId": "enemy"
+        },
+        {
+          "type": "turn_end",
+          "turn": 12,
+          "preStateHash": "128a7d",
+          "postStateHash": "7f653e"
+        }
+      ],
+      "hashValid": true
+    },
+    {
+      "turn": 13,
+      "hero": {
+        "id": "hero",
+        "name": "Paladin",
+        "hp": 20,
+        "maxHp": 30,
+        "state": "alive",
+        "statuses": [],
+        "formState": "human"
+      },
+      "enemies": [
+        {
+          "id": "enemy",
+          "name": "Guardian",
+          "hp": 14,
+          "maxHp": 35,
+          "state": "alive",
+          "statuses": [
+            {
+              "name": "defend",
+              "stacks": 3
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "status_tick",
+          "turn": 12,
+          "preStateHash": "7f653e",
+          "postStateHash": "162a15",
+          "targetId": "hero"
+        },
+        {
+          "type": "enemy_action",
+          "turn": 12,
+          "preStateHash": "162a15",
+          "postStateHash": "ad300d",
+          "targetId": "hero"
+        },
+        {
+          "type": "status_tick",
+          "turn": 12,
+          "preStateHash": "ad300d",
+          "postStateHash": "ad300d",
+          "targetId": "enemy"
+        },
+        {
+          "type": "turn_end",
+          "turn": 13,
+          "preStateHash": "7f653e",
+          "postStateHash": "817f6e"
+        }
+      ],
+      "hashValid": true
+    },
+    {
+      "turn": 14,
+      "hero": {
+        "id": "hero",
+        "name": "Paladin",
+        "hp": 26,
+        "maxHp": 30,
+        "state": "alive",
+        "statuses": [],
+        "formState": "human"
+      },
+      "enemies": [
+        {
+          "id": "enemy",
+          "name": "Guardian",
+          "hp": 12,
+          "maxHp": 35,
+          "state": "alive",
+          "statuses": [
+            {
+              "name": "defend",
+              "stacks": 8
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "play_card",
+          "turn": 13,
+          "preStateHash": "817f6e",
+          "postStateHash": "56d180",
+          "cardId": "righteous_strike",
+          "targetId": "enemy"
+        },
+        {
+          "type": "play_card",
+          "turn": 13,
+          "preStateHash": "56d180",
+          "postStateHash": "bb3f76",
+          "cardId": "divine_charge",
+          "targetId": "enemy"
+        },
+        {
+          "type": "play_card",
+          "turn": 13,
+          "preStateHash": "bb3f76",
+          "postStateHash": "af2cb6",
+          "cardId": "stubborn_recovery",
+          "targetId": "enemy"
+        },
+        {
+          "type": "status_tick",
+          "turn": 13,
+          "preStateHash": "af2cb6",
+          "postStateHash": "af2cb6",
+          "targetId": "hero"
+        },
+        {
+          "type": "enemy_action",
+          "turn": 13,
+          "preStateHash": "af2cb6",
+          "postStateHash": "fb5e7a",
+          "targetId": "hero"
+        },
+        {
+          "type": "status_tick",
+          "turn": 13,
+          "preStateHash": "fb5e7a",
+          "postStateHash": "fb5e7a",
+          "targetId": "enemy"
+        },
+        {
+          "type": "turn_end",
+          "turn": 14,
+          "preStateHash": "af2cb6",
+          "postStateHash": "d8b809"
+        }
+      ],
+      "hashValid": true
+    },
+    {
+      "turn": 15,
+      "hero": {
+        "id": "hero",
+        "name": "Paladin",
+        "hp": 30,
+        "maxHp": 30,
+        "state": "alive",
+        "statuses": [
+          {
+            "name": "stun",
+            "stacks": 1
+          }
+        ],
+        "formState": "human"
+      },
+      "enemies": [
+        {
+          "id": "enemy",
+          "name": "Guardian",
+          "hp": 10,
+          "maxHp": 35,
+          "state": "alive",
+          "statuses": []
+        }
+      ],
+      "events": [
+        {
+          "type": "play_card",
+          "turn": 14,
+          "preStateHash": "d8b809",
+          "postStateHash": "b09296",
+          "cardId": "righteous_strike",
+          "targetId": "enemy"
+        },
+        {
+          "type": "play_card",
+          "turn": 14,
+          "preStateHash": "b09296",
+          "postStateHash": "32689c",
+          "cardId": "divine_charge",
+          "targetId": "enemy"
+        },
+        {
+          "type": "play_card",
+          "turn": 14,
+          "preStateHash": "32689c",
+          "postStateHash": "6080b1",
+          "cardId": "stubborn_recovery",
+          "targetId": "enemy"
+        },
+        {
+          "type": "status_tick",
+          "turn": 14,
+          "preStateHash": "6080b1",
+          "postStateHash": "6080b1",
+          "targetId": "hero"
+        },
+        {
+          "type": "enemy_action",
+          "turn": 14,
+          "preStateHash": "6080b1",
+          "postStateHash": "777156",
+          "targetId": "hero"
+        },
+        {
+          "type": "status_tick",
+          "turn": 14,
+          "preStateHash": "777156",
+          "postStateHash": "777156",
+          "targetId": "enemy"
+        },
+        {
+          "type": "turn_end",
+          "turn": 15,
+          "preStateHash": "6080b1",
+          "postStateHash": "1df542"
+        }
+      ],
+      "hashValid": true
+    },
+    {
+      "turn": 16,
+      "hero": {
+        "id": "hero",
+        "name": "Paladin",
+        "hp": 20,
+        "maxHp": 30,
+        "state": "alive",
+        "statuses": [],
+        "formState": "human"
+      },
+      "enemies": [
+        {
+          "id": "enemy",
+          "name": "Guardian",
+          "hp": 10,
+          "maxHp": 35,
+          "state": "alive",
+          "statuses": []
+        }
+      ],
+      "events": [
+        {
+          "type": "status_tick",
+          "turn": 15,
+          "preStateHash": "1df542",
+          "postStateHash": "7002cc",
+          "targetId": "hero"
+        },
+        {
+          "type": "enemy_action",
+          "turn": 15,
+          "preStateHash": "7002cc",
+          "postStateHash": "6cf7ef",
+          "targetId": "hero"
+        },
+        {
+          "type": "status_tick",
+          "turn": 15,
+          "preStateHash": "6cf7ef",
+          "postStateHash": "6cf7ef",
+          "targetId": "enemy"
+        },
+        {
+          "type": "turn_end",
+          "turn": 16,
+          "preStateHash": "1df542",
+          "postStateHash": "304b15"
+        }
+      ],
+      "hashValid": true
+    },
+    {
+      "turn": 17,
+      "hero": {
+        "id": "hero",
+        "name": "Paladin",
+        "hp": 26,
+        "maxHp": 30,
+        "state": "alive",
+        "statuses": [],
+        "formState": "human"
+      },
+      "enemies": [
+        {
+          "id": "enemy",
+          "name": "Guardian",
+          "hp": 5,
+          "maxHp": 35,
+          "state": "alive",
+          "statuses": [
+            {
+              "name": "defend",
+              "stacks": 8
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "play_card",
+          "turn": 16,
+          "preStateHash": "304b15",
+          "postStateHash": "ff1359",
+          "cardId": "righteous_strike",
+          "targetId": "enemy"
+        },
+        {
+          "type": "play_card",
+          "turn": 16,
+          "preStateHash": "ff1359",
+          "postStateHash": "b7fe1f",
+          "cardId": "divine_charge",
+          "targetId": "enemy"
+        },
+        {
+          "type": "play_card",
+          "turn": 16,
+          "preStateHash": "b7fe1f",
+          "postStateHash": "1ed007",
+          "cardId": "stubborn_recovery",
+          "targetId": "enemy"
+        },
+        {
+          "type": "status_tick",
+          "turn": 16,
+          "preStateHash": "1ed007",
+          "postStateHash": "1ed007",
+          "targetId": "hero"
+        },
+        {
+          "type": "enemy_action",
+          "turn": 16,
+          "preStateHash": "1ed007",
+          "postStateHash": "6550b4",
+          "targetId": "hero"
+        },
+        {
+          "type": "status_tick",
+          "turn": 16,
+          "preStateHash": "6550b4",
+          "postStateHash": "6550b4",
+          "targetId": "enemy"
+        },
+        {
+          "type": "turn_end",
+          "turn": 17,
+          "preStateHash": "1ed007",
+          "postStateHash": "158a29"
+        }
+      ],
+      "hashValid": true
+    },
+    {
+      "turn": 18,
+      "hero": {
+        "id": "hero",
+        "name": "Paladin",
+        "hp": 30,
+        "maxHp": 30,
+        "state": "alive",
+        "statuses": [
+          {
+            "name": "stun",
+            "stacks": 1
+          }
+        ],
+        "formState": "human"
+      },
+      "enemies": [
+        {
+          "id": "enemy",
+          "name": "Guardian",
+          "hp": 5,
+          "maxHp": 35,
+          "state": "alive",
+          "statuses": [
+            {
+              "name": "defend",
+              "stacks": 3
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "play_card",
+          "turn": 17,
+          "preStateHash": "158a29",
+          "postStateHash": "ad6320",
+          "cardId": "righteous_strike",
+          "targetId": "enemy"
+        },
+        {
+          "type": "play_card",
+          "turn": 17,
+          "preStateHash": "ad6320",
+          "postStateHash": "cbfe2d",
+          "cardId": "divine_charge",
+          "targetId": "enemy"
+        },
+        {
+          "type": "play_card",
+          "turn": 17,
+          "preStateHash": "cbfe2d",
+          "postStateHash": "5314fd",
+          "cardId": "stubborn_recovery",
+          "targetId": "enemy"
+        },
+        {
+          "type": "status_tick",
+          "turn": 17,
+          "preStateHash": "5314fd",
+          "postStateHash": "5314fd",
+          "targetId": "hero"
+        },
+        {
+          "type": "enemy_action",
+          "turn": 17,
+          "preStateHash": "5314fd",
+          "postStateHash": "ed5f1c",
+          "targetId": "hero"
+        },
+        {
+          "type": "status_tick",
+          "turn": 17,
+          "preStateHash": "ed5f1c",
+          "postStateHash": "ed5f1c",
+          "targetId": "enemy"
+        },
+        {
+          "type": "turn_end",
+          "turn": 18,
+          "preStateHash": "5314fd",
+          "postStateHash": "bc4bd1"
+        }
+      ],
+      "hashValid": true
+    },
+    {
+      "turn": 19,
+      "hero": {
+        "id": "hero",
+        "name": "Paladin",
+        "hp": 20,
+        "maxHp": 30,
+        "state": "alive",
+        "statuses": [],
+        "formState": "human"
+      },
+      "enemies": [
+        {
+          "id": "enemy",
+          "name": "Guardian",
+          "hp": 5,
+          "maxHp": 35,
+          "state": "alive",
+          "statuses": [
+            {
+              "name": "defend",
+              "stacks": 3
+            }
+          ]
+        }
+      ],
+      "events": [
+        {
+          "type": "status_tick",
+          "turn": 18,
+          "preStateHash": "bc4bd1",
+          "postStateHash": "3d07d8",
+          "targetId": "hero"
+        },
+        {
+          "type": "enemy_action",
+          "turn": 18,
+          "preStateHash": "3d07d8",
+          "postStateHash": "39a4f0",
+          "targetId": "hero"
+        },
+        {
+          "type": "status_tick",
+          "turn": 18,
+          "preStateHash": "39a4f0",
+          "postStateHash": "39a4f0",
+          "targetId": "enemy"
+        },
+        {
+          "type": "turn_end",
+          "turn": 19,
+          "preStateHash": "bc4bd1",
+          "postStateHash": "8815b1"
+        }
+      ],
+      "hashValid": true
+    }
+  ],
+  "outcome": "hero_wins",
+  "_meta": {
+    "savedAt": "2026-08-20T14:14:17.821Z",
+    "divergedAt": null,
+    "divergedTurn": null,
+    "eventsReplayed": 109
+  }
+}

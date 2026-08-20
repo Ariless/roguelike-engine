@@ -2179,11 +2179,14 @@ function executeEnemyIntent(gs, enemy, intent) {
 }
 
 function tickStatuses(gs, who) {
-  const entity = who === 'hero' ? gs.hero : gs.enemies.find(e => e.id === who)
+  const isHero = who === 'hero'
+  const entity = isHero ? gs.hero : gs.enemies.find(e => e.id === who)
   const bleed = getStatus(entity, 'bleed')
   if (bleed) {
     const dmg = bleed.stacks
     applyDamageToEntity(entity, dmg)
+    // Enemies have no lingering death_door — convert immediately (same as dealDamage line 1901)
+    if (!isHero && entity.state === 'death_door') entity.state = 'dead'
     addLog(gs, `🩸 ${entity.name} bleeds for ${dmg}`)
     bleed.stacks = Math.max(0, bleed.stacks - 1)
     if (bleed.stacks === 0) removeStatus(entity, 'bleed')
@@ -2672,7 +2675,7 @@ document.addEventListener('keydown', e => {
   if (e.key === '1') selectCard(gs.hero.hand[0])
   if (e.key === '2') selectCard(gs.hero.hand[1])
   if (e.key === '3') selectCard(gs.hero.hand[2])
-  // Cmd+Shift+C — demo trigger для портфолио (Mac)
+  // Cmd+Shift+C — portfolio demo trigger (Mac)
   if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'c') {
     e.preventDefault()
     triggerCorruption('dead-cannot-act', 'Dead entity attempted to act. State machine corrupted.')

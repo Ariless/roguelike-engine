@@ -34,9 +34,9 @@ function hashState(state: GameState): string {
 }
 
 // ─── Enemy intent tables ──────────────────────────────────────────────────────
-// Экспортируется ради tests/decision-tables.test.ts: таблица сверяется с
-// docs/DECISION-TABLES.md, который CLAUDE.md объявляет intended spec. Без
-// экспорта расхождение спецификации и кода можно заметить только глазами.
+// Exported for tests/decision-tables.test.ts: the table is compared against
+// docs/DECISION-TABLES.md, which CLAUDE.md declares the intended spec. Without
+// the export, a divergence between spec and code can only be spotted by eye.
 export const ENEMY_INTENTS: Record<EnemyType, Intent[]> = {
   goblin:      [{ type: 'attack', value: 6 }, { type: 'attack', value: 6 }, { type: 'attack', value: 6 }],
   guardian:    [{ type: 'defend' },           { type: 'stun' },             { type: 'attack', value: 10 }],

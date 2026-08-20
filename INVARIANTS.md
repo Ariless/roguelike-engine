@@ -27,7 +27,7 @@ Every invariant the system must hold, where it applies, how a violation looks, a
 | `dead → alive` is impossible | Always | Resurrected entity | `invariants.test.ts: DEAD_ENTITY_STATE` |
 | `dead → death_door` is impossible | Always | Dead entity partially recovers | `invariants.test.ts` |
 | `dead` entity cannot act | Turn Pipeline step 4/5 | Dead enemy executes intent | `invariants.test.ts: dead-cannot-act` |
-| `death_door` clears only via explicit heal | Always | Stun / status tick / form change clears death_door | `resolution.test.ts: death_door только через applyHeal` |
+| `death_door` clears only via explicit heal | Always | Stun / status tick / form change clears death_door | `resolution.test.ts: death_door → alive when healed` |
 | Enemy never lingers in `death_door` between turns | End of executor tick | Enemy with `death_door` skips death and acts next turn | `executor.test.ts: enemy killed by lethal bleed` |
 | Werewolf: `human ↔ wolf` (never skips) | Turn Pipeline step 3 | Hero jumps to wolf without passing threshold | `heroes/werewolf.test.ts` |
 | Werewolf: `dead` hero never transforms | Turn Pipeline step 3 | Dead hero gains wolf form | `heroes/werewolf.test.ts: dead hero → no transform` |
@@ -39,10 +39,10 @@ Every invariant the system must hold, where it applies, how a violation looks, a
 | Invariant | Applies at | Violation looks like | Caught by | BUGS.md |
 |-----------|-----------|---------------------|-----------|---------|
 | `bleed.stacks <= 10` | After addStatus | More than 10 stacks | `property.test.ts: bleed stacks <= 10` | — |
-| `bleed.stacks >= 0` | After tick | Negative bleed damage | `property.test.ts: bleed tick не уходит в минус` | — |
+| `bleed.stacks >= 0` | After tick | Negative bleed damage | `property.test.ts: a bleed tick never pushes hp below zero` | — |
 | `stun` does not stack | After addStatus | Duration > 1 from stacking | `statuses.test.ts` | — |
-| `defend` never increases incoming damage | ARP step 4 | Attack with defend deals more damage | `property.test.ts: defend никогда не увеличивает урон` | — |
-| Status effects survive transformation | Turn Pipeline step 3 | Bleed disappears after werewolf transform | `heroes/werewolf.test.ts: статусы выживают` | — |
+| `defend` never increases incoming damage | ARP step 4 | Attack with defend deals more damage | `property.test.ts: defend never increases damage taken` | — |
+| Status effects survive transformation | Turn Pipeline step 3 | Bleed disappears after werewolf transform | `property.test.ts: statuses survive the transformation` | — |
 | `hasStatus(e, X)` is false when X not applied | Always | Function returns true for arbitrary status | `statuses.test.ts: hasStatus negative cases` | MUTATION-01 |
 | Status with `duration` expires; without `duration` persists | After tick | Bleed removed by tick; stun persists forever | `statuses.test.ts: tickStatuses duration filter` | MUTATION-01 |
 
@@ -54,11 +54,11 @@ Every invariant the system must hold, where it applies, how a violation looks, a
 |-----------|-----------|---------------------|-----------|---------|
 | `chargeStacks <= 3` | After any charge gain | 4+ stacks, double-double damage | `property.test.ts: Paladin chargeStacks` | — |
 | `chargeStacks >= 0` | Always | Negative charges | `heroes/paladin.test.ts` | — |
-| `chargeStacks undefined = 0` | playRighteousStrike / playDivineCharge | First charge gives 0 instead of 1 | `heroes/paladin.test.ts: первый заряд из undefined` | MUTATION-01 |
+| `chargeStacks undefined = 0` | playRighteousStrike / playDivineCharge | First charge gives 0 instead of 1 | `heroes/paladin.test.ts: the first charge from chargeStacks=undefined gives 1, not 0` | MUTATION-01 |
 | `rageStacks <= 5` | After Primal Fury | 6+ stacks | `heroes/berserker.test.ts: rage capped at 5` | — |
 | `isInRage(dead hero)` = false | Always | Dead hero gets rage bonus | `heroes/berserker.test.ts: HP=0 dead → rage inactive` | — |
 | `wolfDamage >= base` for any HP | ARP step 4 | Wolf form reduces damage | `property.test.ts: wolfDamage >= base` | — |
-| `wolfDamage` monotonically decreasing with HP | ARP step 4 | Higher HP → more damage (backwards) | `property.test.ts: wolfDamage монотонно убывает` | — |
+| `wolfDamage` monotonically decreasing with HP | ARP step 4 | Higher HP → more damage (backwards) | `property.test.ts: wolfDamage decreases monotonically as HP rises` | — |
 
 ---
 
@@ -77,7 +77,7 @@ Every invariant the system must hold, where it applies, how a violation looks, a
 
 | Invariant | Applies at | Violation looks like | Caught by | BUGS.md |
 |-----------|-----------|---------------------|-----------|---------|
-| Same seed → same replay (byte-perfect) | ReplayLog | `replayGame(log).success = false` | `runtime/executor-property.test.ts: детерминизм` | — |
+| Same seed → same replay (byte-perfect) | ReplayLog | `replayGame(log).success = false` | `runtime/executor-property.test.ts: the same seed → the same outcome` | — |
 | `snapshots.length === turn_end events` | After any endTurn | Segment missing in debugger | `runtime/executor-property.test.ts` | BUG-12 |
 | Every play_card event has pre/post hash | ReplayLog | Hash = `undefined` in log | `replay/replay.test.ts` | — |
 | Diverged hash → `result.divergedAt` points to event | Replayer | Silent divergence, no report | `replay/replay.test.ts: tampered hash` | — |
@@ -103,7 +103,7 @@ These tests use `it.fails()` — they pass only when the assertion FAILS.
 |-----------|-----------|---------------------|-----------|
 | Action target must exist at resolution time | ARP step 1 | Card fires against non-existent entity | `action-resolution.test.ts` (resolveAction returns early if target not found) |
 | Action targeting `dead` entity is a no-op | ARP step 4 | Dead enemy takes damage, HP goes negative | `resolution.test.ts: dead immunity` |
-| AoE cards skip dead entities | ARP step 3 | Rampage damages archived enemies | `heroes/werewolf.test.ts: пропускает мёртвых` |
+| AoE cards skip dead entities | ARP step 3 | Rampage damages archived enemies | `heroes/werewolf.test.ts: skips dead enemies` |
 
 ---
 
@@ -132,7 +132,7 @@ These tests use `it.fails()` — they pass only when the assertion FAILS.
 |-----------|-----------|---------------------|-----------|
 | `dead → hp = 0` | Always | `state = dead, hp = 12` after replay reconstruction | `property.test.ts: dead entity stays dead` |
 | `death_door → hp = 0` | Always | `state = death_door, hp = 5` — entity bypassed death transition | `resolution.test.ts` |
-| HP cannot increase via damage | After applyDamage | `hp_after > hp_before` | `property.test.ts: applyDamage никогда не увеличивает hp` |
+| HP cannot increase via damage | After applyDamage | `hp_after > hp_before` | `property.test.ts: applyDamage: hp never increases` |
 
 ---
 
@@ -150,7 +150,7 @@ These tests use `it.fails()` — they pass only when the assertion FAILS.
 
 | Invariant | Applies at | Violation looks like | Caught by |
 |-----------|-----------|---------------------|-----------|
-| `intent(enemy, turn)` is pure — same input = same output | Turn Pipeline step 5 | Intent changes on re-run with same seed | `runtime/executor-property.test.ts: детерминизм` |
+| `intent(enemy, turn)` is pure — same input = same output | Turn Pipeline step 5 | Intent changes on re-run with same seed | `runtime/executor-property.test.ts: the same seed → the same outcome` |
 | Intent selection has no side effects | Turn Pipeline step 5 | Logging / telemetry code accidentally advances RNG | Architecture: intent tables are pure arrays; no RNG consumed |
 | Intent cycle is deterministic — turn N % len = same intent | Always | Turn 4 gives different intent than turn 1 for same enemy | `tests/bdd/features/combat.feature: Guardian cycle` |
 | Lifesteal uses `min(dmg_dealt, enemy.maxHp - enemy.hp)` | ARP step 5 | Lifesteal heals for overkill damage (>actual damage dealt) | `runtime/executor.ts: lifesteal capped` |
@@ -161,26 +161,27 @@ These tests use `it.fails()` — they pass only when the assertion FAILS.
 
 ## RNG distribution invariants
 
-> Отдельно от детерминизма. Детерминизм отвечает на вопрос «повторится ли тот же
-> результат», распределение — «правильный ли он был». Генератор, проходящий все
-> инварианты детерминизма выше, может выдавать 1 вдвое чаще, чем 6: контракт
-> держится, баланс уезжает, тесты зелёные.
+> Separate from determinism. Determinism answers "will the same result come back
+> again", distribution answers "was it the right result in the first place". A
+> generator that satisfies every determinism invariant above can still roll a 1
+> twice as often as a 6: the contract holds, the balance drifts, the tests stay
+> green.
 >
-> Все seed фиксированы, поэтому метрики воспроизводимы до последней цифры.
-> Статистический тест, падающий раз в N прогонов, уместен в лаборатории и
-> недопустим в CI: он приучает перезапускать сборку вместо чтения отчёта.
+> Every seed here is fixed, so the metrics are reproducible to the last digit. A
+> statistical test that fails once every N runs belongs in a lab and not in CI:
+> it teaches people to re-run the build instead of reading the report.
 
 | Invariant | Applies at | Violation looks like | Caught by |
 |-----------|-----------|---------------------|-----------|
-| Значения равномерны по 100 бинам | `createRng` | Перекос гистограммы; часть диапазона выпадает чаще | `rng-statistical.test.ts: равномерность` (χ² < 148.23 при df=99) |
-| Пары соседних значений заполняют квадрат | `createRng` | Точки ложатся на решётку из нескольких гиперплоскостей | `rng-statistical.test.ts: решётка 10×10` |
-| Серии выше/ниже медианы имеют ожидаемую длину | `createRng` | Идеальная гистограмма при длинных сериях подряд | `rng-statistical.test.ts: runs test` (\|z\| < 3.291) |
-| Соседние значения не коррелируют | `createRng` | Значение предсказуемо по предыдущему | `rng-statistical.test.ts: lag-1` |
-| `nextInt` не смещён на диапазоне, не кратном степени двойки | `nextInt` | Младшие значения диапазона выпадают чаще | `rng-statistical.test.ts: 1..10` |
-| `shuffle` даёт все n! перестановок равновероятно | `shuffle` | Все перестановки достижимы, но с разными вероятностями — наивный Fisher-Yates | `rng-statistical.test.ts: 24 перестановки` |
-| Каждый элемент попадает в каждую позицию одинаково часто | `shuffle` | Первая позиция смещена | `rng-statistical.test.ts: позиционная равномерность` |
-| Различимых seed ровно 2³², и это заявлено явно | `createRng` | `seed` и `seed + 2³²` дают один поток молча | `rng-statistical.test.ts: пространство seed` · BUG-15 |
-| **False invariant:** разные seed дают независимые потоки | `createRng` | — | `it.fails()` — seed задаёт точку входа в один поток; сдвиг на `0x6D2B79F5` даёт ту же последовательность |
+| Values are uniform across 100 bins | `createRng` | Skewed histogram; part of the range comes up more often | `rng-statistical.test.ts: values are uniform across 100 bins` (χ² < 148.23 at df=99) |
+| Pairs of consecutive values fill the square | `createRng` | Points fall onto a lattice of a few hyperplanes | `rng-statistical.test.ts: 10×10 lattice` |
+| Runs above/below the median have the expected length | `createRng` | A perfect histogram alongside long consecutive streaks | `rng-statistical.test.ts: runs test` (\|z\| < 3.291) |
+| Consecutive values are uncorrelated | `createRng` | A value is predictable from the previous one | `rng-statistical.test.ts: lag-1` |
+| `nextInt` is unbiased on a range that is not a power of two | `nextInt` | The lower values of the range come up more often | `rng-statistical.test.ts: 1..10` |
+| `shuffle` produces all n! permutations with equal probability | `shuffle` | Every permutation is reachable but with different probabilities — naive Fisher-Yates | `rng-statistical.test.ts: all 24 permutations` |
+| Every element lands in every position equally often | `shuffle` | The first position is biased | `rng-statistical.test.ts: positional uniformity` |
+| There are exactly 2³² distinguishable seeds, and it is stated explicitly | `createRng` | `seed` and `seed + 2³²` silently give one stream | `rng-statistical.test.ts: seed space` · BUG-15 |
+| **False invariant:** different seeds give independent streams | `createRng` | — | `it.fails()` — a seed picks an entry point into one stream; an offset of `0x6D2B79F5` reproduces the same sequence |
 
 ---
 

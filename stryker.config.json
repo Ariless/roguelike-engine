@@ -21,9 +21,9 @@
   ],
   "coverageAnalysis": "perTest",
   "thresholds": {
-    "high": 80,
-    "low": 60,
-    "break": 0
+    "high": 90,
+    "low": 70,
+    "break": 85
   },
   "reporters": ["html", "clear-text", "json"],
   "htmlReporter": {

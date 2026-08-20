@@ -40,14 +40,14 @@ function makeEnemy(id: string, overrides: Partial<GameState['enemies'][0]> = {})
   }
 }
 
-// ─── Валидный стейт ───────────────────────────────────────────────────────────
+// ─── Valid state ─────────────────────────────────────────────────────────────
 
-describe('assertValidGameState — валидный стейт', () => {
-  it('не бросает на корректном стейте', () => {
+describe('assertValidGameState — a valid state', () => {
+  it('does not throw on a valid state', () => {
     expect(() => assertValidGameState(makeState())).not.toThrow()
   })
 
-  it('возвращает пустой список softViolations на корректном стейте', () => {
+  it('returns an empty softViolations list on a valid state', () => {
     const { softViolations } = assertValidGameState(makeState())
     expect(softViolations).toHaveLength(0)
   })
@@ -56,17 +56,17 @@ describe('assertValidGameState — валидный стейт', () => {
 // ─── hp-floor ─────────────────────────────────────────────────────────────────
 
 describe('hp-floor — hp >= 0', () => {
-  it('HP героя < 0 → TimelineCorruptedError', () => {
+  it('hero HP < 0 → TimelineCorruptedError', () => {
     const state = makeState({ hero: { ...makeState().hero, hp: -1 } })
     expect(() => assertValidGameState(state)).toThrow(TimelineCorruptedError)
   })
 
-  it('HP врага < 0 → TimelineCorruptedError', () => {
+  it('enemy HP < 0 → TimelineCorruptedError', () => {
     const state = makeState({ enemies: [makeEnemy('g1', { hp: -5 })] })
     expect(() => assertValidGameState(state)).toThrow(TimelineCorruptedError)
   })
 
-  it('HP = 0 не нарушает hp-floor', () => {
+  it('HP = 0 does not violate hp-floor', () => {
     const state = makeState({ hero: { ...makeState().hero, hp: 0, state: 'death_door' } })
     expect(() => assertValidGameState(state)).not.toThrow()
   })
@@ -75,17 +75,17 @@ describe('hp-floor — hp >= 0', () => {
 // ─── hp-ceiling ───────────────────────────────────────────────────────────────
 
 describe('hp-ceiling — hp <= maxHp', () => {
-  it('HP героя > maxHp → TimelineCorruptedError', () => {
+  it('hero HP > maxHp → TimelineCorruptedError', () => {
     const state = makeState({ hero: { ...makeState().hero, hp: 51, maxHp: 50 } })
     expect(() => assertValidGameState(state)).toThrow(TimelineCorruptedError)
   })
 
-  it('HP врага > maxHp → TimelineCorruptedError', () => {
+  it('enemy HP > maxHp → TimelineCorruptedError', () => {
     const state = makeState({ enemies: [makeEnemy('g1', { hp: 25, maxHp: 20 })] })
     expect(() => assertValidGameState(state)).toThrow(TimelineCorruptedError)
   })
 
-  it('HP = maxHp не нарушает hp-ceiling', () => {
+  it('HP = maxHp does not violate hp-ceiling', () => {
     expect(() => assertValidGameState(makeState())).not.toThrow()
   })
 })
@@ -93,21 +93,21 @@ describe('hp-ceiling — hp <= maxHp', () => {
 // ─── bleed-cap ────────────────────────────────────────────────────────────────
 
 describe('bleed-cap — bleed stacks <= 10', () => {
-  it('bleed stacks > 10 на герое → TimelineCorruptedError', () => {
+  it('bleed stacks > 10 on the hero → TimelineCorruptedError', () => {
     const state = makeState({
       hero: { ...makeState().hero, statuses: [{ name: 'bleed', stacks: 11 }] },
     })
     expect(() => assertValidGameState(state)).toThrow(TimelineCorruptedError)
   })
 
-  it('bleed stacks > 10 на враге → TimelineCorruptedError', () => {
+  it('bleed stacks > 10 on an enemy → TimelineCorruptedError', () => {
     const state = makeState({
       enemies: [makeEnemy('g1', { statuses: [{ name: 'bleed', stacks: 15 }] })],
     })
     expect(() => assertValidGameState(state)).toThrow(TimelineCorruptedError)
   })
 
-  it('bleed stacks = 10 не нарушает bleed-cap', () => {
+  it('bleed stacks = 10 does not violate bleed-cap', () => {
     const state = makeState({
       hero: { ...makeState().hero, statuses: [{ name: 'bleed', stacks: 10 }] },
     })
@@ -123,30 +123,30 @@ describe('charge-cap — chargeStacks <= 3', () => {
     expect(() => assertValidGameState(state)).toThrow(TimelineCorruptedError)
   })
 
-  it('chargeStacks = 3 не нарушает charge-cap', () => {
+  it('chargeStacks = 3 does not violate charge-cap', () => {
     const state = makeState({ hero: { ...makeState().hero, chargeStacks: 3 } })
     expect(() => assertValidGameState(state)).not.toThrow()
   })
 
-  it('chargeStacks = undefined не нарушает charge-cap', () => {
+  it('chargeStacks = undefined does not violate charge-cap', () => {
     expect(() => assertValidGameState(makeState())).not.toThrow()
   })
 })
 
 // ─── death-door-hp ────────────────────────────────────────────────────────────
 
-describe('death-door-hp — death_door и dead имеют hp = 0', () => {
-  it('death_door с hp > 0 → TimelineCorruptedError', () => {
+describe('death-door-hp — death_door and dead have hp = 0', () => {
+  it('death_door with hp > 0 → TimelineCorruptedError', () => {
     const state = makeState({ hero: { ...makeState().hero, hp: 1, state: 'death_door' } })
     expect(() => assertValidGameState(state)).toThrow(TimelineCorruptedError)
   })
 
-  it('dead с hp > 0 → TimelineCorruptedError', () => {
+  it('dead with hp > 0 → TimelineCorruptedError', () => {
     const state = makeState({ enemies: [makeEnemy('g1', { hp: 5, state: 'dead' })] })
     expect(() => assertValidGameState(state)).toThrow(TimelineCorruptedError)
   })
 
-  it('death_door с hp = 0 не нарушает инвариант', () => {
+  it('death_door with hp = 0 does not violate the invariant', () => {
     const state = makeState({ hero: { ...makeState().hero, hp: 0, state: 'death_door' } })
     expect(() => assertValidGameState(state)).not.toThrow()
   })
@@ -154,18 +154,18 @@ describe('death-door-hp — death_door и dead имеют hp = 0', () => {
 
 // ─── alive-hp ─────────────────────────────────────────────────────────────────
 
-describe('alive-hp — alive сущность имеет hp > 0', () => {
-  it('alive с hp = 0 → TimelineCorruptedError', () => {
+describe('alive-hp — an alive entity has hp > 0', () => {
+  it('alive with hp = 0 → TimelineCorruptedError', () => {
     const state = makeState({ hero: { ...makeState().hero, hp: 0, state: 'alive' } })
     expect(() => assertValidGameState(state)).toThrow(TimelineCorruptedError)
   })
 
-  it('alive враг с hp = 0 → TimelineCorruptedError', () => {
+  it('an alive enemy with hp = 0 → TimelineCorruptedError', () => {
     const state = makeState({ enemies: [makeEnemy('g1', { hp: 0, state: 'alive' })] })
     expect(() => assertValidGameState(state)).toThrow(TimelineCorruptedError)
   })
 
-  it('alive с hp = 1 не нарушает инвариант', () => {
+  it('alive with hp = 1 does not violate the invariant', () => {
     const state = makeState({ hero: { ...makeState().hero, hp: 1 } })
     expect(() => assertValidGameState(state)).not.toThrow()
   })
@@ -174,7 +174,7 @@ describe('alive-hp — alive сущность имеет hp > 0', () => {
 // ─── TimelineCorruptedError ───────────────────────────────────────────────────
 
 describe('TimelineCorruptedError', () => {
-  it('сообщение содержит TIMELINE CORRUPTED', () => {
+  it('the message contains TIMELINE CORRUPTED', () => {
     const state = makeState({ hero: { ...makeState().hero, hp: -1 } })
     try {
       assertValidGameState(state)
@@ -183,7 +183,7 @@ describe('TimelineCorruptedError', () => {
     }
   })
 
-  it('сообщение содержит id инварианта', () => {
+  it('the message contains the invariant id', () => {
     const state = makeState({ hero: { ...makeState().hero, hp: -1 } })
     try {
       assertValidGameState(state)
@@ -192,7 +192,7 @@ describe('TimelineCorruptedError', () => {
     }
   })
 
-  it('сообщение содержит seed и turn', () => {
+  it('the message contains the seed and the turn', () => {
     const state = makeState({ seed: 882911, turn: 17, hero: { ...makeState().hero, hp: 55, maxHp: 50 } })
     try {
       assertValidGameState(state)
@@ -205,8 +205,8 @@ describe('TimelineCorruptedError', () => {
 
 // ─── Soft invariants ──────────────────────────────────────────────────────────
 
-describe('soft invariants — не бросают, возвращают нарушения', () => {
-  it('turn > 50 возвращает softViolation, не бросает', () => {
+describe('soft invariants — do not throw, they return violations', () => {
+  it('turn > 50 returns a softViolation instead of throwing', () => {
     const state = makeState({ turn: 51 })
     expect(() => assertValidGameState(state)).not.toThrow()
     const { softViolations } = assertValidGameState(state)
@@ -214,7 +214,7 @@ describe('soft invariants — не бросают, возвращают нару
     expect(softViolations[0]).toContain('combat-terminates')
   })
 
-  it('turn = 50 не нарушает combat-terminates', () => {
+  it('turn = 50 does not violate combat-terminates', () => {
     const { softViolations } = assertValidGameState(makeState({ turn: 50 }))
     expect(softViolations).toHaveLength(0)
   })

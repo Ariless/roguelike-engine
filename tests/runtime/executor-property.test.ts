@@ -72,7 +72,7 @@ const seedArb = fc.integer({ min: 0, max: 99999 })
 
 // ─── Core invariant ───────────────────────────────────────────────────────────
 
-describe('property: любая случайная игра воспроизводится byte-perfect', () => {
+describe('property: any random game replays byte-perfect', () => {
   it('forAll(seeds) → replayGame(log).success === true', () => {
     fc.assert(fc.property(
       seedArb, heroClassArb, enemyTypeArb,
@@ -85,23 +85,23 @@ describe('property: любая случайная игра воспроизво�
   })
 })
 
-// ─── Детерминизм ──────────────────────────────────────────────────────────────
+// ─── Determinism ─────────────────────────────────────────────────────────────
 
-describe('property: одинаковый seed → одинаковый исход', () => {
-  it('два прогона одного seed дают идентичные логи', () => {
+describe('property: the same seed → the same outcome', () => {
+  it('two runs of the same seed produce identical logs', () => {
     fc.assert(fc.property(
       seedArb, heroClassArb, enemyTypeArb,
       (seed, heroClass, enemyType) => {
         const log1 = playRandom(seed, heroClass, enemyType)
         const log2 = playRandom(seed, heroClass, enemyType)
 
-        // Одинаковый outcome
+        // The same outcome
         if (log1.outcome !== log2.outcome) return false
 
-        // Одинаковое количество событий
+        // The same number of events
         if (log1.events.length !== log2.events.length) return false
 
-        // Все postStateHash совпадают
+        // All postStateHash values match
         return log1.events.every((e, i) =>
           e.postStateHash === log2.events[i].postStateHash
         )
@@ -112,8 +112,8 @@ describe('property: одинаковый seed → одинаковый исхо�
 
 // ─── Snapshot integrity ───────────────────────────────────────────────────────
 
-describe('property: все snapshots имеют валидные хэши', () => {
-  it('forAll(seeds) → snapshot.hashValid === true для каждого сегмента', () => {
+describe('property: every snapshot has a valid hash', () => {
+  it('forAll(seeds) → snapshot.hashValid === true for every segment', () => {
     fc.assert(fc.property(
       seedArb, heroClassArb, enemyTypeArb,
       (seed, heroClass, enemyType) => {
@@ -123,7 +123,7 @@ describe('property: все snapshots имеют валидные хэши', () =
     ), { numRuns: 200 })
   })
 
-  it('количество snapshots = количество turn_end events', () => {
+  it('the number of snapshots equals the number of turn_end events', () => {
     fc.assert(fc.property(
       seedArb, heroClassArb, enemyTypeArb,
       (seed, heroClass, enemyType) => {
@@ -137,8 +137,8 @@ describe('property: все snapshots имеют валидные хэши', () =
 
 // ─── State machine invariants ─────────────────────────────────────────────────
 
-describe('property: state machine invariants через replay', () => {
-  it('HP никогда не выходит за [0, maxHp] в любом snapshot', () => {
+describe('property: state machine invariants through replay', () => {
+  it('HP never leaves [0, maxHp] in any snapshot', () => {
     fc.assert(fc.property(
       seedArb, heroClassArb, enemyTypeArb,
       (seed, heroClass, enemyType) => {
@@ -152,7 +152,7 @@ describe('property: state machine invariants через replay', () => {
     ), { numRuns: 200 })
   })
 
-  it('dead entity не появляется в живом состоянии в следующем snapshot', () => {
+  it('a dead entity never reappears alive in the next snapshot', () => {
     fc.assert(fc.property(
       seedArb, heroClassArb, enemyTypeArb,
       (seed, heroClass, enemyType) => {
@@ -177,8 +177,8 @@ describe('property: state machine invariants через replay', () => {
 
 // ─── Fault injection determinism ──────────────────────────────────────────────
 
-describe('property: fault injection детерминирован', () => {
-  it('одинаковый seed + bleedOffByOne → одинаковый replay', () => {
+describe('property: fault injection is deterministic', () => {
+  it('the same seed + bleedOffByOne → the same replay', () => {
     fc.assert(fc.property(
       seedArb,
       (seed) => {

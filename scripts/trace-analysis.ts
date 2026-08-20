@@ -10,13 +10,13 @@ import type { TurnSnapshot } from '../src/telemetry/types'
 
 const RUNS = parseInt(process.argv[2] ?? '2000')
 
-// Автоплеер и раскладка seed берутся из lib/harness — те же, что в simulate.ts
-// и stability.ts. Раньше здесь лежала собственная копия генератора, колоды и
-// игрового цикла, и вместе с ней собственная копия ошибки выборки (BUG-13):
-// heroClass и enemyType выводились из одного и того же `seed % 4`, поэтому
-// трассы собирались с 4 конфигураций из 16. Инварианты в INVARIANTS.md,
-// выведенные из этих трасс, унаследовали смещение и помечены как требующие
-// перепроверки — первый из них уже опровергнут.
+// The auto-player and the seed layout come from lib/harness — the same ones simulate.ts uses
+// and stability.ts. This used to hold its own copy of the generator, the deck and
+// the game loop, and with it its own copy of the sampling bug (BUG-13):
+// heroClass and enemyType were both derived from the same `seed % 4`, so
+// traces were collected from 4 configurations out of 16. The invariants in INVARIANTS.md,
+// derived from those traces inherited the bias and are marked as needing
+// re-verification — the first of them has already been refuted.
 
 // ─── Pattern collectors ───────────────────────────────────────────────────────
 
@@ -103,8 +103,8 @@ for (let seed = 0; seed < RUNS; seed++) {
     const log = autoPlay(seed, heroClass, enemyType)
     collectPatterns(log.snapshots, log.outcome, stats)
   } catch {
-    // Испорченный таймлайн — нарушен инвариант. Здесь это не отчётный факт:
-    // за нарушениями следит simulate.ts, который их считает и архивирует.
+    // A corrupted timeline means a broken invariant. Here that is not a reporting detail:
+    // violations are tracked by simulate.ts, which counts and archives them.
   }
 }
 

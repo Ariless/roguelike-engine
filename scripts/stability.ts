@@ -1,23 +1,23 @@
-// Стабильность метрик — отвечает на вопрос, который один батч задать не может.
+// Metric stability — answers the question a single batch cannot ask.
 //
 // Usage: npx tsx scripts/stability.ts [runsPerBatch=8000] [batches=8]
 //
-// simulate.ts даёт винрейт с доверительным интервалом, то есть оценивает
-// внутрибатчевый шум. Но интервал считается в предположении, что батч —
-// случайная выборка. Если исход систематически зависит от того, с какого seed
-// начали, интервал будет узким и при этом неверным: он сойдётся к неправильному
-// числу и будет выглядеть тем убедительнее, чем больше прогонов.
+// simulate.ts reports a win rate with a confidence interval, i.e. it estimates
+// within-batch noise. But the interval assumes the batch is a
+// random sample. If the outcome systematically depends on which seed sampling
+// started from, the interval will be narrow and wrong at the same time: it converges to the wrong
+// number, and it will look more convincing the more runs are added.
 //
-// Поэтому здесь два независимых измерения:
+// Hence two independent measurements here:
 //
-//   1. РАЗБРОС между батчами на разных базовых seed при одинаковом размере.
-//      Проверяет, что оценка не зависит от точки входа в поток.
-//   2. СХОДИМОСТЬ при росте числа прогонов.
-//      Проверяет, что оценка успокаивается, а не гуляет.
+//   1. SPREAD across batches on different base seeds at the same batch size.
+//      Checks that the estimate does not depend on the entry point into the stream.
+//   2. CONVERGENCE as the number of runs grows.
+//      Checks that the estimate settles down rather than wandering.
 //
-// Метрика может пройти первое и провалить второе, и наоборот. Совпадение
-// доверительного интервала с межбатчевым разбросом — единственное, что даёт
-// право предъявлять число одного батча как характеристику системы.
+// A metric can pass the first and fail the second, and vice versa. Comparing
+// a confidence interval against cross-batch spread is the only thing that grants
+// the right to present one batch's number as a property of the system.
 
 import { runBatch, winrateOf, HERO_CLASSES } from './lib/harness'
 import {
@@ -29,20 +29,20 @@ import type { HeroClass } from '../src/engine/types'
 const RUNS_PER_BATCH = parseInt(process.argv[2] ?? '8000')
 const BATCHES        = parseInt(process.argv[3] ?? '8')
 
-// Шаг между базовыми seed.
+// Stride between base seeds.
 //
-// Не круглое число и не кратное 0x6D2B79F5 (1 831 565 813) — умышленно.
-// tests/rng-statistical.test.ts показывает, что seed не выбирает независимый
-// поток, а выбирает точку входа в один поток длины 2³²: два seed, отличающиеся
-// ровно на эту константу, дают одну и ту же последовательность со сдвигом на
-// шаг. Батчи, разнесённые кратно ей, перекрывались бы — и «независимые»
-// повторы измеряли бы одно и то же, давая ложно малый разброс.
+// Neither a round number nor a multiple of 0x6D2B79F5 (1,831,565,813) — deliberately.
+// tests/rng-statistical.test.ts shows that a seed does not choose an independent
+// stream but an entry point into one stream of length 2³²: two seeds differing
+// by exactly that constant produce the same sequence, offset by one
+// step. Batches spaced at a multiple of it would overlap, and the "independent"
+// repeats would measure the same thing, giving a falsely small spread.
 const BATCH_STRIDE = 1_000_003
 
 const WIDTH = 78
 const line = (char = '═') => char.repeat(WIDTH)
 
-// ─── Измерение 1: разброс между батчами ───────────────────────────────────────
+// ─── Measurement 1: spread across batches ────────────────────────────────────
 
 console.log(line())
 console.log('  METRIC STABILITY REPORT')
@@ -77,7 +77,7 @@ for (let b = 0; b < BATCHES; b++) {
 
 console.log('\n')
 
-// ─── Отчёт по разбросу ────────────────────────────────────────────────────────
+// ─── Spread report ───────────────────────────────────────────────────────────
 
 console.log(`  CROSS-BATCH SPREAD — limit ${pct(CROSS_BATCH_SPREAD_MAX)} peak-to-peak`)
 console.log()
@@ -94,14 +94,14 @@ for (const heroClass of HERO_CLASSES) {
   const spread = hi - lo
   const sd = stdDev(rates)
 
-  // Ожидаемая полуширина интервала для одного батча — с чем сравнивать разброс.
-  // Берём среднюю долю по батчам как оценку p.
+  // Expected interval half-width for a single batch — what the spread is compared against.
+  // Take the mean proportion across batches as the estimate of p.
   const avgRate = mean(rates)
   const halfWidth = marginOfError(Math.round(avgRate * RUNS_PER_BATCH), RUNS_PER_BATCH)
 
   const overLimit = spread > CROSS_BATCH_SPREAD_MAX
-  // Разброс между батчами должен укладываться примерно в интервал одного батча.
-  // Систематически шире — значит источник разброса не выборочный шум, а seed.
+  // Cross-batch spread should sit roughly within the interval of a single batch.
+  // Systematically wider means the source of the spread is the seed, not sampling noise.
   const overInterval = spread > 2.5 * 2 * halfWidth
 
   if (overLimit) spreadFailures++
@@ -119,13 +119,13 @@ for (const heroClass of HERO_CLASSES) {
 
 console.log()
 
-// ─── Измерение 2: сходимость ──────────────────────────────────────────────────
+// ─── Measurement 2: convergence ──────────────────────────────────────────────
 //
-// Удваиваем число прогонов и смотрим на две вещи одновременно: как двигается
-// точечная оценка и как сужается интервал. Правильная картина — оценка стоит
-// на месте, интервал сужается примерно как 1/√n. Если оценка ползёт в одну
-// сторону при каждом удвоении, значит она ещё не сошлась, а узкий интервал
-// на последнем шаге создаёт ложную уверенность.
+// Double the number of runs and watch two things at once: how the point estimate
+// moves and how the interval narrows. The healthy picture is an estimate that
+// stays put while the interval narrows roughly as 1/√n. If the estimate creeps in one
+// direction at every doubling, it has not converged yet, and a narrow interval
+// at the final step creates false confidence.
 
 const CONVERGENCE_STEPS = [1_000, 2_000, 4_000, 8_000, 16_000, 32_000]
 
@@ -166,8 +166,8 @@ for (const runs of CONVERGENCE_STEPS) {
 
 console.log()
 
-// Сошлось, если последние два удвоения двигают оценку меньше, чем на
-// полуширину интервала последнего шага.
+// Converged if the last two doublings move the estimate by less than
+// the interval half-width of the final step.
 const lastDeltas = deltas.slice(-2)
 const converged = lastDeltas.every(d => d < 0.005)
 
@@ -176,7 +176,7 @@ console.log(`  Last two doublings moved the estimate by ` +
             `${converged ? 'converged' : 'NOT converged'}`)
 console.log()
 
-// ─── Итог ─────────────────────────────────────────────────────────────────────
+// ─── Summary ─────────────────────────────────────────────────────────────────
 
 console.log(line('─'))
 

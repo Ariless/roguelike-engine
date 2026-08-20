@@ -53,17 +53,17 @@ function makeState(hero: GameState['hero'], enemies: GameState['enemies'] = []):
 // ─── Card definitions ─────────────────────────────────────────────────────────
 
 describe('card definitions', () => {
-  it('все 3 карты паладина присутствуют', () => {
+  it('all 3 paladin cards are present', () => {
     expect(PALADIN_CARDS).toHaveLength(3)
   })
 
-  it('каждая карта принадлежит классу paladin', () => {
+  it('every card belongs to the paladin class', () => {
     PALADIN_CARDS.forEach(card => {
       expect(card.heroClass).toBe('paladin')
     })
   })
 
-  it('каждая карта затрагивает ровно 2 оси', () => {
+  it('each card touches exactly 2 axes', () => {
     PALADIN_CARDS.forEach(card => {
       expect(card.axes).toHaveLength(2)
     })
@@ -85,35 +85,35 @@ describe('card definitions', () => {
 // ─── playRighteousStrike ──────────────────────────────────────────────────────
 
 describe('playRighteousStrike', () => {
-  it('наносит 5 урона', () => {
+  it('deals 5 damage', () => {
     const state = makeState(makeHero(), [makeEnemy('g1')])
     const next = playRighteousStrike(state, 'g1')
     expect(next.enemies[0].hp).toBe(15)
   })
 
-  it('не меняет chargeStacks если цель не vulnerable', () => {
+  it('leaves chargeStacks alone when the target is not vulnerable', () => {
     const state = makeState(makeHero(50, 1), [makeEnemy('g1')])
     const next = playRighteousStrike(state, 'g1')
     expect(next.hero.chargeStacks).toBe(1)
   })
 
-  it('прибавляет 1 заряд если цель vulnerable', () => {
+  it('adds 1 charge when the target is vulnerable', () => {
     const enemy = makeEnemy('g1', 20, [{ name: 'vulnerable', stacks: 1 }])
     const state = makeState(makeHero(50, 0), [enemy])
     const next = playRighteousStrike(state, 'g1')
     expect(next.hero.chargeStacks).toBe(1)
   })
 
-  it('vulnerable ×1.5 и +1 заряд происходят одновременно', () => {
+  it('vulnerable ×1.5 and +1 charge happen together', () => {
     const enemy = makeEnemy('g1', 20, [{ name: 'vulnerable', stacks: 1 }])
     const state = makeState(makeHero(50, 0), [enemy])
     const next = playRighteousStrike(state, 'g1')
-    // floor(5 * 1.5) = 7 урона, +1 заряд
+    // floor(5 * 1.5) = 7 damage, +1 charge
     expect(next.enemies[0].hp).toBe(13)
     expect(next.hero.chargeStacks).toBe(1)
   })
 
-  it('заряд не превышает 3 при накоплении через vulnerable', () => {
+  it('charges do not exceed 3 when accumulated through vulnerable', () => {
     const enemy = makeEnemy('g1', 20, [{ name: 'vulnerable', stacks: 1 }])
     const state = makeState(makeHero(50, 3), [enemy])
     // isChargeActive=true → double damage, reset→0; then +1 from vulnerable → 1
@@ -121,37 +121,37 @@ describe('playRighteousStrike', () => {
     expect(next.hero.chargeStacks).toBe(1)
   })
 
-  it('при 3 зарядах наносит 10 урона (×2)', () => {
+  it('with 3 charges it deals 10 damage (×2)', () => {
     const state = makeState(makeHero(50, 3), [makeEnemy('g1')])
     const next = playRighteousStrike(state, 'g1')
     expect(next.enemies[0].hp).toBe(10)
   })
 
-  it('заряды сбрасываются в 0 после двойного удара', () => {
+  it('charges reset to 0 after the double strike', () => {
     const state = makeState(makeHero(50, 3), [makeEnemy('g1')])
     const next = playRighteousStrike(state, 'g1')
     expect(next.hero.chargeStacks).toBe(0)
   })
 
-  it('при 3 зарядах + vulnerable: 10×1.5=15 урона, заряды → 1', () => {
+  it('with 3 charges + vulnerable: 10×1.5=15 damage, charges → 1', () => {
     const enemy = makeEnemy('g1', 20, [{ name: 'vulnerable', stacks: 1 }])
     const state = makeState(makeHero(50, 3), [enemy])
     const next = playRighteousStrike(state, 'g1')
-    // floor(10 * 1.5) = 15 урона; reset→0, +1 vulnerable → 1
+    // floor(10 * 1.5) = 15 damage; reset→0, +1 vulnerable → 1
     expect(next.enemies[0].hp).toBe(5)
     expect(next.hero.chargeStacks).toBe(1)
   })
 
-  it('атака в back-row при живом front-row — стейт не меняется', () => {
+  it('an attack into the back row with a living front row leaves the state unchanged', () => {
     const front = makeEnemy('g1', 20, [], 'front')
     const back  = makeEnemy('g2', 20, [], 'back')
     const state = makeState(makeHero(), [front, back])
     const next = playRighteousStrike(state, 'g2')
-    // без rangeType → не блокируется (нет melee)
+    // no rangeType → not blocked (not melee)
     expect(next.enemies[1].hp).toBe(15)
   })
 
-  it('цель на death_door умирает при атаке', () => {
+  it('a target at death_door dies when attacked', () => {
     const dying = { ...makeEnemy('g1', 0), state: 'death_door' as const }
     const state = makeState(makeHero(), [dying])
     const next = playRighteousStrike(state, 'g1')
@@ -162,25 +162,25 @@ describe('playRighteousStrike', () => {
 // ─── playStubbornRecovery ─────────────────────────────────────────────────────
 
 describe('playStubbornRecovery', () => {
-  it('восстанавливает 6 HP', () => {
+  it('restores 6 HP', () => {
     const state = makeState(makeHero(30))
     const next = playStubbornRecovery(state)
     expect(next.hero.hp).toBe(36)
   })
 
-  it('HP не превышает maxHp', () => {
+  it('HP never exceeds maxHp', () => {
     const state = makeState(makeHero(48))
     const next = playStubbornRecovery(state)
     expect(next.hero.hp).toBe(50)
   })
 
-  it('не меняет chargeStacks', () => {
+  it('leaves chargeStacks alone', () => {
     const state = makeState(makeHero(30, 2))
     const next = playStubbornRecovery(state)
     expect(next.hero.chargeStacks).toBe(2)
   })
 
-  it('не затрагивает врагов', () => {
+  it('leaves the enemies alone', () => {
     const state = makeState(makeHero(30), [makeEnemy('g1')])
     const next = playStubbornRecovery(state)
     expect(next.enemies[0].hp).toBe(20)
@@ -190,45 +190,45 @@ describe('playStubbornRecovery', () => {
 // ─── playDivineCharge ─────────────────────────────────────────────────────────
 
 describe('playDivineCharge', () => {
-  it('прибавляет 1 заряд с нуля (undefined → 1)', () => {
+  it('adds 1 charge from nothing (undefined → 1)', () => {
     const state = makeState(makeHero())
     const next = playDivineCharge(state)
     expect(next.hero.chargeStacks).toBe(1)
   })
 
-  it('прибавляет 1 заряд к существующим', () => {
+  it('adds 1 charge to the existing ones', () => {
     const state = makeState(makeHero(50, 1))
     const next = playDivineCharge(state)
     expect(next.hero.chargeStacks).toBe(2)
   })
 
-  it('максимум ровно 3 стака', () => {
+  it('caps at exactly 3 stacks', () => {
     const state = makeState(makeHero(50, 2))
     const next = playDivineCharge(state)
     expect(next.hero.chargeStacks).toBe(3)
   })
 
-  it('при уже 3 зарядах остаётся 3 — не накапливается выше', () => {
+  it('at 3 charges it stays 3 and does not go higher', () => {
     const state = makeState(makeHero(50, 3))
     const next = playDivineCharge(state)
     expect(next.hero.chargeStacks).toBe(3)
   })
 
-  it('не меняет HP и статусы героя', () => {
+  it('leaves hero HP and statuses alone', () => {
     const state = makeState(makeHero(35))
     const next = playDivineCharge(state)
     expect(next.hero.hp).toBe(35)
     expect(next.hero.statuses).toHaveLength(0)
   })
 
-  it('три последовательных броска дают 3 заряда', () => {
+  it('three consecutive casts give 3 charges', () => {
     const s1 = playDivineCharge(makeState(makeHero()))
     const s2 = playDivineCharge(s1)
     const s3 = playDivineCharge(s2)
     expect(s3.hero.chargeStacks).toBe(3)
   })
 
-  it('четвёртый бросок не увеличивает до 4', () => {
+  it('a fourth cast does not push it to 4', () => {
     const s1 = playDivineCharge(makeState(makeHero()))
     const s2 = playDivineCharge(s1)
     const s3 = playDivineCharge(s2)
@@ -237,14 +237,14 @@ describe('playDivineCharge', () => {
   })
 
   // Kill: L58 ?? 0 → && 0 (chargeStacks undefined treated as 0)
-  it('первый заряд с chargeStacks=undefined даёт 1, не 0', () => {
+  it('the first charge from chargeStacks=undefined gives 1, not 0', () => {
     const s = makeState({ ...makeHero(), chargeStacks: undefined })
     const next = playDivineCharge(s)
     expect(next.hero.chargeStacks).toBe(1)  // kills ?? 0 → && 0 mutant
   })
 
-  it('vulnerable даёт +1 заряд из undefined (не из 0)', () => {
-    // RighteousStrike: если target vulnerable, gain 1 charge from chargeStacks ?? 0
+  it('vulnerable gives +1 charge from undefined (not from 0)', () => {
+    // RighteousStrike: if the target is vulnerable, gain 1 charge from chargeStacks ?? 0
     const enemy = makeEnemy('enemy', 20, [{ name: 'vulnerable', stacks: 1 }])
     const s = makeState({ ...makeHero(), chargeStacks: undefined }, [enemy])
     const next = playRighteousStrike(s, 'enemy')

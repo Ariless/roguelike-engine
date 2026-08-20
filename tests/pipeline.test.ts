@@ -50,20 +50,20 @@ function makeGoblin(id: string, hp = 25, statuses: GameState['enemies'][0]['stat
 // ─── step7_statusTick ─────────────────────────────────────────────────────────
 
 describe('step7_statusTick', () => {
-  it('применяет bleed к герою', () => {
+  it('applies bleed to the hero', () => {
     const state = makeState({ heroHp: 30, heroStatuses: [{ name: 'bleed', stacks: 4 }] })
     const next = step7_statusTick(state)
     expect(next.hero.hp).toBe(26)
   })
 
-  it('применяет bleed к врагу', () => {
+  it('applies bleed to the enemy', () => {
     const goblin = makeGoblin('g1', 20, [{ name: 'bleed', stacks: 3 }])
     const state = makeState({ enemies: [goblin] })
     const next = step7_statusTick(state)
     expect(next.enemies[0].hp).toBe(17)
   })
 
-  it('тикает всех сущностей одновременно', () => {
+  it('ticks every entity at once', () => {
     const goblin = makeGoblin('g1', 20, [{ name: 'bleed', stacks: 2 }])
     const state = makeState({
       heroHp: 30,
@@ -75,13 +75,13 @@ describe('step7_statusTick', () => {
     expect(next.enemies[0].hp).toBe(18)
   })
 
-  it('stun истекает после тика', () => {
+  it('stun expires after the tick', () => {
     const state = makeState({ heroStatuses: [{ name: 'stun', stacks: 1, duration: 1 }] })
     const next = step7_statusTick(state)
     expect(next.hero.statuses.find(s => s.name === 'stun')).toBeUndefined()
   })
 
-  it('bleed вызывает death_door на враге когда HP достигает 0', () => {
+  it('bleed triggers death_door on an enemy when HP reaches 0', () => {
     const goblin = makeGoblin('g1', 3, [{ name: 'bleed', stacks: 5 }])
     const state = makeState({ enemies: [goblin] })
     const next = step7_statusTick(state)
@@ -92,39 +92,39 @@ describe('step7_statusTick', () => {
 // ─── step9_deathResolution ────────────────────────────────────────────────────
 
 describe('step9_deathResolution', () => {
-  it('герой с HP=0 и state=alive → death_door', () => {
+  it('a hero at HP=0 with state=alive → death_door', () => {
     // Defensive: state that shouldn't exist normally, but step 9 must catch it
     const state = makeState({ heroHp: 0, heroState: 'alive' })
     const next = step9_deathResolution(state)
     expect(next.hero.state).toBe('death_door')
   })
 
-  it('враг с HP=0 и state=alive → death_door', () => {
+  it('an enemy at HP=0 with state=alive → death_door', () => {
     const goblin = { ...makeGoblin('g1', 0), state: 'alive' as const }
     const state = makeState({ enemies: [goblin] })
     const next = step9_deathResolution(state)
     expect(next.enemies[0].state).toBe('death_door')
   })
 
-  it('death_door остаётся death_door', () => {
+  it('death_door stays death_door', () => {
     const state = makeState({ heroHp: 0, heroState: 'death_door' })
     const next = step9_deathResolution(state)
     expect(next.hero.state).toBe('death_door')
   })
 
-  it('dead остаётся dead', () => {
+  it('dead stays dead', () => {
     const state = makeState({ heroHp: 0, heroState: 'dead' })
     const next = step9_deathResolution(state)
     expect(next.hero.state).toBe('dead')
   })
 
-  it('alive с HP > 0 не меняется', () => {
+  it('alive with HP > 0 is unchanged', () => {
     const state = makeState({ heroHp: 20 })
     const next = step9_deathResolution(state)
     expect(next.hero.state).toBe('alive')
   })
 
-  it('идемпотентен — второй вызов не меняет стейт', () => {
+  it('is idempotent — a second call leaves the state unchanged', () => {
     const state = makeState({ heroHp: 0, heroState: 'alive' })
     const once = step9_deathResolution(state)
     const twice = step9_deathResolution(once)
@@ -135,19 +135,19 @@ describe('step9_deathResolution', () => {
 // ─── runTurn ──────────────────────────────────────────────────────────────────
 
 describe('runTurn', () => {
-  it('увеличивает счётчик хода', () => {
+  it('increments the turn counter', () => {
     const state = makeState()
     const next = runTurn(state)
     expect(next.turn).toBe(2)
   })
 
-  it('применяет status tick за ход', () => {
+  it('applies the status tick for the turn', () => {
     const state = makeState({ heroHp: 30, heroStatuses: [{ name: 'bleed', stacks: 3 }] })
     const next = runTurn(state)
     expect(next.hero.hp).toBe(27)
   })
 
-  it('вызывает playerActions handler', () => {
+  it('calls the playerActions handler', () => {
     const state = makeState()
     const next = runTurn(state, {
       playerActions: (s) => ({ ...s, hero: { ...s.hero, hp: 10 } }),
@@ -155,7 +155,7 @@ describe('runTurn', () => {
     expect(next.hero.hp).toBe(10)
   })
 
-  it('вызывает enemyActions handler', () => {
+  it('calls the enemyActions handler', () => {
     const goblin = makeGoblin('g1', 25)
     const state = makeState({ enemies: [goblin] })
     const next = runTurn(state, {
@@ -167,7 +167,7 @@ describe('runTurn', () => {
     expect(next.enemies[0].hp).toBe(20)
   })
 
-  it('bleed убивает врага за несколько ходов — корректные переходы состояний', () => {
+  it('bleed kills an enemy over several turns with correct state transitions', () => {
     const goblin = makeGoblin('g1', 6, [{ name: 'bleed', stacks: 4 }])
     const state = makeState({ enemies: [goblin] })
 

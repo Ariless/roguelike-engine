@@ -31,7 +31,7 @@ No HTTP, no UI, no database — different layers, different tools, different pur
                 ╱──────────────────────╲
                ╱  Chaos / Monte Carlo   ╲  80k+ seeds — adversarial + statistical
               ╱────────────────────────╲
-             ╱  Mutation (Stryker ~79%)  ╲  meta-layer — tests the tests
+             ╱  Mutation (Stryker 86.1%)  ╲  meta-layer — tests the tests
             ╱────────────────────────────╲
            ╱  Replay (byte-perfect)        ╲  13 tests — determinism proof
           ╱──────────────────────────────────╲
@@ -51,7 +51,7 @@ No HTTP, no UI, no database — different layers, different tools, different pur
 | **Integration** | API + DB wiring | Executor (engine + RNG + faults) | Verify pipeline composition |
 | **Property** | Rarely used | `forAll(seeds) → invariant` | Find edge cases automatically |
 | **Replay** | Does not exist | `replayGame(log).success` | Prove determinism |
-| **Mutation** | Optional | Stryker ~79% | Measure test quality |
+| **Mutation** | Optional | Stryker 86.1% across engine, runtime, telemetry | Measure test quality |
 | **Chaos/Monte Carlo** | Load tests | 80k seeds across simulation, stability, chaos | Statistical stability |
 | **Spec compliance** | Rarely automated | `ENEMY_INTENTS` vs decision tables | Catches behaviour that was specified but never built |
 | **BDD** | Cucumber E2E | Cucumber on engine | Rules as specification |
@@ -91,8 +91,16 @@ These three don't exist in standard web pyramids:
 Web equivalent: would require recording and replaying every HTTP request, database state, and timer.
 For a rule engine: built-in because RNG is seeded.
 
-**Mutation testing** — measures test quality, not just coverage. If 79% of mutations are caught,
-21% of bugs in those files could slip through unnoticed. This makes the pyramid self-auditing.
+**Mutation testing** — measures test quality, not just coverage. At 86.1%, roughly one mutation in
+seven survives, meaning bugs of that shape could slip through unnoticed. This makes the pyramid
+self-auditing.
+
+The scope of the mutation run is itself an unaudited place. The score was "~79%" for months, and it
+was neither wrong nor complete: it covered 6 files and said nothing about the other 7, including
+`executor.ts` and `rng.ts`. Widening the config to 13 files raised the number to 86.1% and, more
+usefully, exposed `faults.ts` at 26% — the fault-injection module, whose entire job is to break
+behaviour on purpose so tests can prove they notice. A broken injector silently injects nothing and
+looks exactly like a working one (MUTATION-02).
 
 **Monte Carlo** — statistical confidence. 16,000 seeds = 16,000 test cases generated automatically,
 covering all 16 hero × enemy configurations. Every class metric carries a Wilson interval and a
@@ -123,7 +131,7 @@ Replay             | 13       | 0.04s    | Determinism proof
 Executor property  | 7        | 1s       | End-to-end byte-perfect
 BDD (Cucumber)     | 12 scen  | 0.04s    | Rules as specification
 Playwright UI      | 25       | 17s      | Debugger + game + visual
-Mutation           | 626 mut  | 4 min    | Test quality ~79%
+Mutation           | 1489 mut | 38 min   | Test quality 86.1%
 Monte Carlo        | 16,000   | 5s       | Corridors + matchup coverage
 Stability          | 64,000   | 40s      | Cross-batch spread, convergence
 Chaos Agent        | 200      | 3s       | Adversarial probe

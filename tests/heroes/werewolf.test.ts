@@ -40,13 +40,13 @@ function makeWolfState(turnsLeft = 3, heroHp = 15): GameState {
 // ─── Card catalogue ──────────────────────────────────────────────────────────
 
 describe('WEREWOLF_CARDS', () => {
-  it('6 карт всего', () => expect(WEREWOLF_CARDS).toHaveLength(6))
-  it('3 human карты', () => expect(WEREWOLF_HUMAN_CARDS).toHaveLength(3))
-  it('3 wolf карты', () => expect(WEREWOLF_WOLF_CARDS).toHaveLength(3))
-  it('все heroClass: werewolf', () => {
+  it('6 cards in total', () => expect(WEREWOLF_CARDS).toHaveLength(6))
+  it('3 human cards', () => expect(WEREWOLF_HUMAN_CARDS).toHaveLength(3))
+  it('3 wolf cards', () => expect(WEREWOLF_WOLF_CARDS).toHaveLength(3))
+  it('every card has heroClass: werewolf', () => {
     WEREWOLF_CARDS.forEach(c => expect(c.heroClass).toBe('werewolf'))
   })
-  it('у каждой карты 2 оси', () => {
+  it('each card has 2 axes', () => {
     WEREWOLF_CARDS.forEach(c => expect(c.axes).toHaveLength(2))
   })
 })
@@ -56,15 +56,15 @@ describe('WEREWOLF_CARDS', () => {
 describe('wolfDamage', () => {
   const hero = makeState(30).hero
 
-  it('полный HP → базовый урон без бонуса', () => {
+  it('full HP → base damage, no bonus', () => {
     expect(wolfDamage(hero, 8)).toBe(8)
   })
 
-  it('50% HP → ×1.5 урон', () => {
+  it('50% HP → ×1.5 damage', () => {
     expect(wolfDamage({ ...hero, hp: 15 }, 8)).toBe(12)
   })
 
-  it('0 HP → ×2.0 урон', () => {
+  it('0 HP → ×2.0 damage', () => {
     expect(wolfDamage({ ...hero, hp: 0 }, 8)).toBe(16)
   })
 })
@@ -72,41 +72,41 @@ describe('wolfDamage', () => {
 // ─── checkWerewolfTransform ───────────────────────────────────────────────────
 
 describe('checkWerewolfTransform', () => {
-  it('HP > 50% → трансформации нет', () => {
+  it('HP > 50% → no transformation', () => {
     expect(checkWerewolfTransform(makeState(20)).hero.formState).toBe('human')
   })
 
-  it('HP = 50% → трансформация', () => {
+  it('HP = 50% → transformation', () => {
     const next = checkWerewolfTransform(makeState(15))
     expect(next.hero.formState).toBe('werewolf')
     expect(next.hero.werewolfTurnsLeft).toBe(3)
   })
 
-  it('HP < 50% → трансформация', () => {
+  it('HP < 50% → transformation', () => {
     expect(checkWerewolfTransform(makeState(10)).hero.formState).toBe('werewolf')
   })
 
-  it('трансформация при stun (пассивная, не action)', () => {
+  it('transformation while stunned (passive, not an action)', () => {
     let s = makeState(10)
     s = { ...s, hero: { ...s.hero, statuses: [{ name: 'stun', stacks: 1, duration: 1 }] } }
     expect(checkWerewolfTransform(s).hero.formState).toBe('werewolf')
   })
 
-  it('HP > 50% в wolf форме → возврат', () => {
+  it('HP > 50% in wolf form → revert', () => {
     expect(checkWerewolfTransform(makeWolfState(2, 20)).hero.formState).toBe('human')
   })
 
-  it('turnsLeft = 1 → возврат', () => {
+  it('turnsLeft = 1 → revert', () => {
     expect(checkWerewolfTransform(makeWolfState(1, 10)).hero.formState).toBe('human')
   })
 
-  it('turnsLeft = 2 → остаётся wolf, декремент до 1', () => {
+  it('turnsLeft = 2 → stays wolf, decrements to 1', () => {
     const next = checkWerewolfTransform(makeWolfState(2, 10))
     expect(next.hero.formState).toBe('werewolf')
     expect(next.hero.werewolfTurnsLeft).toBe(1)
   })
 
-  it('wolf форма длится ровно 3 хода', () => {
+  it('wolf form lasts exactly 3 turns', () => {
     let s = makeState(15)
     s = checkWerewolfTransform(s)    // transforms; turnsLeft=3
     s = checkWerewolfTransform(s)    // turnsLeft=2
@@ -117,21 +117,21 @@ describe('checkWerewolfTransform', () => {
     expect(s.hero.formState).toBe('human')
   })
 
-  it('Death\'s Door выживает при трансформации', () => {
+  it('Death\'s Door survives the transformation', () => {
     const s = { ...makeState(0), hero: { ...makeState(0).hero, state: 'death_door' as const } }
     const next = checkWerewolfTransform(s)
     expect(next.hero.formState).toBe('werewolf')
     expect(next.hero.state).toBe('death_door')
   })
 
-  it('статусы выживают при трансформации', () => {
+  it('statuses survive the transformation', () => {
     let s = makeState(10)
     s = addStatus(s, 'hero', { name: 'bleed', stacks: 3 })
     const next = checkWerewolfTransform(s)
     expect(next.hero.statuses[0].stacks).toBe(3)
   })
 
-  it('не-werewolf герой: no-op', () => {
+  it('a non-werewolf hero: no-op', () => {
     const s = makeState()
     const paladin = { ...s, hero: { ...s.hero, heroClass: 'paladin' as const } }
     expect(checkWerewolfTransform(paladin)).toBe(paladin)
@@ -141,24 +141,24 @@ describe('checkWerewolfTransform', () => {
 // ─── Human form cards ─────────────────────────────────────────────────────────
 
 describe('playLunarStrike', () => {
-  it('HP > 50% → 5 урона', () => {
+  it('HP > 50% → 5 damage', () => {
     const next = playLunarStrike(makeState(20), 'enemy')
     expect(next.enemies[0].hp).toBe(30 - 5)
   })
 
-  it('HP ≤ 50% → 8 урона', () => {
+  it('HP ≤ 50% → 8 damage', () => {
     const next = playLunarStrike(makeState(15), 'enemy')
     expect(next.enemies[0].hp).toBe(30 - 8)
   })
 })
 
 describe('playPackSense', () => {
-  it('применяет vulnerable к цели', () => {
+  it('applies vulnerable to the target', () => {
     const next = playPackSense(makeState(), 'enemy')
     expect(next.enemies[0].statuses.some(s => s.name === 'vulnerable')).toBe(true)
   })
 
-  it('даёт 2 defend герою', () => {
+  it('gives the hero 2 defend', () => {
     const next = playPackSense(makeState(), 'enemy')
     const def = next.hero.statuses.find(s => s.name === 'defend')
     expect(def?.stacks).toBe(2)
@@ -166,12 +166,12 @@ describe('playPackSense', () => {
 })
 
 describe('playStalk', () => {
-  it('даёт 5 defend', () => {
+  it('gives 5 defend', () => {
     const next = playStalk(makeState(), 'enemy')
     expect(next.hero.statuses.find(s => s.name === 'defend')?.stacks).toBe(5)
   })
 
-  it('применяет 1 bleed к цели', () => {
+  it('applies 1 bleed to the target', () => {
     const next = playStalk(makeState(), 'enemy')
     expect(next.enemies[0].statuses.find(s => s.name === 'bleed')?.stacks).toBe(1)
   })
@@ -180,18 +180,18 @@ describe('playStalk', () => {
 // ─── Wolf form cards ──────────────────────────────────────────────────────────
 
 describe('playRend', () => {
-  it('наносит урон (8 базового при полном HP)', () => {
+  it('deals damage (8 base at full HP)', () => {
     const next = playRend(makeState(30), 'enemy')
     expect(next.enemies[0].hp).toBe(30 - 8)
   })
 
-  it('bleed применяется ПОСЛЕ урона', () => {
+  it('bleed is applied AFTER the damage', () => {
     const next = playRend(makeState(30), 'enemy')
     expect(next.enemies[0].statuses.find(s => s.name === 'bleed')?.stacks).toBe(2)
     expect(next.enemies[0].hp).toBe(22)
   })
 
-  it('урон масштабируется при низком HP', () => {
+  it('damage scales up at low HP', () => {
     const next = playRend(makeState(0, 30), 'enemy')
     // hp=0 → wolfDamage(0/30) = 8 * (1 + 30/30) = 16
     expect(next.enemies[0].hp).toBe(30 - 16)
@@ -199,12 +199,12 @@ describe('playRend', () => {
 })
 
 describe('playRampage', () => {
-  it('наносит урон единственному врагу', () => {
+  it('deals damage to the only enemy', () => {
     const next = playRampage(makeState(30))
     expect(next.enemies[0].hp).toBe(30 - 4)
   })
 
-  it('бьёт всех живых врагов', () => {
+  it('hits every living enemy', () => {
     const s: GameState = {
       ...makeState(30),
       enemies: [
@@ -217,7 +217,7 @@ describe('playRampage', () => {
     expect(next.enemies[1].hp).toBe(16)
   })
 
-  it('пропускает мёртвых врагов', () => {
+  it('skips dead enemies', () => {
     const s: GameState = {
       ...makeState(30),
       enemies: [
@@ -232,7 +232,7 @@ describe('playRampage', () => {
 })
 
 describe('playRealityCrack', () => {
-  it('применяет vulnerable ко всем живым врагам', () => {
+  it('applies vulnerable to every living enemy', () => {
     const s: GameState = {
       ...makeState(),
       enemies: [
@@ -249,17 +249,17 @@ describe('playRealityCrack', () => {
 // ─── Turn Pipeline integration ───────────────────────────────────────────────
 
 describe('step3 via runTurn — werewolf transform', () => {
-  it('трансформируется при HP ≤ 50% в начале хода', () => {
+  it('transforms at HP ≤ 50% at the start of the turn', () => {
     const next = runTurn(makeState(15), { onStartOfTurnPassives: checkWerewolfTransform })
     expect(next.hero.formState).toBe('werewolf')
   })
 
-  it('не трансформируется при HP > 50%', () => {
+  it('does not transform at HP > 50%', () => {
     const next = runTurn(makeState(20), { onStartOfTurnPassives: checkWerewolfTransform })
     expect(next.hero.formState).toBe('human')
   })
 
-  it('wolf форма истекает через 3 хода', () => {
+  it('wolf form expires after 3 turns', () => {
     let s = makeState(15)
     s = runTurn(s, { onStartOfTurnPassives: checkWerewolfTransform })  // transforms
     s = runTurn(s, { onStartOfTurnPassives: checkWerewolfTransform })
@@ -272,30 +272,30 @@ describe('step3 via runTurn — werewolf transform', () => {
 
 // ─── Mutation killing tests ───────────────────────────────────────────────────
 
-describe('checkWerewolfTransform — точные граничные значения', () => {
-  it('HP = 50% (15/30) → трансформируется (граница включительно)', () => {
+describe('checkWerewolfTransform — exact boundary values', () => {
+  it('HP = 50% (15/30) → transforms (boundary inclusive)', () => {
     const s = makeState(15)  // 15/30 = 0.5 exactly
     expect(checkWerewolfTransform(s).hero.formState).toBe('werewolf')
   })
 
-  it('HP = 16/30 (>50%) → НЕ трансформируется', () => {
+  it('HP = 16/30 (>50%) → does NOT transform', () => {
     const s = makeState(16)  // kills hpPct <= 0.5 → true mutant
     expect(checkWerewolfTransform(s).hero.formState).toBe('human')
   })
 
-  it('в wolf форме HP = 16/30 (>50%) → немедленный откат', () => {
+  it('in wolf form at HP = 16/30 (>50%) → immediate revert', () => {
     const s = makeWolfState(2, 16)
     expect(checkWerewolfTransform(s).hero.formState).toBe('human')
   })
 
-  it('в wolf форме HP = 15/30 (50%) → остаётся wolf, декремент', () => {
+  it('in wolf form at HP = 15/30 (50%) → stays wolf, decrements', () => {
     const s = makeWolfState(2, 15)  // kills hpPct > 0.5 → true mutant
     const next = checkWerewolfTransform(s)
     expect(next.hero.formState).toBe('werewolf')
     expect(next.hero.werewolfTurnsLeft).toBe(1)
   })
 
-  it('maxHp = 0 → hpPct fallback 1 → никогда не трансформируется', () => {
+  it('maxHp = 0 → hpPct falls back to 1 → never transforms', () => {
     const s = makeState(0)
     const zeroMax = { ...s, hero: { ...s.hero, maxHp: 0 } }
     // hpPct = maxHp > 0 ? hp/maxHp : 1 → 1 > 0.5 → no transform
@@ -304,25 +304,25 @@ describe('checkWerewolfTransform — точные граничные значе�
 })
 
 describe('playLunarStrike — threshold boundary', () => {
-  it('HP = 50% (15/30) → 8 урона (граница включительно)', () => {
+  it('HP = 50% (15/30) → 8 damage (boundary inclusive)', () => {
     const s = makeState(15)
     const next = playLunarStrike(s, 'enemy')
     expect(next.enemies[0].hp).toBe(30 - 8)  // kills hpPct<=0.5 → false mutant
   })
 
-  it('HP = 16/30 (>50%) → 5 урона', () => {
+  it('HP = 16/30 (>50%) → 5 damage', () => {
     const s = makeState(16)
     const next = playLunarStrike(s, 'enemy')
     expect(next.enemies[0].hp).toBe(30 - 5)  // kills hpPct<=0.5 → true mutant
   })
 
-  it('HP = 14/30 (<50%) → 8 урона', () => {
+  it('HP = 14/30 (<50%) → 8 damage', () => {
     const s = makeState(14)
     const next = playLunarStrike(s, 'enemy')
     expect(next.enemies[0].hp).toBe(30 - 8)
   })
 
-  it('maxHp=0 → fallback hpPct=1 → 5 урона (не 8)', () => {
+  it('maxHp=0 → fallback hpPct=1 → 5 damage (not 8)', () => {
     const s = makeState(0)
     const zeroMax = { ...s, hero: { ...s.hero, maxHp: 0 } }
     const next = playLunarStrike(zeroMax, 'enemy')

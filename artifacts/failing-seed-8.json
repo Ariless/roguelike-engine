@@ -1,0 +1,815 @@
+{
+  "seed": 8,
+  "heroClass": "paladin",
+  "enemyType": "vampire",
+  "faults": {
+    "bleedOffByOne": false,
+    "ignoreStun": false
+  },
+  "events": [
+    {
+      "type": "play_card",
+      "turn": 1,
+      "preStateHash": "1acfe6",
+      "postStateHash": "6bad7f",
+      "cardId": "righteous_strike",
+      "targetId": "enemy"
+    },
+    {
+      "type": "play_card",
+      "turn": 1,
+      "preStateHash": "6bad7f",
+      "postStateHash": "8a488b",
+      "cardId": "divine_charge",
+      "targetId": "enemy"
+    },
+    {
+      "type": "play_card",
+      "turn": 1,
+      "preStateHash": "8a488b",
+      "postStateHash": "304770",
+      "cardId": "stubborn_recovery",
+      "targetId": "enemy"
+    },
+    {
+      "type": "status_tick",
+      "turn": 1,
+      "preStateHash": "304770",
+      "postStateHash": "304770",
+      "targetId": "hero"
+    },
+    {
+      "type": "enemy_action",
+      "turn": 1,
+      "preStateHash": "304770",
+      "postStateHash": "6eee8f",
+      "targetId": "hero"
+    },
+    {
+      "type": "status_tick",
+      "turn": 1,
+      "preStateHash": "6eee8f",
+      "postStateHash": "6eee8f",
+      "targetId": "enemy"
+    },
+    {
+      "type": "turn_end",
+      "turn": 2,
+      "preStateHash": "304770",
+      "postStateHash": "84fb65"
+    },
+    {
+      "type": "play_card",
+      "turn": 2,
+      "preStateHash": "84fb65",
+      "postStateHash": "3b8835",
+      "cardId": "righteous_strike",
+      "targetId": "enemy"
+    },
+    {
+      "type": "play_card",
+      "turn": 2,
+      "preStateHash": "3b8835",
+      "postStateHash": "a7363d",
+      "cardId": "divine_charge",
+      "targetId": "enemy"
+    },
+    {
+      "type": "play_card",
+      "turn": 2,
+      "preStateHash": "a7363d",
+      "postStateHash": "451ada",
+      "cardId": "stubborn_recovery",
+      "targetId": "enemy"
+    },
+    {
+      "type": "status_tick",
+      "turn": 2,
+      "preStateHash": "451ada",
+      "postStateHash": "451ada",
+      "targetId": "hero"
+    },
+    {
+      "type": "enemy_action",
+      "turn": 2,
+      "preStateHash": "451ada",
+      "postStateHash": "f29996",
+      "targetId": "hero"
+    },
+    {
+      "type": "status_tick",
+      "turn": 2,
+      "preStateHash": "f29996",
+      "postStateHash": "f29996",
+      "targetId": "enemy"
+    },
+    {
+      "type": "turn_end",
+      "turn": 3,
+      "preStateHash": "451ada",
+      "postStateHash": "638948"
+    },
+    {
+      "type": "play_card",
+      "turn": 3,
+      "preStateHash": "638948",
+      "postStateHash": "2a5ed5",
+      "cardId": "righteous_strike",
+      "targetId": "enemy"
+    },
+    {
+      "type": "play_card",
+      "turn": 3,
+      "preStateHash": "2a5ed5",
+      "postStateHash": "62aa5d",
+      "cardId": "divine_charge",
+      "targetId": "enemy"
+    },
+    {
+      "type": "play_card",
+      "turn": 3,
+      "preStateHash": "62aa5d",
+      "postStateHash": "c7c1a1",
+      "cardId": "stubborn_recovery",
+      "targetId": "enemy"
+    },
+    {
+      "type": "status_tick",
+      "turn": 3,
+      "preStateHash": "c7c1a1",
+      "postStateHash": "20624e",
+      "targetId": "hero"
+    },
+    {
+      "type": "enemy_action",
+      "turn": 3,
+      "preStateHash": "20624e",
+      "postStateHash": "3b5f1a",
+      "targetId": "hero"
+    },
+    {
+      "type": "status_tick",
+      "turn": 3,
+      "preStateHash": "3b5f1a",
+      "postStateHash": "3b5f1a",
+      "targetId": "enemy"
+    },
+    {
+      "type": "turn_end",
+      "turn": 4,
+      "preStateHash": "c7c1a1",
+      "postStateHash": "531cfa"
+    },
+    {
+      "type": "play_card",
+      "turn": 4,
+      "preStateHash": "531cfa",
+      "postStateHash": "2d32d4",
+      "cardId": "righteous_strike",
+      "targetId": "enemy"
+    },
+    {
+      "type": "play_card",
+      "turn": 4,
+      "preStateHash": "2d32d4",
+      "postStateHash": "216e39",
+      "cardId": "divine_charge",
+      "targetId": "enemy"
+    },
+    {
+      "type": "play_card",
+      "turn": 4,
+      "preStateHash": "216e39",
+      "postStateHash": "858408",
+      "cardId": "stubborn_recovery",
+      "targetId": "enemy"
+    },
+    {
+      "type": "status_tick",
+      "turn": 4,
+      "preStateHash": "858408",
+      "postStateHash": "8a65e3",
+      "targetId": "hero"
+    },
+    {
+      "type": "enemy_action",
+      "turn": 4,
+      "preStateHash": "8a65e3",
+      "postStateHash": "c675fe",
+      "targetId": "hero"
+    },
+    {
+      "type": "status_tick",
+      "turn": 4,
+      "preStateHash": "c675fe",
+      "postStateHash": "c675fe",
+      "targetId": "enemy"
+    },
+    {
+      "type": "turn_end",
+      "turn": 5,
+      "preStateHash": "858408",
+      "postStateHash": "a0f1b2"
+    },
+    {
+      "type": "play_card",
+      "turn": 5,
+      "preStateHash": "a0f1b2",
+      "postStateHash": "a1c7ea",
+      "cardId": "righteous_strike",
+      "targetId": "enemy"
+    },
+    {
+      "type": "play_card",
+      "turn": 5,
+      "preStateHash": "a1c7ea",
+      "postStateHash": "d75f1e",
+      "cardId": "divine_charge",
+      "targetId": "enemy"
+    },
+    {
+      "type": "play_card",
+      "turn": 5,
+      "preStateHash": "d75f1e",
+      "postStateHash": "688d19",
+      "cardId": "stubborn_recovery",
+      "targetId": "enemy"
+    },
+    {
+      "type": "status_tick",
+      "turn": 5,
+      "preStateHash": "688d19",
+      "postStateHash": "c115a8",
+      "targetId": "hero"
+    },
+    {
+      "type": "enemy_action",
+      "turn": 5,
+      "preStateHash": "c115a8",
+      "postStateHash": "5e2ec7",
+      "targetId": "hero"
+    },
+    {
+      "type": "status_tick",
+      "turn": 5,
+      "preStateHash": "5e2ec7",
+      "postStateHash": "5e2ec7",
+      "targetId": "enemy"
+    },
+    {
+      "type": "turn_end",
+      "turn": 6,
+      "preStateHash": "688d19",
+      "postStateHash": "e147a5"
+    },
+    {
+      "type": "play_card",
+      "turn": 6,
+      "preStateHash": "e147a5",
+      "postStateHash": "1afe3d",
+      "cardId": "righteous_strike",
+      "targetId": "enemy"
+    },
+    {
+      "type": "play_card",
+      "turn": 6,
+      "preStateHash": "1afe3d",
+      "postStateHash": "251131",
+      "cardId": "divine_charge",
+      "targetId": "enemy"
+    },
+    {
+      "type": "play_card",
+      "turn": 6,
+      "preStateHash": "251131",
+      "postStateHash": "2cdefa",
+      "cardId": "stubborn_recovery",
+      "targetId": "enemy"
+    },
+    {
+      "type": "status_tick",
+      "turn": 6,
+      "preStateHash": "2cdefa",
+      "postStateHash": "f3ebba",
+      "targetId": "hero"
+    },
+    {
+      "type": "enemy_action",
+      "turn": 6,
+      "preStateHash": "f3ebba",
+      "postStateHash": "9bfe98",
+      "targetId": "hero"
+    },
+    {
+      "type": "status_tick",
+      "turn": 6,
+      "preStateHash": "9bfe98",
+      "postStateHash": "9bfe98",
+      "targetId": "enemy"
+    },
+    {
+      "type": "turn_end",
+      "turn": 7,
+      "preStateHash": "2cdefa",
+      "postStateHash": "52795a"
+    },
+    {
+      "type": "play_card",
+      "turn": 7,
+      "preStateHash": "52795a",
+      "postStateHash": "28350f",
+      "cardId": "righteous_strike",
+      "targetId": "enemy"
+    }
+  ],
+  "snapshots": [
+    {
+      "turn": 2,
+      "hero": {
+        "id": "hero",
+        "name": "Paladin",
+        "hp": 24,
+        "maxHp": 30,
+        "state": "alive",
+        "statuses": [],
+        "formState": "human"
+      },
+      "enemies": [
+        {
+          "id": "enemy",
+          "name": "Vampire",
+          "hp": 30,
+          "maxHp": 30,
+          "state": "alive",
+          "statuses": []
+        }
+      ],
+      "events": [
+        {
+          "type": "play_card",
+          "turn": 1,
+          "preStateHash": "1acfe6",
+          "postStateHash": "6bad7f",
+          "cardId": "righteous_strike",
+          "targetId": "enemy"
+        },
+        {
+          "type": "play_card",
+          "turn": 1,
+          "preStateHash": "6bad7f",
+          "postStateHash": "8a488b",
+          "cardId": "divine_charge",
+          "targetId": "enemy"
+        },
+        {
+          "type": "play_card",
+          "turn": 1,
+          "preStateHash": "8a488b",
+          "postStateHash": "304770",
+          "cardId": "stubborn_recovery",
+          "targetId": "enemy"
+        },
+        {
+          "type": "status_tick",
+          "turn": 1,
+          "preStateHash": "304770",
+          "postStateHash": "304770",
+          "targetId": "hero"
+        },
+        {
+          "type": "enemy_action",
+          "turn": 1,
+          "preStateHash": "304770",
+          "postStateHash": "6eee8f",
+          "targetId": "hero"
+        },
+        {
+          "type": "status_tick",
+          "turn": 1,
+          "preStateHash": "6eee8f",
+          "postStateHash": "6eee8f",
+          "targetId": "enemy"
+        },
+        {
+          "type": "turn_end",
+          "turn": 2,
+          "preStateHash": "304770",
+          "postStateHash": "84fb65"
+        }
+      ],
+      "hashValid": true
+    },
+    {
+      "turn": 3,
+      "hero": {
+        "id": "hero",
+        "name": "Paladin",
+        "hp": 30,
+        "maxHp": 30,
+        "state": "alive",
+        "statuses": [
+          {
+            "name": "bleed",
+            "stacks": 2
+          }
+        ],
+        "formState": "human"
+      },
+      "enemies": [
+        {
+          "id": "enemy",
+          "name": "Vampire",
+          "hp": 25,
+          "maxHp": 30,
+          "state": "alive",
+          "statuses": []
+        }
+      ],
+      "events": [
+        {
+          "type": "play_card",
+          "turn": 2,
+          "preStateHash": "84fb65",
+          "postStateHash": "3b8835",
+          "cardId": "righteous_strike",
+          "targetId": "enemy"
+        },
+        {
+          "type": "play_card",
+          "turn": 2,
+          "preStateHash": "3b8835",
+          "postStateHash": "a7363d",
+          "cardId": "divine_charge",
+          "targetId": "enemy"
+        },
+        {
+          "type": "play_card",
+          "turn": 2,
+          "preStateHash": "a7363d",
+          "postStateHash": "451ada",
+          "cardId": "stubborn_recovery",
+          "targetId": "enemy"
+        },
+        {
+          "type": "status_tick",
+          "turn": 2,
+          "preStateHash": "451ada",
+          "postStateHash": "451ada",
+          "targetId": "hero"
+        },
+        {
+          "type": "enemy_action",
+          "turn": 2,
+          "preStateHash": "451ada",
+          "postStateHash": "f29996",
+          "targetId": "hero"
+        },
+        {
+          "type": "status_tick",
+          "turn": 2,
+          "preStateHash": "f29996",
+          "postStateHash": "f29996",
+          "targetId": "enemy"
+        },
+        {
+          "type": "turn_end",
+          "turn": 3,
+          "preStateHash": "451ada",
+          "postStateHash": "638948"
+        }
+      ],
+      "hashValid": true
+    },
+    {
+      "turn": 4,
+      "hero": {
+        "id": "hero",
+        "name": "Paladin",
+        "hp": 16,
+        "maxHp": 30,
+        "state": "alive",
+        "statuses": [
+          {
+            "name": "bleed",
+            "stacks": 2
+          }
+        ],
+        "formState": "human"
+      },
+      "enemies": [
+        {
+          "id": "enemy",
+          "name": "Vampire",
+          "hp": 20,
+          "maxHp": 30,
+          "state": "alive",
+          "statuses": []
+        }
+      ],
+      "events": [
+        {
+          "type": "play_card",
+          "turn": 3,
+          "preStateHash": "638948",
+          "postStateHash": "2a5ed5",
+          "cardId": "righteous_strike",
+          "targetId": "enemy"
+        },
+        {
+          "type": "play_card",
+          "turn": 3,
+          "preStateHash": "2a5ed5",
+          "postStateHash": "62aa5d",
+          "cardId": "divine_charge",
+          "targetId": "enemy"
+        },
+        {
+          "type": "play_card",
+          "turn": 3,
+          "preStateHash": "62aa5d",
+          "postStateHash": "c7c1a1",
+          "cardId": "stubborn_recovery",
+          "targetId": "enemy"
+        },
+        {
+          "type": "status_tick",
+          "turn": 3,
+          "preStateHash": "c7c1a1",
+          "postStateHash": "20624e",
+          "targetId": "hero"
+        },
+        {
+          "type": "enemy_action",
+          "turn": 3,
+          "preStateHash": "20624e",
+          "postStateHash": "3b5f1a",
+          "targetId": "hero"
+        },
+        {
+          "type": "status_tick",
+          "turn": 3,
+          "preStateHash": "3b5f1a",
+          "postStateHash": "3b5f1a",
+          "targetId": "enemy"
+        },
+        {
+          "type": "turn_end",
+          "turn": 4,
+          "preStateHash": "c7c1a1",
+          "postStateHash": "531cfa"
+        }
+      ],
+      "hashValid": true
+    },
+    {
+      "turn": 5,
+      "hero": {
+        "id": "hero",
+        "name": "Paladin",
+        "hp": 14,
+        "maxHp": 30,
+        "state": "alive",
+        "statuses": [
+          {
+            "name": "bleed",
+            "stacks": 2
+          }
+        ],
+        "formState": "human"
+      },
+      "enemies": [
+        {
+          "id": "enemy",
+          "name": "Vampire",
+          "hp": 16,
+          "maxHp": 30,
+          "state": "alive",
+          "statuses": []
+        }
+      ],
+      "events": [
+        {
+          "type": "play_card",
+          "turn": 4,
+          "preStateHash": "531cfa",
+          "postStateHash": "2d32d4",
+          "cardId": "righteous_strike",
+          "targetId": "enemy"
+        },
+        {
+          "type": "play_card",
+          "turn": 4,
+          "preStateHash": "2d32d4",
+          "postStateHash": "216e39",
+          "cardId": "divine_charge",
+          "targetId": "enemy"
+        },
+        {
+          "type": "play_card",
+          "turn": 4,
+          "preStateHash": "216e39",
+          "postStateHash": "858408",
+          "cardId": "stubborn_recovery",
+          "targetId": "enemy"
+        },
+        {
+          "type": "status_tick",
+          "turn": 4,
+          "preStateHash": "858408",
+          "postStateHash": "8a65e3",
+          "targetId": "hero"
+        },
+        {
+          "type": "enemy_action",
+          "turn": 4,
+          "preStateHash": "8a65e3",
+          "postStateHash": "c675fe",
+          "targetId": "hero"
+        },
+        {
+          "type": "status_tick",
+          "turn": 4,
+          "preStateHash": "c675fe",
+          "postStateHash": "c675fe",
+          "targetId": "enemy"
+        },
+        {
+          "type": "turn_end",
+          "turn": 5,
+          "preStateHash": "858408",
+          "postStateHash": "a0f1b2"
+        }
+      ],
+      "hashValid": true
+    },
+    {
+      "turn": 6,
+      "hero": {
+        "id": "hero",
+        "name": "Paladin",
+        "hp": 18,
+        "maxHp": 30,
+        "state": "alive",
+        "statuses": [
+          {
+            "name": "bleed",
+            "stacks": 4
+          }
+        ],
+        "formState": "human"
+      },
+      "enemies": [
+        {
+          "id": "enemy",
+          "name": "Vampire",
+          "hp": 11,
+          "maxHp": 30,
+          "state": "alive",
+          "statuses": []
+        }
+      ],
+      "events": [
+        {
+          "type": "play_card",
+          "turn": 5,
+          "preStateHash": "a0f1b2",
+          "postStateHash": "a1c7ea",
+          "cardId": "righteous_strike",
+          "targetId": "enemy"
+        },
+        {
+          "type": "play_card",
+          "turn": 5,
+          "preStateHash": "a1c7ea",
+          "postStateHash": "d75f1e",
+          "cardId": "divine_charge",
+          "targetId": "enemy"
+        },
+        {
+          "type": "play_card",
+          "turn": 5,
+          "preStateHash": "d75f1e",
+          "postStateHash": "688d19",
+          "cardId": "stubborn_recovery",
+          "targetId": "enemy"
+        },
+        {
+          "type": "status_tick",
+          "turn": 5,
+          "preStateHash": "688d19",
+          "postStateHash": "c115a8",
+          "targetId": "hero"
+        },
+        {
+          "type": "enemy_action",
+          "turn": 5,
+          "preStateHash": "c115a8",
+          "postStateHash": "5e2ec7",
+          "targetId": "hero"
+        },
+        {
+          "type": "status_tick",
+          "turn": 5,
+          "preStateHash": "5e2ec7",
+          "postStateHash": "5e2ec7",
+          "targetId": "enemy"
+        },
+        {
+          "type": "turn_end",
+          "turn": 6,
+          "preStateHash": "688d19",
+          "postStateHash": "e147a5"
+        }
+      ],
+      "hashValid": true
+    },
+    {
+      "turn": 7,
+      "hero": {
+        "id": "hero",
+        "name": "Paladin",
+        "hp": 8,
+        "maxHp": 30,
+        "state": "alive",
+        "statuses": [
+          {
+            "name": "bleed",
+            "stacks": 4
+          }
+        ],
+        "formState": "human"
+      },
+      "enemies": [
+        {
+          "id": "enemy",
+          "name": "Vampire",
+          "hp": 6,
+          "maxHp": 30,
+          "state": "alive",
+          "statuses": []
+        }
+      ],
+      "events": [
+        {
+          "type": "play_card",
+          "turn": 6,
+          "preStateHash": "e147a5",
+          "postStateHash": "1afe3d",
+          "cardId": "righteous_strike",
+          "targetId": "enemy"
+        },
+        {
+          "type": "play_card",
+          "turn": 6,
+          "preStateHash": "1afe3d",
+          "postStateHash": "251131",
+          "cardId": "divine_charge",
+          "targetId": "enemy"
+        },
+        {
+          "type": "play_card",
+          "turn": 6,
+          "preStateHash": "251131",
+          "postStateHash": "2cdefa",
+          "cardId": "stubborn_recovery",
+          "targetId": "enemy"
+        },
+        {
+          "type": "status_tick",
+          "turn": 6,
+          "preStateHash": "2cdefa",
+          "postStateHash": "f3ebba",
+          "targetId": "hero"
+        },
+        {
+          "type": "enemy_action",
+          "turn": 6,
+          "preStateHash": "f3ebba",
+          "postStateHash": "9bfe98",
+          "targetId": "hero"
+        },
+        {
+          "type": "status_tick",
+          "turn": 6,
+          "preStateHash": "9bfe98",
+          "postStateHash": "9bfe98",
+          "targetId": "enemy"
+        },
+        {
+          "type": "turn_end",
+          "turn": 7,
+          "preStateHash": "2cdefa",
+          "postStateHash": "52795a"
+        }
+      ],
+      "hashValid": true
+    }
+  ],
+  "outcome": "hero_wins",
+  "_meta": {
+    "savedAt": "2026-08-20T14:14:17.836Z",
+    "divergedAt": null,
+    "divergedTurn": null,
+    "eventsReplayed": 43
+  }
+}
