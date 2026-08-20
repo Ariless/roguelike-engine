@@ -1,5 +1,7 @@
 # Roguelike Engine — Deterministic Rule Engine SUT
 
+[![CI](https://github.com/Ariless/roguelike-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/Ariless/roguelike-engine/actions/workflows/ci.yml)
+
 > *A deterministic roguelike simulation engine built to explore advanced testing techniques through unstable timelines and reproducible state corruption.*
 
 **This is not a game testing project.**
@@ -50,6 +52,9 @@ npm run stability 8000 8          # cross-batch spread + convergence — 40 seco
 npm run chaos 200                 # Adversarial agent
 npm run trace 500                 # Trace analysis + suggested invariants
 npm run replay 42                 # Generate replay.json for debugger
+
+# The five below call the Claude API. Without ANTHROPIC_API_KEY they exit with
+# instructions; append -- --dry-run to see the flow on a canned response.
 npm run oracle 42                 # LLM oracle evaluation
 npm run semantic-mutations src/engine/statuses.ts tickStatuses   # AI upstream Stryker
 npm run spec-to-test "Bleed deals damage equal to stacks per turn"

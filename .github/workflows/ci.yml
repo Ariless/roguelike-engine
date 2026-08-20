@@ -11,8 +11,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # ─── Быстрый барьер ─────────────────────────────────────────────────────────
-  # Всё, что укладывается в минуту. Падает здесь — остальные джобы не тратятся.
+  # ─── Fast barrier ───────────────────────────────────────────────────────────
+  # Everything that fits inside a minute. If this fails, the other jobs are never spent.
   verify:
     name: Types, unit, BDD
     runs-on: ubuntu-latest
@@ -33,21 +33,22 @@ jobs:
       - name: BDD scenarios
         run: npm run test:bdd
 
-  # ─── Симуляция ──────────────────────────────────────────────────────────────
-  # Две проверки с разной строгостью, и это осознанно.
+  # ─── Simulation ─────────────────────────────────────────────────────────────
+  # Two checks with deliberately different strictness.
   #
-  # Детерминизм — блокирующий. simulate завершается с кодом 1, если есть
-  # испорченные таймлайны или расхождение хешей: одинаковый seed обязан давать
-  # байт-в-байт одинаковый лог, и нарушение этого дефект без обсуждения.
+  # Determinism is blocking. simulate exits with code 1 on corrupted timelines or
+  # a hash divergence: the same seed has to produce a byte-identical log, and a
+  # violation of that is a defect, no discussion.
   #
-  # Баланс — отчётный, пока не закрыт BUG-14. Три класса из четырёх сейчас вне
-  # коридора, и половина перекоса идёт от того, что двое врагов не выполняют
-  # заявленных в спецификации действий. Гейт на балансе до реализации механик
-  # держал бы сборку красной постоянно и приучил бы игнорировать красный цвет.
+  # Balance is reported rather than blocking while BUG-14 is open. Three classes
+  # out of four are currently outside their corridor, and half of that skew comes
+  # from two enemies not performing the actions the specification declares. A gate
+  # on balance before those mechanics ship would keep the build permanently red
+  # and teach people to ignore the colour.
   #
-  # Когда механики врагов появятся в движке: заменить шаг на
+  # Once the enemy mechanics land in the engine, replace the step with
   #     npm run simulate 16000 -- --gate
-  # и коридоры начнут блокировать мерж так же, как unit-тесты.
+  # and the corridors will block merges the same way the unit tests do.
   simulation:
     name: Monte Carlo and stability
     runs-on: ubuntu-latest
@@ -109,10 +110,10 @@ jobs:
             playwright-report/
           retention-days: 7
 
-  # ─── Качество тестов ────────────────────────────────────────────────────────
-  # Порог живёт в stryker.config.json (thresholds.break), а не здесь: он часть
-  # контракта проекта, а не настройка сборки. Stryker сам вернёт код 1, если
-  # score опустится ниже — CI не должен дублировать это число.
+  # ─── Test quality ───────────────────────────────────────────────────────────
+  # The threshold lives in stryker.config.json (thresholds.break), not here: it is
+  # part of the project contract rather than a build setting. Stryker returns code 1
+  # by itself when the score drops below it — CI must not duplicate that number.
   mutation:
     name: Mutation score
     runs-on: ubuntu-latest

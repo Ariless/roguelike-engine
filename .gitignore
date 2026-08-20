@@ -3,6 +3,5 @@ node_modules/
 test-results/
 reports/mutation/
 reports/ci-report.html
-cucumber.json
 .DS_Store
 SOLUTIONS/

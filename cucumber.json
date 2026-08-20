@@ -1,0 +1,8 @@
+{
+  "default": {
+    "paths": ["tests/bdd/features/**/*.feature"],
+    "import": ["tsx/esm", "tests/bdd/steps/**/*.ts"],
+    "format": ["progress-bar", "summary"],
+    "publishQuiet": true
+  }
+}

@@ -345,7 +345,7 @@ Related: `game/index.html:2148` builds the skeleton id as `` `skeleton-${Date.no
 
 **Invariant (needed, currently absent):** An enemy's intent set in the engine matches its decision table in `docs/DECISION-TABLES.md`. A violation looks like an enemy that cannot perform a documented action.
 
-**Testing value:** 376 tests, a mutation score around 79%, a full invariant contract — and not one of them caught that an entire enemy does not do what three documents say it does. Because all of them check that the implemented code behaves correctly, and none asks whether what was promised was implemented. A missing mechanic is invisible both to tests on existing code and to mutation testing: there is nothing to mutate, the code is not there.
+**Testing value:** 386 tests, a mutation score around 79%, a full invariant contract — and not one of them caught that an entire enemy does not do what three documents say it does. Because all of them check that the implemented code behaves correctly, and none asks whether what was promised was implemented. A missing mechanic is invisible both to tests on existing code and to mutation testing: there is nothing to mutate, the code is not there.
 
 **Closed by a check (2026-08-20):** `tests/decision-tables.test.ts` compares `ENEMY_INTENTS` against the decision tables. The gap is pinned in `KNOWN_GAPS` with the exact current behaviour, so the suite stays green while the gap can be neither silently widened (the check "the gap has not changed" fails) nor silently closed (the check "the gap still exists" fails, demanding the enemy be removed from the list).
 
