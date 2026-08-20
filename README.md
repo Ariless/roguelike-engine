@@ -25,7 +25,7 @@ The roguelike is a rule engine — the same class of system as a payment process
 | **Monte Carlo simulation** | `npm run simulate` → winrate per class and per matchup, Wilson intervals, verdict against a target corridor | Statistical stability; caught a whole enemy that never got implemented |
 | **Sampling-bias detection** | Hero and enemy both derived from `seed % 4` → 4 of 16 configurations ever scanned | A biased sample returns a plausible number nobody rechecks |
 | **Metric stability** | `npm run stability` → cross-batch spread + convergence as runs double | An interval narrowing toward a seed-dependent answer looks *more* trustworthy |
-| **RNG statistical battery** | chi-square uniformity, runs test, autocorrelation, integer bias, permutation fairness, seed-space limits | Determinism tests pass on a generator that rolls 1 twice as often as 6 |
+| **RNG statistical battery** | NIST SP 800-22 and Diehard tests reported as p-values; fault injection proves each one can go red | Determinism tests pass on a generator that rolls 1 twice as often as 6 |
 | **BDD / Cucumber** | Natural language scenarios on the engine — no browser, no HTTP | Executable specification for rule engines |
 | **Decision tables** | Guardian: shield→stun→attack; each row = one test | Classic technique on non-classic system |
 | **Spec-compliance testing** | `ENEMY_INTENTS` checked against the decision tables; two enemies diverge, and the gaps are pinned | Every other test verifies existing code is correct; none asks whether specified behaviour exists |
@@ -142,6 +142,65 @@ teaches people to ignore red. Once the enemy mechanics land, the step becomes
 
 Both reports are written to the job summary, so a run's statistics are readable without downloading
 artefacts.
+
+---
+
+## RNG battery — correspondence with published test suites
+
+Determinism and distribution are different questions. Determinism asks whether the
+same result comes back; distribution asks whether it was the right result in the
+first place. A generator that satisfies every determinism test in `rng.test.ts` can
+still roll a 1 twice as often as a 6.
+
+The battery in `tests/rng-statistical.test.ts` is not an invention of this project.
+Most of it maps directly onto the suites a certification lab runs:
+
+| This project | Published test |
+|---|---|
+| monobit | NIST SP 800-22 §2.1 Frequency (Monobit) |
+| block frequency | NIST SP 800-22 §2.2 Frequency within a Block |
+| runs above/below the median | NIST SP 800-22 §2.3 Runs |
+| longest run of ones in a block | NIST SP 800-22 §2.4 Longest Run of Ones |
+| cumulative sums (forward) | NIST SP 800-22 §2.13 Cumulative Sums |
+| uniformity across 100 bins | classical χ² goodness-of-fit |
+| 10×10 lattice of adjacent pairs | Diehard overlapping pairs / serial |
+| lag-1 autocorrelation | Diehard autocorrelation |
+| permutation fairness (24 permutations) | Diehard permutation test, order 4 |
+| uniformity of the p-values | NIST SP 800-22 §4.2.2 second-order check |
+
+**Not implemented**, and stated rather than implied: the spectral (DFT) test,
+Maurer's universal test, linear complexity, and the template-matching family. Those
+need sequence lengths in the millions of bits per run and would turn a six-second
+suite into a batch job. For a 32-bit generator driving a game simulation they are
+out of scope — claiming full SP 800-22 coverage would be the more impressive and
+less true statement.
+
+**Results are p-values, not PASS/FAIL against a table.** A critical value answers
+one question, "did it cross the line", and discards the rest. A p-value says how
+unlikely a deviation at least this large would be if the generator were sound, which
+is what makes it comparable across runs and testable for uniformity in its own
+right. The arithmetic behind them — regularised incomplete gamma, erfc, the normal
+CDF — lives in `src/stats/distributions.ts` and is verified in
+`tests/stats/distributions.test.ts` against published table values, not against
+itself.
+
+**The battery proves it can fail.** Every test here passes, and on its own that
+means nothing: BUG-16 in this project is a test named "skeleton appears" that
+asserted "at least two panels" and could never go red. So the generator is
+deliberately corrupted and the statistics recomputed:
+
+```
+source                monobit      runs     block frequency
+clean                  0.2772    0.7119              0.7333
+biased 51/49          2.4e-25    0.6159              0.0000
+repeats each bit        0.0647    0.0e+0             1.1e-39
+```
+
+Two percentage points of skew are invisible to the eye and invisible to the runs
+test by construction — the alternation rate is untouched — while monobit rejects it
+at 2.4e-25. The mirror case, a stream that repeats each bit, leaves the balance
+intact so monobit barely notices, and runs collapses to zero. A battery where every
+test fires at every defect is not a battery; it is one test written five times.
 
 ---
 

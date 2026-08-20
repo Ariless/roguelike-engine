@@ -104,10 +104,15 @@ export function erfc(x: number): number {
 
 /**
  * Two-sided p-value of a standard normal statistic: P(|Z| >= |z|).
- * NIST SP 800-22 reports monobit, runs and cumulative sums this way.
+ * NIST SP 800-22 reports monobit and runs this way.
  */
 export function normalTwoSidedPValue(z: number): number {
   return erfc(Math.abs(z) / Math.SQRT2)
+}
+
+/** Standard normal CDF Φ(x) = P(Z <= x). */
+export function normalCdf(x: number): number {
+  return 0.5 * erfc(-x / Math.SQRT2)
 }
 
 // ─── Uniformity of p-values ───────────────────────────────────────────────────
