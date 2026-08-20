@@ -187,17 +187,18 @@ These tests use `it.fails()` — they pass only when the assertion FAILS.
 
 ## Simulation validity invariants
 
-> Про достоверность отчёта, а не про поведение движка. Смещённая выборка не
-> падает и не бросает исключений — она возвращает правдоподобное число под
-> неверным ярлыком, и это самый дорогой класс ошибки в симуляции.
+> About whether the report can be trusted, not about how the engine behaves. A
+> biased sample does not fail and does not throw — it returns a plausible number
+> under the wrong label, and that is the most expensive class of error in a
+> simulation.
 
 | Invariant | Applies at | Violation looks like | Caught by |
 |-----------|-----------|---------------------|-----------|
-| Просканированы все конфигурации, либо непокрытые названы явно | `runBatch` | Метрика класса на деле является метрикой одной пары | Матрица пар в `npm run simulate`: `Configuration coverage: N/16` · BUG-13 |
-| Вердикт выносится по доверительному интервалу, не по точечной оценке | `verdictFor` | PASS/FAIL решается шумом на границе коридора | `lib/stats.ts: verdictFor` — третий исход `INCONCLUSIVE` |
-| Коридор зафиксирован до прогона | `lib/corridors.ts` | Коридор подогнан под измеренное → PASS всегда, смысла нет | Ревью: коридоры лежат отдельным файлом с обоснованием каждой границы |
-| Разброс между батчами укладывается в интервал одного батча | `npm run stability` | Интервал сужается к seed-зависимому ответу и выглядит тем убедительнее, чем больше прогонов | `scripts/stability.ts`: вердикт `SEED-DEPENDENT` |
-| Базовые seed батчей не разнесены кратно `0x6D2B79F5` | `npm run stability` | «Независимые» повторы перекрываются, разброс ложно мал | `BATCH_STRIDE = 1_000_003` с обоснованием в комментарии |
+| Every configuration is scanned, or the uncovered ones are named explicitly | `runBatch` | A class metric is in fact the metric of a single pair | The matchup matrix in `npm run simulate`: `Configuration coverage: N/16` · BUG-13 |
+| The verdict comes from the confidence interval, not the point estimate | `verdictFor` | PASS/FAIL is decided by noise at the corridor boundary | `lib/stats.ts: verdictFor` — a third outcome, `INCONCLUSIVE` |
+| The corridor is fixed before the run | `lib/corridors.ts` | A corridor fitted to the measurement → always PASS, says nothing | Review: the corridors live in their own file with a rationale for every bound |
+| Cross-batch spread fits within the interval of a single batch | `npm run stability` | The interval narrows toward a seed-dependent answer and looks more convincing the more runs are added | `scripts/stability.ts`: the `SEED-DEPENDENT` verdict |
+| Base seeds of the batches are not spaced at a multiple of `0x6D2B79F5` | `npm run stability` | "Independent" repeats overlap and the spread is falsely small | `BATCH_STRIDE = 1_000_003`, with the rationale in a comment |
 
 ---
 
@@ -206,18 +207,18 @@ These tests use `it.fails()` — they pass only when the assertion FAILS.
 > These were discovered by running `npm run trace 2000` — 2000 actual game traces analyzed.
 > "What to test" came from data, not from assumptions.
 
-> ⚠️ **Каждая строка ниже выведена из трасс, собранных до BUG-13** — то есть на
-> выборке, где `seed` задавал не пару герой/враг, а диагональ матрицы 4×4.
-> Проверялись 4 конфигурации из 16, и любое «максимальное наблюдённое значение»
-> ниже — максимум по четверти пространства. Первая строка уже опровергнута:
-> после исправления выборки `npm run simulate 16000` даёт max 49 ходов при
-> p95 = 16. Инвариант, выведенный из данных, наследует смещение этих данных —
-> и выглядит при этом эмпирически обоснованным, что хуже догадки.
-> Остальные строки требуют перепроверки на полной выборке.
+> ⚠️ **Every row below was derived from traces collected before BUG-13** — that
+> is, from a sample where `seed` selected not a hero/enemy pair but the diagonal
+> of a 4×4 matrix. Four configurations out of sixteen were ever exercised, so any
+> "maximum observed value" below is a maximum over a quarter of the space. The
+> first row has already been refuted: with the sampling fixed, `npm run simulate
+> 16000` gives a max of 49 turns at p95 = 16. An invariant derived from data
+> inherits the bias of that data — while looking empirically grounded, which is
+> worse than a guess. The remaining rows need re-checking on the full sample.
 
 | Invariant | Source | Suggested test |
 |-----------|--------|----------------|
-| ~~Games terminate within 12 turns~~ | Max observed win = 10 turns на смещённой выборке | ❌ Опровергнуто: max 49 ходов, p95 = 16 на полной выборке (16 пар). Реальная граница — потолок автоплеера в 50 ходов |
+| ~~Games terminate within 12 turns~~ | Max observed win = 10 turns on the biased sample | ❌ Refuted: max 49 turns, p95 = 16 on the full sample (16 pairs). The real bound is the auto-player's ceiling of 50 turns |
 | bleed+defend co-occur in 70%+ of games | 352/500 traces | `forAll(bleed+defend states, defend not consumed by bleed tick)` |
 | Losing games last 2× longer (7.5 vs 4.0 turns avg) | Turn distribution | CI metric: alert if avg_loss_turns drops below 6 |
 | Hero spends ~5% of turns at critical HP (0–20%) | HP histogram bucket 0 | `forAll(critical-HP states, bleed tick → hp >= 0)` |

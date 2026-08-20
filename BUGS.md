@@ -4,390 +4,390 @@ Every real bug found during implementation. Seed · root cause · how found · f
 
 ---
 
-## BUG-01 — Charge order: stun на героя не снимался
+## BUG-01 — Charge order: stun on the hero was never cleared
 
 **Date:** 2026-05-30  
 **Found by:** manual playtesting (game UI)  
-**Symptom:** После того как Guardian применяет Stun к герою, герой навсегда остаётся stunned — карты недоступны, из этого состояния невозможно выйти.
+**Symptom:** Once the Guardian stunned the hero, the hero stayed stunned forever — cards unavailable, no way out of that state.
 
-**Root cause:** `tickStatuses()` обрабатывает только `bleed`. Stun на герое никогда не снимался — не было кода для его удаления по истечении хода.
+**Root cause:** `tickStatuses()` only handled `bleed`. Stun on the hero was never removed: there was no code to clear it once the turn had passed.
 
-**Fix:** В начале `endTurn()`, до status ticks, добавлена явная проверка:
+**Fix:** An explicit check at the start of `endTurn()`, before the status ticks:
 ```js
 if (hasStatus(gs.hero, 'stun')) {
   removeStatus(gs.hero, 'stun')
   addLog(gs, '⚡ Stun cleared')
 }
 ```
-Stun снимается когда герой заканчивает ход в stunned состоянии (они пропустили свои действия — это и есть эффект stun).
+Stun clears when the hero ends a turn while stunned — they skipped their actions, and that is what stun does.
 
-**Invariant, который мог бы поймать это раньше:**  
-`forAll(seeds, s => stunSkipsExactlyOneTurn(simulate(s)))` — добавить в property tests.
+**Invariant that would have caught this earlier:**  
+`forAll(seeds, s => stunSkipsExactlyOneTurn(simulate(s)))` — to be added to the property tests.
 
-**Testing value:** Показывает разницу между "stun = не можешь действовать" и "stun = флаг который автоматически не сбрасывается". Типичный bug класса "state never cleared" — встречается в payment processing, workflow engines, anywhere с explicit state flags.
-
----
-
-## BUG-02 — Charge + vulnerable: неправильный порядок side effects
-
-**Date:** 2026-05-24 (найден при написании тестов Paladin)  
-**Found by:** unit test `при 3 зарядах + vulnerable: заряды → 1`  
-**Symptom:** При зарядах=3 и цели с vulnerable: ожидали что после атаки заряды = 1 (сброс до 0, потом +1 от vulnerable). Получали 0.
-
-**Root cause:** Порядок операций в `playRighteousStrike`:
-1. Сброс зарядов (step 4) — заряды = 0
-2. +1 заряд от vulnerable (step 5) — должно быть 1
-
-Но step 5 читал `s.hero.chargeStacks` который уже был 0 после сброса. Код не использовал результат step 4 корректно — читал из неправильного объекта стейта.
-
-**Fix:** Step 5 читает из уже обновлённого `s` (после сброса), а не из исходного стейта.
-
-**Testing value:** Иллюстрирует почему порядок pipeline шагов критичен. Mutation testing цель: изменить порядок step 4/5 → тест падает.
+**Testing value:** Shows the difference between "stun = you cannot act" and "stun = a flag that never resets itself". A textbook "state never cleared" bug — the same class shows up in payment processing, workflow engines, anywhere with explicit state flags.
 
 ---
 
-## BUG-03 — TypeScript narrowing: `'dead'` не присваивался `newState`
+## BUG-02 — Charge + vulnerable: side effects in the wrong order
+
+**Date:** 2026-05-24 (found while writing the Paladin tests)  
+**Found by:** unit test `with 3 charges + vulnerable: charges → 1`  
+**Symptom:** With charges = 3 against a vulnerable target, the expectation after the attack was charges = 1 (reset to 0, then +1 from vulnerable). The result was 0.
+
+**Root cause:** The order of operations in `playRighteousStrike`:
+1. Reset charges (step 4) — charges = 0
+2. +1 charge from vulnerable (step 5) — should be 1
+
+But step 5 read `s.hero.chargeStacks`, which was already 0 after the reset. The code did not use the result of step 4 correctly — it read from the wrong state object.
+
+**Fix:** Step 5 reads from the already-updated `s` (after the reset) rather than from the original state.
+
+**Testing value:** Illustrates why the ordering of pipeline steps matters. Mutation testing target: swap the order of steps 4 and 5 → the test fails.
+
+---
+
+## BUG-03 — TypeScript narrowing: `'dead'` could not be assigned to `newState`
 
 **Date:** 2026-05-30  
-**Found by:** `npx tsc --noEmit` при добавлении Blood Mage  
-**Symptom:** Compile error: `Type '"dead"' is not assignable to type '"alive" | "death_door"'` на строке присваивания `newState = 'dead'` в `applyDamage`.
+**Found by:** `npx tsc --noEmit` while adding the Blood Mage  
+**Symptom:** Compile error: `Type '"dead"' is not assignable to type '"alive" | "death_door"'` on the line assigning `newState = 'dead'` inside `applyDamage`.
 
-**Root cause:** TypeScript control-flow narrowing. В начале `applyDamage` есть guard:
+**Root cause:** TypeScript control-flow narrowing. `applyDamage` opens with a guard:
 ```ts
 if (!target || target.state === 'dead') return state
 ```
-После этой проверки TS знает что `target.state` — это `'alive' | 'death_door'` (не `'dead'`).
-Строка `let newState = target.state` инициализирована из уже суженного типа — TS выводит тип переменной как `'alive' | 'death_door'`, не как `EntityState`. Последующее присваивание `'dead'` не компилируется.
+After that check, TS knows `target.state` is `'alive' | 'death_door'` (not `'dead'`).
+The line `let newState = target.state` is initialised from the already-narrowed type, so TS infers the variable as `'alive' | 'death_door'` rather than `EntityState`. The later assignment of `'dead'` does not compile.
 
-**Fix:** Явная аннотация расширяет тип обратно до полного union:
+**Fix:** An explicit annotation widens the type back to the full union:
 ```ts
 let newState: EntityState = target.state
 ```
 
-**Invariant, который мог бы поймать это раньше:**  
-CI с `tsc --noEmit` на каждый push — если бы был git-репо. Сейчас тип-чек запускается вручную.
+**Invariant that would have caught this earlier:**  
+CI running `tsc --noEmit` on every push — had there been a git repo at the time. Type-checking is currently run by hand.
 
-**Testing value:** Классический TypeScript gotcha — «слишком умный» вывод типа. Когда guard сужает тип аргумента, инициализированные из него переменные наследуют суженный тип. Решение: всегда явно аннотировать state-машинные переменные, не полагаться на inference.
+**Testing value:** A classic TypeScript gotcha — inference that is "too clever". When a guard narrows the type of an argument, variables initialised from it inherit the narrowed type. The rule: always annotate state-machine variables explicitly instead of relying on inference.
 
 ---
 
-## BUG-04 — Enemy в death_door действовал перед смертью
+## BUG-04 — An enemy at death_door acted before dying
 
 **Date:** 2026-05-30  
-**Found by:** playtesting (game UI) — скриншот: оба hero и enemy на 0 HP, герой stunned, enemy атаковал героя и победил
+**Found by:** playtesting (game UI) — screenshot: both hero and enemy at 0 HP, hero stunned, the enemy attacked the hero and won
 
-**Symptom:** Враг уходил в death_door (HP = 0) после хода героя. При нажатии End Turn враг успевал выполнить свой intent (атаку) ДО разрешения смерти — убивал героя, который тоже был на Death's Door. Требовался дополнительный End Turn чтобы враг умер.
+**Symptom:** The enemy went to death_door (HP = 0) after the hero's turn. On End Turn the enemy still managed to execute its intent (an attack) BEFORE death was resolved, killing the hero, who was also at Death's Door. It took an extra End Turn for the enemy to die.
 
-**Root cause:** `endTurn()` не проверял состояние врага перед тем как вызвать `executeEnemyIntent`. Enemy в state `death_door` проходил условие `gs.enemy.state !== 'dead'` и получал право действовать. Death resolution для enemy происходил только через bleed tick — без bleed враг "застревал" в death_door до следующего хода героя.
+**Root cause:** `endTurn()` did not check the enemy's state before calling `executeEnemyIntent`. An enemy in state `death_door` passed the condition `gs.enemy.state !== 'dead'` and was allowed to act. Death resolution for the enemy only happened through the bleed tick — with no bleed the enemy stayed "stuck" at death_door until the hero's next turn.
 
-**Fix (attempt 1 — неполный):** В начале `endTurn()` добавлена проверка:
+**Fix (attempt 1 — incomplete):** A check added at the start of `endTurn()`:
 ```js
 if (gs.enemy.state === 'death_door') { gs.enemy.state = 'dead'; checkWin(gs); ... }
 ```
-Закрыл путь через End Turn, но не путь через card play — враг всё ещё оставался в death_door в середине хода героя (0 HP, можно было бить впустую).
+This closed the End Turn path but not the card-play path — the enemy still lingered at death_door in the middle of the hero's turn (0 HP, and hittable for nothing).
 
-**Fix (attempt 2 — полный):** В `dealDamage()`, сразу после `applyDamageToEntity`:
+**Fix (attempt 2 — complete):** In `dealDamage()`, immediately after `applyDamageToEntity`:
 ```js
 if (target === 'enemy' && entity.state === 'death_door') {
   entity.state = 'dead'
 }
 ```
-Enemy умирает мгновенно при попадании в 0 HP во время card play. Герой по-прежнему остаётся в death_door — его можно вылечить. `endTurn` check оставлен как safety net для death_door через bleed tick.
+An enemy dies the moment it reaches 0 HP during card play. The hero still stays at death_door and can be healed. The `endTurn` check is kept as a safety net for death_door reached via a bleed tick.
 
-**Invariant, который мог бы поймать это раньше:**  
-`forAll(seeds, s => enemyNeverInDeathDoorAfterCardPlay(simulate(s)))` — после любого action enemy не должен быть в state `death_door`.
+**Invariant that would have caught this earlier:**  
+`forAll(seeds, s => enemyNeverInDeathDoorAfterCardPlay(simulate(s)))` — after any action, no enemy should be in state `death_door`.
 
-**Testing value:** Классический race condition в state machine + неполный фикс. Первый фикс закрыл один из двух путей воспроизведения, второй — системный. Показывает: фикс "в одном месте" не покрывает все пути к багу — нужно закрывать на уровне инварианта ("enemy не может быть в death_door"), а не на уровне конкретного вызывающего кода.
+**Testing value:** A classic state-machine race condition plus an incomplete fix. The first fix closed one of the two paths to reproduction, the second closed it at the level of the rule. It shows that a fix "in one place" does not cover every path to the bug — the closure has to happen at the invariant ("an enemy cannot be at death_door"), not at one particular caller.
 
 ---
 
-## BUG-05 — Berserker не трансформировался: `heroClass` отсутствовал в game state
+## BUG-05 — The Berserker never transformed: `heroClass` was missing from the game state
 
 **Date:** 2026-05-30  
-**Found by:** playtesting — берсеркер не менял форму при HP ≤ 50%
+**Found by:** playtesting — the berserker did not change form at HP ≤ 50%
 
-**Symptom:** При выборе Berserker в UI и снижении HP до 14 и ниже трансформация не срабатывала. Портрет не менялся, рука оставалась human-картами, бейдж WOLF не появлялся.
+**Symptom:** Picking the Berserker in the UI and dropping HP to 14 or below did not trigger the transformation. The portrait did not change, the hand stayed on human cards, the WOLF badge never appeared.
 
-**Root cause:** В `HERO_DEFS.berserker` отсутствовало поле `heroClass`. При создании game state через `{ ...HERO_DEFS[forcedHero], ... }` поле не попадало в `gs.hero`. `checkBerserkerTransformGame()` начинается с `if (gs.hero.heroClass !== 'berserker') return` — условие `undefined !== 'berserker'` = `true`, функция возвращалась немедленно. Та же проблема приводила к тому что rage pips и form badge не рендерились (`renderHero` тоже проверяет `h.heroClass`).
+**Root cause:** `HERO_DEFS.berserker` had no `heroClass` field. Building the game state via `{ ...HERO_DEFS[forcedHero], ... }` therefore never put it into `gs.hero`. `checkBerserkerTransformGame()` opens with `if (gs.hero.heroClass !== 'berserker') return` — the condition `undefined !== 'berserker'` is `true`, so the function returned immediately. The same problem meant the rage pips and the form badge were never rendered (`renderHero` also checks `h.heroClass`).
 
-**Fix:** Добавлен `heroClass` во все три записи `HERO_DEFS`:
+**Fix:** `heroClass` added to all three `HERO_DEFS` entries:
 ```js
 bloodmage: { heroClass: 'bloodmage', ... }
 paladin:   { heroClass: 'paladin',   ... }
 berserker: { heroClass: 'berserker', ... }
 ```
 
-**Invariant, который мог бы поймать это раньше:**  
-`assert(gs.hero.heroClass !== undefined)` в `assertValidGameState()` — обязательные поля hero должны проверяться при инициализации.
+**Invariant that would have caught this earlier:**  
+`assert(gs.hero.heroClass !== undefined)` inside `assertValidGameState()` — required hero fields should be validated at initialisation.
 
-**Testing value:** Классический "silent failure" — функция возвращается без ошибки, просто ничего не происходит. Отсутствующее поле в конфиге не бросает exception, просто меняет логику. Показывает ценность schema validation на системных границах (createGameState = граница между конфигом и runtime).
+**Testing value:** A classic silent failure — the function returns without an error, nothing simply happens. A missing config field throws no exception, it just changes the logic. It shows the value of schema validation at system boundaries (createGameState is the boundary between config and runtime).
 
 ---
 
-## BUG-06 — Property test generator: граничное значение 25% попало в "выше 25%" зону
+## BUG-06 — Property test generator: the boundary value 25% landed in the "above 25%" zone
 
 **Date:** 2026-05-30  
-**Found by:** fast-check — shrunk до контрпримера `[{hp:0, maxHp:4}, base=2]`
+**Found by:** fast-check — shrunk to the counterexample `[{hp:0, maxHp:4}, base=2]`
 
-**Symptom:** Тест "HP > 25% → rage неактивна, базовый урон" упал. Ожидали `rageDamage = 2`, получили `3` (×1.5 бонус).
+**Symptom:** The test "HP > 25% → rage inactive, base damage" failed. Expected `rageDamage = 2`, got `3` (the ×1.5 bonus).
 
-**Root cause:** Генератор HP использовал `Math.max(Math.floor(maxHp * 0.26), 1)` для вычисления "гарантированно выше 25%". При `maxHp=4`: `Math.floor(4 * 0.26) = Math.floor(1.04) = 1`. Но порог rage: `Math.floor(4 * 0.25) = Math.floor(1.0) = 1`. Итог: `hp=1, threshold=1` → rage активна, хотя тест считал что тестирует "HP выше порога".
+**Root cause:** The HP generator used `Math.max(Math.floor(maxHp * 0.26), 1)` to produce a value "guaranteed above 25%". At `maxHp=4`: `Math.floor(4 * 0.26) = Math.floor(1.04) = 1`. But the rage threshold is `Math.floor(4 * 0.25) = Math.floor(1.0) = 1`. Result: `hp=1, threshold=1` → rage active, while the test believed it was testing "HP above the threshold".
 
-Проблема в самом тесте, а не в `isInRage` — функция работала корректно.
+The problem was in the test itself, not in `isInRage` — that function worked correctly.
 
-**Fix:** Генератор изменён на `Math.floor(maxHp * 0.25) + 1` — гарантированно выше threshold независимо от rounding:
+**Fix:** The generator was changed to `Math.floor(maxHp * 0.25) + 1` — guaranteed above the threshold regardless of rounding:
 ```ts
 fc.integer({ min: Math.floor(maxHp * 0.25) + 1, max: maxHp }).map(hp => ({ hp, maxHp }))
 ```
 
-**Как нашли:** Fast-check сжал до минимального контрпримера за 10 шагов shrinking: `maxHp=4, hp=1, base=2`. Без shrinking баг был бы невидим на большинстве значений.
+**How it was found:** fast-check shrank it to a minimal counterexample in 10 steps: `maxHp=4, hp=1, base=2`. Without shrinking the bug would have stayed invisible across most values.
 
-**Invariant, который мог бы поймать это раньше:**  
-Комментарий "hp > 25%" в тесте — но проверить что generator действительно генерирует значения ВЫШЕ порога, не РАВНЫЕ ему.
+**Invariant that would have caught this earlier:**  
+The comment "hp > 25%" in the test — but verified, i.e. checking that the generator really produces values ABOVE the threshold rather than EQUAL to it.
 
-**Testing value:** Классический off-by-one в boundary generator. Граничные значения в property tests — отдельная точка отказа. Показывает: fast-check shrinking находит не только баги в SUT, но и баги в самих тестах.
+**Testing value:** A classic off-by-one in a boundary generator. Boundary values in property tests are their own failure point. It shows that fast-check shrinking finds bugs not only in the SUT but in the tests themselves.
 
 ---
 
-## BUG-07 — Form badge показывался для Berserker вместо Werewolf после split
+## BUG-07 — The form badge showed for the Berserker instead of the Werewolf after the split
 
 **Date:** 2026-05-30  
-**Found by:** playtesting после разделения Berserker/Werewolf
+**Found by:** playtesting after splitting Berserker and Werewolf
 
-**Symptom:** После разделения героев форм-бейдж (HUMAN / 🐺 WOLF) не отображался для Werewolf. Переключение формы происходило корректно, но бейдж на портрете был невидим.
+**Symptom:** After the heroes were split, the form badge (HUMAN / 🐺 WOLF) stopped appearing for the Werewolf. Form switching worked correctly, but the badge on the portrait was invisible.
 
-**Root cause:** `renderHero` проверял `h.heroClass === 'berserker'` для показа form badge. После split у Werewolf `heroClass: 'werewolf'` — условие никогда не срабатывало.
+**Root cause:** `renderHero` checked `h.heroClass === 'berserker'` to show the form badge. After the split the Werewolf has `heroClass: 'werewolf'`, so the condition never fired.
 
-**Fix:** Изменено условие:
+**Fix:** The condition was changed:
 ```js
 if (h.heroClass === 'berserker') → if (h.heroClass === 'werewolf')
 ```
 
-**Invariant:** Schema validation при split — при переименовании `heroClass` нужно grep по всему коду.
+**Invariant:** Schema validation on a split — renaming `heroClass` requires a grep across the whole codebase.
 
-**Testing value:** После рефакторинга (rename/split) hardcoded строки остаются в коде и не обновляются. Показывает ценность поиска по всем вхождениям строки при переименовании типов.
+**Testing value:** After a refactor (rename or split), hardcoded strings stay behind and never get updated. It shows the value of searching every occurrence of a string when types are renamed.
 
 ---
 
-## BUG-08 — HERO_DEFS.werewolf.hand содержал старые берсеркер-карты
+## BUG-08 — HERO_DEFS.werewolf.hand still held the old berserker cards
 
 **Date:** 2026-05-30  
-**Found by:** code review при добавлении Werewolf в game UI
+**Found by:** code review while adding the Werewolf to the game UI
 
-**Symptom:** При выборе Werewolf в начале боя рука содержала Savage Lunge / Primal Fury / Primal Dodge (карты Берсеркера) вместо Lunar Strike / Pack Sense / Stalk.
+**Symptom:** Choosing the Werewolf at the start of a battle gave a hand of Savage Lunge / Primal Fury / Primal Dodge (Berserker cards) instead of Lunar Strike / Pack Sense / Stalk.
 
-**Root cause:** При создании HERO_DEFS.werewolf поле `hand` (начальная рука при старте игры) было скопировано из старого HERO_DEFS.berserker и не обновлено:
+**Root cause:** When HERO_DEFS.werewolf was created, the `hand` field (the opening hand at game start) was copied from the old HERO_DEFS.berserker and never updated:
 ```js
-hand: ['savage_lunge', 'primal_fury', 'primal_dodge'],  // ← старые карты
+hand: ['savage_lunge', 'primal_fury', 'primal_dodge'],  // ← the old cards
 ```
-`humanHand` был правильным (`['lunar_strike', 'pack_sense', 'stalk']`), но `hand` (используется в `makeGameState`) — нет.
+`humanHand` was correct (`['lunar_strike', 'pack_sense', 'stalk']`), but `hand` — the one used by `makeGameState` — was not.
 
-**Fix:** `hand: ['lunar_strike', 'pack_sense', 'stalk']` — синхронизирован с `humanHand`.
+**Fix:** `hand: ['lunar_strike', 'pack_sense', 'stalk']`, brought in sync with `humanHand`.
 
-**Invariant:** `hand === humanHand` для всех героев с трансформацией в начале игры.
+**Invariant:** `hand === humanHand` at game start for every hero with a transformation.
 
-**Testing value:** Два поля (`hand` и `humanHand`) дублируют информацию — точка рассинхронизации. Паттерн встречается везде где есть "initial value" + "current value" — они расходятся при копировании конфига.
-
----
-
-## BUG-09 — Cancel hint в flex-контейнере сдвигал панели врагов при выборе карты
-
-**Date:** 2026-05-30  
-**Found by:** playtesting — при выборе карты панели двух врагов смещались вправо
-
-**Symptom:** Когда игрок выбирал карту, появлялась надпись "ESC — CANCEL". Она находилась в `.battle-area` flex-контейнере как третий элемент после `#heroPanel` и `#enemiesArea`. При `display: block` она занимала место в flex-row и сдвигала врагов влево, освобождая пустое место справа.
-
-**Root cause:** `<div id="cancelHint">` был дочерним элементом `.battle-area` (flex container). `position: static` (default) → элемент участвует в flex layout. При появлении занимает ширину.
-
-**Fix:** `position: absolute` + `bottom: 4px; left: 50%; transform: translateX(-50%)` — элемент вынут из flex-flow, отображается поверх контента. `.battle-area` получил `position: relative` как anchor.
-
-**Invariant:** UI-элементы которые показываются/скрываются не должны влиять на layout соседних элементов. Используй `visibility: hidden` или `position: absolute` вместо `display: none/block` если элемент в flex/grid.
-
-**Testing value:** Классический "layout shift" баг — элемент меняет layout при появлении. Встречается в toast notifications, tooltips, error messages. Решение одно: вынести из document flow через absolute/fixed positioning.
+**Testing value:** Two fields (`hand` and `humanHand`) duplicate the same information, which makes them a desynchronisation point. The pattern appears anywhere there is an "initial value" plus a "current value" — they drift apart the moment the config is copied.
 
 ---
 
-## BUG-10 — Flash анимация на портрете атакующего врага стиралась render()
+## BUG-09 — The cancel hint inside a flex container shifted the enemy panels on card selection
 
 **Date:** 2026-05-30  
-**Found by:** playtesting — визуальный флэш при атаке врага не был виден
+**Found by:** playtesting — selecting a card shifted both enemy panels to the right
 
-**Symptom:** `flashAttacker(enemyId)` добавлял CSS класс `attacking-now` к portrait frame во время `endTurn()`. Анимация не отображалась.
+**Symptom:** When the player selected a card, the label "ESC — CANCEL" appeared. It sat inside the `.battle-area` flex container as the third element after `#heroPanel` and `#enemiesArea`. At `display: block` it took up space in the flex row and pushed the enemies left, leaving an empty gap on the right.
 
-**Root cause:** `endTurn()` запускается синхронно: `flashAttacker()` → ... → `render()`. Внутри `renderEnemies()` строка `frame.className = 'portrait-frame enemy-frame'` сбрасывала все классы включая `attacking-now` — браузер не успевал отрисовать анимацию до сброса.
+**Root cause:** `<div id="cancelHint">` was a child of `.battle-area` (a flex container). With `position: static` (the default) the element takes part in flex layout, so it claims width as soon as it appears.
 
-**Fix:** `setTimeout(() => flashAttacker(_eid), 50)` — флэш запускается через 50ms после завершения синхронного `render()`, когда браузер уже отрисовал новый кадр.
+**Fix:** `position: absolute` plus `bottom: 4px; left: 50%; transform: translateX(-50%)` — the element is taken out of the flex flow and drawn over the content. `.battle-area` was given `position: relative` as the anchor.
 
-**Invariant:** CSS анимации добавленные до `render()` стираются следующим вызовом render. Анимации после render нужно планировать через setTimeout.
+**Invariant:** UI elements that appear and disappear must not affect the layout of their neighbours. Use `visibility: hidden` or `position: absolute` rather than `display: none/block` when the element sits inside flex or grid.
 
-**Testing value:** Race condition между JavaScript-мутацией DOM и CSS animation pipeline. Браузер не гарантирует отрисовку между синхронными операциями — `setTimeout(fn, 0)` или `requestAnimationFrame` нужны для "следующий кадр". Паттерн встречается в toast, flash messages, transition triggers.
+**Testing value:** A classic layout-shift bug — an element that changes the layout by appearing. It shows up in toast notifications, tooltips and error messages. The remedy is always the same: take it out of the document flow with absolute or fixed positioning.
 
 ---
 
-## BUG-11 — turn_end не записывался при досрочном выходе из endTurn
+## BUG-10 — The flash animation on the attacking enemy's portrait was wiped by render()
 
 **Date:** 2026-05-30  
-**Found by:** replay тест "replays a full game until hero loses" — `result.finalState.winner` = null вместо 'enemies'
+**Found by:** playtesting — the visual flash on an enemy attack was never visible
 
-**Symptom:** При проигрыше героя (enemy убивает во время endTurn) реплей не воспроизводил последний ход. `result.finalState.isOver` = false после replay, хотя оригинал заканчивался проигрышем.
+**Symptom:** `flashAttacker(enemyId)` added the CSS class `attacking-now` to the portrait frame during `endTurn()`. The animation never played.
 
-**Root cause:** `record('turn_end', ...)` стоял в конце `endTurn()` после всех ранних выходов (`if (state.isOver) return state`). Когда герой умирал на шаге enemy_action, функция возвращалась досрочно — `turn_end` event не записывался. Replayer итерирует log и вызывает `endTurn()` только когда видит `turn_end` событие. Без него последний ход не воспроизводился.
+**Root cause:** `endTurn()` runs synchronously: `flashAttacker()` → … → `render()`. Inside `renderEnemies()` the line `frame.className = 'portrait-frame enemy-frame'` reset every class, `attacking-now` included, and the browser never got to paint the animation before the reset.
 
-**Fix:** `record('turn_end', ...)` добавлен во все ранние выходы из endTurn — перед каждым `return state` при `isOver`.
+**Fix:** `setTimeout(() => flashAttacker(_eid), 50)` — the flash starts 50ms after the synchronous `render()` has finished, once the browser has painted the new frame.
 
-**Invariant:** Каждый вызов `endTurn()` должен порождать ровно один `turn_end` event в логе, независимо от пути выполнения.
+**Invariant:** CSS animations added before `render()` are wiped by the next render call. Animations that follow a render have to be scheduled through setTimeout.
 
-**Testing value:** Классический "happy path only" — код корректно записывал события при нормальном завершении, но пропускал их при ранних выходах. Показывает ценность тестирования terminal states (game over, timeout, error paths) наравне с happy path.
+**Testing value:** A race between JavaScript DOM mutation and the CSS animation pipeline. The browser guarantees no paint between synchronous operations — `setTimeout(fn, 0)` or `requestAnimationFrame` is what "next frame" actually requires. The pattern shows up in toasts, flash messages and transition triggers.
 
 ---
 
-## BUG-12 — recordSnapshot пропущен в одном из early returns endTurn
+## BUG-11 — turn_end was not recorded on an early return from endTurn
 
 **Date:** 2026-05-30  
-**Found by:** fast-check property test — counterexample `[12245, 'paladin', 'guardian']`
+**Found by:** the replay test "replays a full game until hero loses" — `result.finalState.winner` was null instead of 'enemies'
 
-**Symptom:** Тест `snapshots.length === turn_end events` упал: 20 snapshots vs 21 turn_end events. Один ход был в логе (turn_end записан) но без snapshot в `log.snapshots`.
+**Symptom:** When the hero lost (the enemy killing them during endTurn), the replay did not reproduce the final turn. `result.finalState.isOver` was false after the replay, although the original run ended in a loss.
 
-**Root cause:** В executor.ts было 4 пути выхода из `endTurn()` — три ранних return + нормальный конец. При добавлении `recordSnapshot` три пути обновились, один пропустили:
+**Root cause:** `record('turn_end', ...)` sat at the end of `endTurn()`, after every early return (`if (state.isOver) return state`). When the hero died at the enemy_action step, the function returned early and no `turn_end` event was recorded. The replayer iterates the log and calls `endTurn()` only when it sees a `turn_end` event. Without one, the final turn was never replayed.
+
+**Fix:** `record('turn_end', ...)` was added to every early return from endTurn — before each `return state` under `isOver`.
+
+**Invariant:** Every call to `endTurn()` must produce exactly one `turn_end` event in the log, whichever path execution takes.
+
+**Testing value:** A classic happy-path-only bug — the code recorded events correctly on a normal completion and skipped them on early returns. It shows the value of testing terminal states (game over, timeout, error paths) alongside the happy path.
+
+---
+
+## BUG-12 — recordSnapshot missing from one of endTurn's early returns
+
+**Date:** 2026-05-30  
+**Found by:** a fast-check property test — counterexample `[12245, 'paladin', 'guardian']`
+
+**Symptom:** The test `snapshots.length === turn_end events` failed: 20 snapshots against 21 turn_end events. One turn was in the log (turn_end recorded) with no snapshot in `log.snapshots`.
+
+**Root cause:** executor.ts had 4 exit paths from `endTurn()` — three early returns plus the normal end. When `recordSnapshot` was added, three paths were updated and one was missed:
 
 ```ts
-// enemy action kills hero — ранний выход
+// enemy action kills hero — early return
 if (state.isOver) {
   log.outcome = 'hero_loses'
   record('turn_end', turnEndPre, state)
-  // ← recordSnapshot(state) ОТСУТСТВОВАЛ
+  // ← recordSnapshot(state) WAS MISSING
   record('game_over', state, state)
   return state
 }
 ```
 
-Три других пути имели `recordSnapshot` — только этот пропустили.
+The other three paths had `recordSnapshot`; only this one did not.
 
-**Fix:** `recordSnapshot(state)` добавлен между `record('turn_end', ...)` и `record('game_over', ...)`.
+**Fix:** `recordSnapshot(state)` added between `record('turn_end', ...)` and `record('game_over', ...)`.
 
-**Как нашли:** Fast-check сгенерировал 200 случайных (seed, heroClass, enemyType) комбинаций. На seed=12245 / paladin / guardian invariant сломался. Shrinking выдал минимальный контрпример.
+**How it was found:** fast-check generated 200 random (seed, heroClass, enemyType) combinations. At seed=12245 / paladin / guardian the invariant broke. Shrinking produced the minimal counterexample.
 
-**Invariant:** Каждый вызов `endTurn()` порождает ровно один `turn_end` event И ровно один snapshot — независимо от пути выполнения.
+**Invariant:** Every call to `endTurn()` produces exactly one `turn_end` event AND exactly one snapshot, whichever path execution takes.
 
-**Testing value:** Классический "пропущенный путь" баг — код обновлялся в 3 из 4 мест. Четвёртое место не бросало ошибку, просто не создавало snapshot. Property test нашёл это за 200 прогонов там, где code review мог пропустить.
+**Testing value:** A classic missed-path bug — the code was updated in 3 places out of 4. The fourth threw no error, it simply produced no snapshot. The property test found it within 200 runs where code review could have walked past it.
 
 ---
 
-## BUG-13 — Monte Carlo сканировал 4 конфигурации из 16
+## BUG-13 — Monte Carlo scanned 4 configurations out of 16
 
 **Date:** 2026-08-20  
-**Found by:** чтение `scripts/simulate.ts` перед добавлением коридоров баланса
+**Found by:** reading `scripts/simulate.ts` before adding the balance corridors
 
-**Symptom:** Винрейты по классам выглядели неправдоподобно ровными: paladin 99.8%, werewolf 100.0%. Ни один прогон на 10 000 seed не показывал слабых мест ни у одного героя.
+**Symptom:** The per-class win rates looked implausibly smooth: paladin 99.8%, werewolf 100.0%. No run over 10,000 seeds showed a weak spot for any hero.
 
-**Root cause:** Обе координаты конфигурации выводились из одного и того же остатка:
+**Root cause:** Both coordinates of the configuration were derived from the same remainder:
 
 ```ts
 const heroClass = HERO_CLASSES[seed % HERO_CLASSES.length]
 const enemyType = ENEMY_TYPES[seed % ENEMY_TYPES.length]
 ```
 
-Массивы одной длины (4), поэтому `seed` выбирал не пару, а диагональ матрицы 4×4. Paladin встречал только Goblin, Bloodmage — только Guardian, Berserker — только Vampire, Werewolf — только Necromancer. Остальные 12 сочетаний не проверялись ни на одном seed, сколько бы прогонов ни запросили.
+The arrays are the same length (4), so `seed` was selecting not a pair but the diagonal of a 4×4 matrix. Paladin only ever met the Goblin, Bloodmage only the Guardian, Berserker only the Vampire, Werewolf only the Necromancer. The other 12 combinations were never exercised on any seed, however many runs were requested.
 
-Отчёт при этом не врал в узком смысле: paladin действительно выигрывает у гоблина в 99.8% случаев. Врал ярлык — число было подписано как винрейт класса, а являлось винрейтом одной пары.
+The report was not lying in the narrow sense: the paladin really does beat the goblin 99.8% of the time. The label was lying — the number was presented as a class win rate while it was the win rate of a single pair.
 
-**Fix:** Вторая координата берётся из старшей части seed — `scripts/lib/harness.ts`, `configFor()`:
+**Fix:** The second coordinate now comes from the high part of the seed — `scripts/lib/harness.ts`, `configFor()`:
 
 ```ts
 heroClass: HERO_CLASSES[seed % HERO_CLASSES.length],
 enemyType: ENEMY_TYPES[Math.floor(seed / HERO_CLASSES.length) % ENEMY_TYPES.length],
 ```
 
-Полный цикл по 16 парам, каждой достаётся 1/16 прогонов. В отчёт добавлена матрица пар со строкой `Configuration coverage: N/16 pairs scanned` — непросканированная пара теперь видна как прочерк, а не как отсутствие строки.
+A full cycle over all 16 pairs, each getting 1/16 of the runs. The report gained a matchup matrix and the line `Configuration coverage: N/16 pairs scanned` — an unscanned pair now shows up as a dash rather than as a missing row.
 
-**Что показал первый же прогон после исправления:** paladin 70.5% вместо 99.8%, и разброс внутри класса от 20.9% (против Guardian) до 100.0% (против Necromancer). Балансовая картина изменилась полностью, три класса из четырёх вышли за целевой коридор.
+**What the very first run after the fix showed:** paladin 70.5% instead of 99.8%, with a spread inside the class from 20.9% (against the Guardian) to 100.0% (against the Necromancer). The balance picture changed completely and three classes out of four fell outside the target corridor.
 
-**Та же ошибка нашлась ещё в двух местах (2026-08-20).** `scripts/trace-analysis.ts:113-114` и `scripts/chaos-agent.ts:218-219` содержали собственные копии этой же пары строк — каждый скрипт держал свой автоплеер, свою колоду и свой генератор. То есть все trace-derived инварианты в `INVARIANTS.md` выведены на выборке из 4 конфигураций, а chaos-агент искал «интересные таймлайны» там же. После перевода обоих скриптов на `scripts/lib/harness.ts` первый же прогон `npm run trace 200` дал «terminates within 32 turns (observed max: 30)» вместо прежних 12 — прямое подтверждение.
+**The same mistake was found in two more places (2026-08-20).** `scripts/trace-analysis.ts:113-114` and `scripts/chaos-agent.ts:218-219` each held their own copy of the same two lines — every script kept its own auto-player, its own deck and its own generator. Which means every trace-derived invariant in `INVARIANTS.md` was derived from a sample of 4 configurations, and the chaos agent was hunting for "interesting timelines" in the same quarter of the space. After both scripts were moved onto `scripts/lib/harness.ts`, the very first `npm run trace 200` reported "terminates within 32 turns (observed max: 30)" instead of the previous 12 — direct confirmation.
 
-**Invariant:** Число просканированных конфигураций равно числу существующих, либо отчёт называет непокрытые явно. Раскладка seed по конфигурациям существует в одном экземпляре — `configFor()` в `lib/harness.ts`.
+**Invariant:** The number of configurations scanned equals the number that exist, or the report names the uncovered ones explicitly. The mapping from seed to configuration exists in exactly one place — `configFor()` in `lib/harness.ts`.
 
-**Testing value:** Самый дорогой класс ошибки в симуляции — не неверная формула, а систематически смещённая выборка. Формула падает и зовёт разбираться. Смещённая выборка возвращает правдоподобное число, которое никто не перепроверяет, потому что оно не выглядит подозрительным. Здесь смещение вдобавок маскировало BUG-14: некромант доставался только вервольфу, а тот выигрывал всё подряд, и нулевая опасность некроманта читалась как сила героя.
+**Testing value:** The most expensive class of error in a simulation is not a wrong formula but a systematically biased sample. A wrong formula fails and asks to be investigated. A biased sample returns a plausible number that nobody re-checks, because it does not look suspicious. Here the bias also masked BUG-14: the necromancer only ever faced the werewolf, who wins everything anyway, so the necromancer being harmless read as the hero being strong.
 
 ---
 
-## BUG-14 — Necromancer: Raise Dead и Empower отсутствуют в движке ⚠️ OPEN
+## BUG-14 — Necromancer: Raise Dead and Empower do not exist in the engine ⚠️ OPEN
 
 **Date:** 2026-08-20  
-**Found by:** матрица пар в `npm run simulate` после исправления BUG-13
+**Found by:** the matchup matrix in `npm run simulate` after BUG-13 was fixed
 
-**Symptom:** Все четыре класса выигрывают у некроманта ровно в 100.0% боёв. 4000 прогонов, ни одной победы врага.
+**Symptom:** All four classes beat the necromancer in exactly 100.0% of battles. 4,000 runs, not a single win for the enemy.
 
-**Root cause:** Механика некроманта не реализована в движке. `src/runtime/executor.ts:41`:
+**Root cause:** The necromancer's mechanic is not implemented in the engine. `src/runtime/executor.ts:41`:
 
 ```ts
 necromancer: [{ type: 'bleed', value: 3 }, { type: 'bleed', value: 3 }, { type: 'bleed', value: 3 }],
 ```
 
-Три одинаковых bleed. Некромант не наносит прямого урона вообще, а bleed ограничен капом — убить героя он не может ни при какой раздаче.
+Three identical bleeds. The necromancer deals no direct damage at all, and bleed is capped, so it cannot kill the hero under any draw.
 
-Спецификация описывает другое, причём в трёх местах:
+The specification says something else, and it says it in three places:
 
-| Источник | Что заявлено |
+| Source | What is declared |
 |---|---|
 | `DESIGN.md:301-308` | Turn 1 Wither → Turn 2 Raise Dead (spawn Skeleton) → Turn 3 Empower |
-| `docs/DECISION-TABLES.md:71-93` | 4 строки таблицы решений + три производных теста, включая «raise with no dead ally → no entity spawned» |
-| `DECISIONS.md:335` | «Necromancer won't raise if no corpse on field → graceful no-op» |
+| `docs/DECISION-TABLES.md:71-93` | 4 decision-table rows plus three derived tests, including "raise with no dead ally → no entity spawned" |
+| `DECISIONS.md:335` | "Necromancer won't raise if no corpse on field → graceful no-op" |
 
-В движке нет ни того, ни другого: `Intent` в `src/engine/types.ts:13-17` содержит только `attack`, `bleed`, `defend`, `stun`. Слова `skeleton`, `raise`, `empower` встречаются в `src/` исключительно в комментариях (`actionResolution.ts:22,78`), описывающих механику как существующую.
+The engine has neither: `Intent` in `src/engine/types.ts:13-17` contains only `attack`, `bleed`, `defend`, `stun`. The words `skeleton`, `raise` and `empower` appear in `src/` exclusively inside comments (`actionResolution.ts:22,78`) that describe the mechanic as if it existed.
 
-**При этом механика реализована — в UI.** `game/index.html` содержит собственные интенты `raise` и `empower` (строки 1604-1605), определение скелета (1608), поиск трупа с флагом `raisedOnce` и спавном сущности (2141-2152), применение бонуса empower к урону (2104-2107). То есть правила боя существуют в двух независимых реализациях: движок и 2863-строчный UI. Vitest проверяет первую, Playwright — вторую, и ничто не сравнивает их между собой.
+**And yet the mechanic is implemented — in the UI.** `game/index.html` carries its own `raise` and `empower` intents (lines 1604-1605), a skeleton definition (1608), corpse lookup with a `raisedOnce` flag and entity spawning (2141-2152), and the empower bonus applied to damage (2104-2107). So the combat rules exist in two independent implementations: the engine and a 2,863-line UI. Vitest checks the first, Playwright checks the second, and nothing compares them against each other.
 
-Сопутствующее: `game/index.html:2148` строит id скелета как `` `skeleton-${Date.now()}` ``. Тот же seed даст другой id — в игровом слое детерминизм уже нарушен, тогда как весь движок построен вокруг обещания «тот же seed → байт-в-байт тот же лог».
+Related: `game/index.html:2148` builds the skeleton id as `` `skeleton-${Date.now()}` ``. The same seed produces a different id, so determinism is already broken in the game layer, while the entire engine is built around the promise "same seed → byte-identical log".
 
-**Status:** OPEN. Чинить — значит вносить в движок новый тип Intent, жизненный цикл сущности (спавн в бою), флаг израсходованного трупа и порядок «raise → empower → атака скелета». Это меняет `types.ts`, `actionResolution.ts`, `executor.ts` и требует новых инвариантов на спавн. Отдельная задача, не правка.
+**Status:** OPEN. Fixing it means introducing a new Intent type into the engine, an entity lifecycle (spawning mid-battle), a spent-corpse flag and the ordering "raise → empower → skeleton attack". That touches `types.ts`, `actionResolution.ts` and `executor.ts`, and needs new invariants on spawning. A separate task, not an edit.
 
-**Правило проекта, по которому это баг:** `CLAUDE.md`, Rule priority — «If Decision Tables conflict with engine code, treat tables as **intended spec** — file a bug».
+**The project rule that makes this a bug:** `CLAUDE.md`, Rule priority — "If Decision Tables conflict with engine code, treat tables as **intended spec** — file a bug".
 
-**Invariant (нужный, пока отсутствует):** Набор интентов врага в движке совпадает с его таблицей решений в `docs/DECISION-TABLES.md`. Нарушение выглядит как враг, который не может выполнить заявленное действие.
+**Invariant (needed, currently absent):** An enemy's intent set in the engine matches its decision table in `docs/DECISION-TABLES.md`. A violation looks like an enemy that cannot perform a documented action.
 
-**Testing value:** 376 тестов, mutation score ~79%, полный контракт инвариантов — и ни один из них не поймал, что целый враг не делает того, что записано в трёх документах. Потому что все они проверяют, что реализованный код работает правильно, и ни один не спрашивает, реализовано ли то, что обещано. Пропущенная механика невидима для тестов на существующий код и для мутационного тестирования: мутировать нечего, кода нет.
+**Testing value:** 376 tests, a mutation score around 79%, a full invariant contract — and not one of them caught that an entire enemy does not do what three documents say it does. Because all of them check that the implemented code behaves correctly, and none asks whether what was promised was implemented. A missing mechanic is invisible both to tests on existing code and to mutation testing: there is nothing to mutate, the code is not there.
 
-**Закрыто проверкой (2026-08-20):** `tests/decision-tables.test.ts` сверяет `ENEMY_INTENTS` с таблицами решений. Разрыв зафиксирован в `KNOWN_GAPS` с точным описанием текущего поведения, поэтому сьют остаётся зелёным, но разрыв нельзя ни тихо ухудшить (упадёт проверка «разрыв не изменился»), ни тихо закрыть (упадёт проверка «разрыв всё ещё существует» с требованием убрать врага из списка).
+**Closed by a check (2026-08-20):** `tests/decision-tables.test.ts` compares `ENEMY_INTENTS` against the decision tables. The gap is pinned in `KNOWN_GAPS` with the exact current behaviour, so the suite stays green while the gap can be neither silently widened (the check "the gap has not changed" fails) nor silently closed (the check "the gap still exists" fails, demanding the enemy be removed from the list).
 
-**Побочная находка при написании этой проверки.** Первая версия теста описывала спецификацию в терминах типа `Intent` — и немедленно соврала: `raise` и `empower` в этом типе не существуют, поэтому в спецификацию попали только запасные ветки (`bleed 3`), которые с реализацией совпадают. Тест показал «соответствие» ровно там, где разрыв максимальный. Спецификация, записанная словарём реализации, не способна описать то, чего в реализации нет — в тесте теперь отдельный тип `SpecAction`, не связанный с `Intent`.
+**A side finding while writing that check.** The first version of the test described the specification in terms of the `Intent` type — and immediately lied: `raise` and `empower` do not exist in that type, so only the fallback branches (`bleed 3`) made it into the spec, and those do match the implementation. The test reported "compliance" in exactly the place where the gap was widest. A specification written in the vocabulary of the implementation cannot describe what the implementation lacks — the test now has its own `SpecAction` type, unrelated to `Intent`.
 
 ---
 
-## BUG-15 — seed молча усекается до 32 бит, тест этого не замечал
+## BUG-15 — the seed is silently truncated to 32 bits, and the test never noticed
 
 **Date:** 2026-08-20  
-**Found by:** статистическая батарея `tests/rng-statistical.test.ts`
+**Found by:** the statistical battery in `tests/rng-statistical.test.ts`
 
-**Symptom:** `createRng(7)` и `createRng(7 + 2³²)` дают идентичную последовательность. `createRng(Number.MAX_SAFE_INTEGER)` эквивалентен `createRng(4294967295)`.
+**Symptom:** `createRng(7)` and `createRng(7 + 2³²)` produce an identical sequence. `createRng(Number.MAX_SAFE_INTEGER)` is equivalent to `createRng(4294967295)`.
 
-**Root cause:** `src/runtime/rng.ts:7` — `let s = seed >>> 0`. Всё выше 2³² отбрасывается. Само по себе это неизбежно для 32-битного генератора; дефект в том, что отбрасывание молчаливое, а контракт нигде не сообщает, что различимых seed ровно 2³².
+**Root cause:** `src/runtime/rng.ts:7` — `let s = seed >>> 0`. Everything above 2³² is discarded. That is unavoidable for a 32-bit generator in itself; the defect is that the discarding is silent, and nothing in the contract states that there are exactly 2³² distinguishable seeds.
 
-**Почему не поймали раньше:** тест на этот случай существовал и проходил — `tests/rng.test.ts:30`:
+**Why it was not caught earlier:** a test for this case existed and passed — `tests/rng.test.ts:30`:
 
 ```ts
-it('seed MAX_SAFE_INTEGER работает', () => {
+it('seed MAX_SAFE_INTEGER works', () => {
   expect(() => createRng(Number.MAX_SAFE_INTEGER)()).not.toThrow()
 })
 ```
 
-Он проверяет отсутствие исключения. Усечение исключения не бросает, поэтому тест зелёный — и именно поэтому граница seed выглядела проверенной. Тест не ложный, он проверяет более слабое свойство, чем подразумевает название.
+It checks that no exception is thrown. Truncation throws no exception, so the test is green — and that is precisely why the seed boundary looked verified. The test is not false; it checks a weaker property than its name implies.
 
-**Fix:** поведение зафиксировано двумя тестами в `tests/rng-statistical.test.ts`, секция «пространство seed»: эквивалентность `seed` и `seed + 2³²`, и потолок в 2³² различимых прогонов. Изменение генератора теперь ломает тест явно.
+**Fix:** the behaviour is pinned by two tests in `tests/rng-statistical.test.ts`, section "seed space": the equivalence of `seed` and `seed + 2³²`, and the ceiling of 2³² distinguishable runs. Changing the generator now breaks a test explicitly.
 
-**Сопутствующая находка — seed не выбирает независимый поток.** mulberry32 продвигает состояние прибавлением константы `0x6D2B79F5`, поэтому seed задаёт точку входа в один общий поток длины 2³². Два seed, отличающиеся ровно на эту константу, дают одну и ту же последовательность со сдвигом на шаг — проверено, совпадение точное. Для `simulate.ts` с `seed = 0…N` это безопасно: расстояние между точками входа огромно. Опасно станет, если seed начнут брать из времени, хеша или счётчика с шагом: два «независимых» прогона окажутся одним, статистика посчитает один результат дважды, а доверительный интервал будет тем уже, чем сильнее перекрытие. Зафиксировано как `it.fails('разные seed дают независимые потоки')` и учтено в `scripts/stability.ts` при выборе шага между базовыми seed.
+**A related finding — a seed does not select an independent stream.** mulberry32 advances its state by adding the constant `0x6D2B79F5`, so a seed chooses an entry point into one shared stream of length 2³². Two seeds differing by exactly that constant produce the same sequence offset by one step — verified, the match is exact. For `simulate.ts` with `seed = 0…N` this is safe: the distance between entry points is enormous. It becomes dangerous the moment seeds start coming from a clock, a hash, or a counter with a stride: two "independent" runs turn out to be one, the statistics count a single result twice, and the confidence interval gets narrower the more the streams overlap. Pinned as `it.fails('different seeds give independent streams')` and taken into account in `scripts/stability.ts` when choosing the stride between base seeds.
 
-**Invariant:** Различимых seed ровно 2³²; потоки, разнесённые на кратное `0x6D2B79F5`, перекрываются.
+**Invariant:** There are exactly 2³² distinguishable seeds; streams spaced at a multiple of `0x6D2B79F5` overlap.
 
-**Testing value:** Тест, проверяющий «не бросает исключение» там, где по названию проверяется значение, хуже отсутствующего теста — отсутствие видно, а такой тест закрывает строку в отчёте покрытия и создаёт ощущение проверенной границы.
+**Testing value:** A test that checks "does not throw" where its name promises to check a value is worse than a missing test — a missing test is visible, while this one fills in a line in the coverage report and creates the impression of a verified boundary.
 
 ---
 
-## BUG-16 — UI-тест на появление скелета не проверяет появление скелета ⚠️ OPEN
+## BUG-16 — the UI test for the skeleton appearing does not check that a skeleton appears ⚠️ OPEN
 
 **Date:** 2026-08-20  
-**Found by:** проверка BUG-14 — искала, почему механика без реализации в движке покрыта зелёными тестами
+**Found by:** investigating BUG-14 — looking for why a mechanic with no engine implementation was covered by green tests
 
-**Symptom:** `tests/ui/game.test.ts:25` называется «after goblin dies and necromancer raises, skeleton appears as 3rd panel». Проверка на строке 51:
+**Symptom:** `tests/ui/game.test.ts:25` is named "after goblin dies and necromancer raises, skeleton appears as 3rd panel". The assertion on line 51:
 
 ```ts
 const panels = page.locator('[id^="enemy-panel-"]')
@@ -396,98 +396,98 @@ const count = await panels.count()
 expect(count).toBeGreaterThanOrEqual(2)
 ```
 
-Комментарий говорит про три панели, assert требует «не меньше двух». Панелей изначально две — тест проходит, даже если гоблин не умер, скелет не появился и raise не сработал ни разу.
+The comment talks about three panels, the assertion demands "at least two". There are two panels to begin with, so the test passes even if the goblin never died, no skeleton appeared and raise never fired.
 
-Рядом, строка 64: `logText?.includes('Skeleton') || logText?.includes('attempts to raise')` — дизъюнкция, закрывающая оба исхода сразу, поэтому лог тоже подойдёт любой.
+Next to it, line 64: `logText?.includes('Skeleton') || logText?.includes('attempts to raise')` — a disjunction covering both outcomes at once, so any log will do as well.
 
-**Status:** OPEN. Правка assert'а без BUG-14 сделает тест красным, и это будет верно: тест начнёт сообщать о реальном расхождении. Но чинить его имеет смысл вместе с переносом механики в движок, иначе в ветке появится падающий тест без возможности его закрыть.
+**Status:** OPEN. Fixing the assertion without fixing BUG-14 turns the test red, and rightly so: it would start reporting a real divergence. But it is worth fixing together with moving the mechanic into the engine, otherwise the branch gains a failing test with no way to close it.
 
-**Invariant:** Assert проверяет то, что обещает имя теста. «Появляется третья панель» — это `toHaveCount(3)`, а не `toBeGreaterThanOrEqual(2)`.
+**Invariant:** The assertion checks what the test name promises. "A third panel appears" is `toHaveCount(3)`, not `toBeGreaterThanOrEqual(2)`.
 
-**Testing value:** Пара BUG-14 + BUG-16 показывает, как механика без реализации получает зелёное покрытие: движок её не имеет, UI имеет свою копию, а тест на UI написан достаточно мягко, чтобы пройти при любом исходе. Каждый слой по отдельности выглядит проверенным.
+**Testing value:** The pair BUG-14 + BUG-16 shows how an unimplemented mechanic ends up with green coverage: the engine does not have it, the UI has its own copy, and the UI test is written loosely enough to pass on any outcome. Each layer taken separately looks verified.
 
 ---
 
-## MUTATION-02 — Расширение охвата: faults.ts оказался почти непроверенным (2026-08-20)
+## MUTATION-02 — Widening the scope: faults.ts turned out to be almost untested (2026-08-20)
 
 **Date:** 2026-08-20  
-**Tool:** Stryker v9.6, 13 файлов вместо 6, прогон 38 минут  
-**Итог:** **86.10%** (971 убит, 311 по таймауту, 175 выжило, 32 без покрытия)
+**Tool:** Stryker v9.6, 13 files instead of 6, a 38-minute run  
+**Result:** **86.10%** (971 killed, 311 timed out, 175 survived, 32 with no coverage)
 
-Прежние «~79%» относились к шести файлам: `resolution`, `statuses` и четыре героя. Не мутировались оба pipeline-файла, `invariants.ts`, весь `runtime/` (включая `rng.ts` и `executor.ts` — 34 теста, качество которых никто не измерял) и `telemetry/`. Цифра была не завышена, а неполна: она описывала часть системы и молчала про остальную.
+The previous "~79%" applied to six files: `resolution`, `statuses` and the four heroes. Neither pipeline file was mutated, nor `invariants.ts`, nor any of `runtime/` (including `rng.ts` and `executor.ts` — 34 tests whose quality nobody had measured), nor `telemetry/`. The figure was not inflated, it was incomplete: it described part of the system and said nothing about the rest.
 
-| Файл | Score | Комментарий |
-|------|-------|-------------|
+| File | Score | Note |
+|------|-------|------|
 | `resolution.ts` | 100.00% | |
-| `turnPipeline.ts` | 100.00% | добавлен в охват |
-| `actionResolution.ts` | 97.56% | добавлен |
+| `turnPipeline.ts` | 100.00% | added to the scope |
+| `actionResolution.ts` | 97.56% | added |
 | `statuses.ts` | 96.55% | |
 | `berserker.ts` | 95.89% | |
-| `rng.ts` | 95.65% | добавлен |
-| `replayer.ts` | 92.00% | добавлен |
+| `rng.ts` | 95.65% | added |
+| `replayer.ts` | 92.00% | added |
 | `bloodmage.ts` | 89.87% | |
-| `executor.ts` | 85.07% | добавлен, самый крупный файл |
+| `executor.ts` | 85.07% | added, the largest file |
 | `paladin.ts` | 84.85% | |
-| `invariants.ts` | 79.66% | добавлен |
+| `invariants.ts` | 79.66% | added |
 | `werewolf.ts` | 79.53% | |
-| **`faults.ts`** | **26.00%** | добавлен — 37 выживших из 50 |
+| **`faults.ts`** | **26.00%** | added — 37 survivors out of 50 |
 
-**Главная находка — `faults.ts` на 26%.**
+**The main finding — `faults.ts` at 26%.**
 
-Модуль существует затем, чтобы намеренно портить поведение движка (`bleedOffByOne` и подобные) и проверять, поймают ли это тесты. Он инструмент контроля качества тестов. И он сам покрыт хуже всего в проекте: 37 мутантов из 50 выживают.
+The module exists to deliberately corrupt the engine's behaviour (`bleedOffByOne` and similar) and check whether the tests notice. It is an instrument for controlling the quality of the tests. And it is the worst-covered code in the project: 37 mutants out of 50 survive.
 
-Практически это значит, что механизм внедрения дефектов можно сломать, и ни один тест не заметит. Тогда fault injection начнёт молча ничего не внедрять, property-тесты продолжат проходить, и «мы проверили, что тесты ловят подложенный баг» станет утверждением без основания. Отказ тихий по своей природе: сломанный инжектор выглядит точно так же, как исправный на здоровом коде.
+In practice that means the defect-injection mechanism can break with no test noticing. Fault injection would then silently inject nothing, the property tests would keep passing, and "we verified that the tests catch a planted bug" would become a claim with nothing behind it. The failure is silent by its nature: a broken injector looks exactly like a working one running against healthy code.
 
-**Status:** OPEN. Нужны тесты, проверяющие сам инжектор: при `bleedOffByOne: true` поведение обязано отличаться от чистого прогона на конкретную величину, при `false` — совпадать байт в байт.
+**Status:** OPEN. What is needed are tests on the injector itself: with `bleedOffByOne: true` the behaviour must differ from a clean run by a specific amount, and with `false` it must match byte for byte.
 
-**Порог выставлен:** `thresholds.break = 85` в `stryker.config.json`. До этого стоял `0` — score считался и печатался, но ничего не блокировал. Джоба `mutation` в CI валит сборку при падении ниже.
+**Threshold set:** `thresholds.break = 85` in `stryker.config.json`. It used to be `0` — the score was computed and printed but blocked nothing. The `mutation` job in CI now fails the build when it drops below.
 
-**Testing value:** Охват мутационного тестирования — сам по себе непроверяемое место. Score 79% звучит одинаково убедительно и когда он посчитан по всей системе, и когда по её половине; в конфиге это одна строка, которую никто не перечитывает. Расширение охвата подняло цифру до 86.10%, но ценность не в цифре, а в том, что стал виден модуль, про который вся отчётность молчала.
+**Testing value:** The scope of a mutation run is itself an unaudited place. A score of 79% sounds equally convincing whether it was computed across the whole system or across half of it, and in the config it is one line nobody re-reads. Widening the scope raised the figure to 86.10%, but the value is not in the figure — it is in the module the entire report had been silent about.
 
 ---
 
-## MUTATION-01 — Результаты первого прогона Stryker (2026-05-30)
+## MUTATION-01 — Results of the first Stryker run (2026-05-30)
 
 **Date:** 2026-05-30  
 **Tool:** Stryker v9.6 + vitest runner  
 **Mutated files:** resolution.ts, statuses.ts, heroes/*.ts
 
-### Итоговые оценки (после трёх раундов targeted тестов)
+### Final scores (after three rounds of targeted tests)
 
-| Файл | Round 1 | Final | Что убито целенаправленно |
-|------|---------|-------|--------------------------|
-| resolution.ts | 92.4% | 92.4% | — (хорошо с первого раза) |
+| File | Round 1 | Final | Killed deliberately |
+|------|---------|-------|--------------------|
+| resolution.ts | 92.4% | 92.4% | — (good from the start) |
 | statuses.ts | 91.7% | ~94% | hasStatus always-true, duration filter, updateEntity |
 | paladin.ts | 78.8% | **80.3%** | `?? 0` → `&& 0` boundary, undefined chargeStacks |
 | berserker.ts | 68.5% | **69.9%** | Savage Lunge multi-enemy, rage 25% boundary |
-| bloodmage.ts | 67.1% | 67.1% | StringLiteral survivors — не приоритет |
-| werewolf.ts | 67.3% | 67.3% | StringLiteral survivors — не приоритет |
-| **Overall** | **77.96%** | **~79%** | Выше типичного (65–75%) |
+| bloodmage.ts | 67.1% | 67.1% | StringLiteral survivors — not a priority |
+| werewolf.ts | 67.3% | 67.3% | StringLiteral survivors — not a priority |
+| **Overall** | **77.96%** | **~79%** | Above the typical range (65–75%) |
 
-### Что значит каждый результат
+### What each result means
 
-**resolution.ts 92%** — pipeline шаги applyDamage и applyHeal защищены. 7 выживших — edge cases в boundary conditions (например: урон ровно равный HP при death_door). Не критично.
+**resolution.ts 92%** — the applyDamage and applyHeal pipeline steps are protected. The 7 survivors are edge cases in boundary conditions (for example, damage exactly equal to HP at death_door). Not critical.
 
-**statuses.ts 94%** — после добавления negative тестов. Три мутанта убиты явно: `hasStatus always-true`, `duration filter false`, `updateEntity always-update`. Оставшиеся 9 — мутации в stacking logic которые требуют более точных числовых assertions.
+**statuses.ts 94%** — after negative tests were added. Three mutants killed explicitly: `hasStatus always-true`, `duration filter false`, `updateEntity always-update`. The remaining 9 are mutations in the stacking logic that need more precise numeric assertions.
 
-**heroes/* 69%** — 117 выживших. Конкретные проблемные паттерны:
-- Conditional card effects (если X → то Y) тестируются только позитивно
-- Boundary values в rage/charge/transform threshold не все покрыты
-- AoE карты (rampage, reality_crack) — мутации в filter/iteration не пойманы
+**heroes/* 69%** — 117 survivors. The specific problem patterns:
+- Conditional card effects (if X → then Y) are only tested positively
+- Boundary values in the rage/charge/transform thresholds are not all covered
+- AoE cards (rampage, reality_crack) — mutations in filter/iteration are not caught
 
-**Overall 78%** — выше среднего по индустрии (65–75%). При score < 70% тест-сьют ненадёжен как сеть безопасности. При 78% можно рефакторить core logic уверенно, hero-specific логика требует внимания.
+**Overall 78%** — above the industry average (65–75%). Below 70% a test suite is unreliable as a safety net. At 78% core logic can be refactored with confidence, while hero-specific logic needs attention.
 
-### Убитые мутанты (целенаправленно)
+### Mutants killed deliberately
 
-| Мутант | Место | Как убит |
-|--------|-------|----------|
-| `hasStatus` always-true | statuses.ts:100 | Negative test: `expect(hasStatus(e, 'stun')).toBe(false)` когда только bleed |
-| Duration filter → false | statuses.ts:91 | Test: bleed без duration не удаляется; duration:2 не удаляется после 1 тика |
-| updateEntity all enemies | statuses.ts:120 | Test: статус e0 не попадает на e1 при двух врагах |
+| Mutant | Location | How it was killed |
+|--------|----------|-------------------|
+| `hasStatus` always-true | statuses.ts:100 | Negative test: `expect(hasStatus(e, 'stun')).toBe(false)` when only bleed is present |
+| Duration filter → false | statuses.ts:91 | Test: bleed without duration is not removed; duration:2 is not removed after 1 tick |
+| updateEntity all enemies | statuses.ts:120 | Test: a status on e0 does not land on e1 when there are two enemies |
 
-### Следующие цели (heroes 69%→80%)
+### Next targets (heroes 69% → 80%)
 
-Убить оставшихся в hero файлах:
+Killing the survivors in the hero files:
 1. `berserker.ts` — rage threshold boundary (≤25% exact), isInRage(dead entity)
 2. `bloodmage.ts` — open_the_wound pre/post bleed check, vulnerable not applied twice
 3. `werewolf.ts` — wolfDamage formula (×2 at 0 HP exact), transform exactly at 50%
