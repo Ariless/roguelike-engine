@@ -9,11 +9,12 @@ Goal: demonstrate property-based, seeded-RNG, state-machine, fault injection, re
 ## Running tests
 
 ```bash
-npm test                          # 310 vitest tests — 3 seconds
-npm run test:bdd                  # 11 Cucumber BDD scenarios — 0.1 seconds
-npm run test:ui                   # 13 Playwright tests on debugger.html
+npm test                          # 391 vitest tests — 3 seconds
+npm run test:bdd                  # 12 Cucumber BDD scenarios — 0.1 seconds
+npm run test:ui                   # 25 Playwright tests (debugger + game + visual)
 npm run test:mutation             # Stryker ~79% — 4 minutes
-npm run simulate 1000             # Monte Carlo — winrate by class
+npm run simulate 16000            # Monte Carlo — corridors, intervals, matchup matrix
+npm run stability 8000 8          # cross-batch spread + convergence
 npm run chaos 200                 # Adversarial agent — find interesting timelines
 npm run trace 500                 # Trace analysis + suggested invariants
 npm run replay 42                 # Generate replay.json for debugger
@@ -32,7 +33,8 @@ runtime/     wires engine + RNG + fault injection; ONLY layer that calls RNG
 telemetry/   replay log; every action recorded with pre/post state hashes
 debugger/    reads telemetry only; never imports engine/ directly
 game/        UI; reads telemetry, sends actions to runtime; never imports engine/ directly
-scripts/     simulate.ts, chaos-agent.ts, trace-analysis.ts, ci-report.ts, generate-replay.ts
+scripts/     simulate.ts, stability.ts, chaos-agent.ts, trace-analysis.ts, ci-report.ts, generate-replay.ts
+scripts/lib/ harness.ts (shared auto-player + batch runner), stats.ts, corridors.ts
 docs/        TEST-PYRAMID.md, DECISION-TABLES.md
 tests/bdd/   Cucumber feature files + step definitions
 tests/ui/    Playwright tests on debugger.html
@@ -74,7 +76,7 @@ tests/
   runtime/              executor.test.ts / executor-property.test.ts (fast-check)
   replay/               replay.test.ts
   bdd/
-    features/combat.feature     11 Cucumber scenarios — BDD on rule engine without UI
+    features/combat.feature     12 Cucumber scenarios — BDD on rule engine without UI
     steps/combat.steps.ts       Step definitions via executor + engine functions directly
   ui/
     debugger.test.ts    13 Playwright tests; uses window.loadJSON() testability hook
@@ -87,7 +89,11 @@ debugger/
   index.html            Forensic timeline viewer — window.loadJSON(data) for Playwright
 
 scripts/
-  simulate.ts           Monte Carlo — winrate by class, archives failing seeds
+  simulate.ts           Monte Carlo — corridors + Wilson intervals + matchup matrix
+  stability.ts          Cross-batch spread + convergence; archiving off by design
+  lib/harness.ts        Auto-player, configFor(seed), runBatch() — shared by both
+  lib/stats.ts          mean/sd/percentile, Wilson interval, corridor verdict
+  lib/corridors.ts      Target corridors — design intent, fixed before the run
   chaos-agent.ts        Adversarial agent — finds interesting timelines; Claude API optional
   trace-analysis.ts     Trace analysis — top status combos + suggested invariants
   ci-report.ts          CI Stability Report HTML in Archivist style
@@ -191,7 +197,7 @@ If Decision Tables conflict with engine code, treat tables as **intended spec** 
 Before proposing or completing any change:
 
 ```
-1. npm test passes (vitest — all 319 tests)
+1. npm test passes (vitest — all 391 tests)
 2. npx tsc --noEmit passes
 3. No invariant in INVARIANTS.md is violated
 4. Replay determinism preserved — same seed = same hashes

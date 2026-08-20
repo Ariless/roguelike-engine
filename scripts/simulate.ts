@@ -1,207 +1,201 @@
-// Monte Carlo simulation — scans N timelines, collects stability metrics.
-// Usage: npx tsx scripts/simulate.ts [runs=10000]
+// Monte Carlo simulation — сканирует N таймлайнов, проверяет их против коридоров.
 //
-// Output: Archivist-style stability report + winrate by hero class.
-// Failing seeds (invariant violations) are archived to /artifacts/.
+// Usage: npx tsx scripts/simulate.ts [runs=10000] [baseSeed=0] [--gate]
+//
+// Отчёт даёт по каждому классу: винрейт с доверительным интервалом, вердикт
+// против коридора, среднюю длительность с разбросом, матрицу пар герой/враг и
+// распределение длительности боёв. Падающие seed архивируются в /artifacts/.
+//
+// Exit code:
+//   1 — испорченные таймлайны или расхождение хешей (это дефект)
+//   1 — при --gate также если баланс вышел из коридора (это сигнал дизайна)
+//   0 — иначе
+//
+// Разделение осознанное: сломанный детерминизм нельзя оставлять в ветке,
+// а разошедшийся баланс — материал для решения, а не повод валить сборку.
 
-import { createGame } from '../src/runtime/executor'
-import { saveFailingRun } from '../src/telemetry/artifacts'
-import type { HeroClass, EnemyType } from '../src/engine/types'
-import type { ReplayLog } from '../src/telemetry/types'
+import {
+  runBatch, winrateOf, configFor, matchupKey,
+  HERO_CLASSES, ENEMY_TYPES,
+} from './lib/harness'
+import {
+  mean, stdDev, percentile, wilsonInterval, verdictFor, histogram, pct, bar,
+  type Verdict,
+} from './lib/stats'
+import { CLASS_WINRATE, MATCHUP_WINRATE, BATTLE_DURATION } from './lib/corridors'
 
-const RUNS = parseInt(process.argv[2] ?? '10000')
+const RUNS      = parseInt(process.argv[2] ?? '10000')
+const BASE_SEED = parseInt(process.argv[3] ?? '0')
+const GATE      = process.argv.includes('--gate')
 
-const HERO_CLASSES: HeroClass[]  = ['paladin', 'bloodmage', 'berserker', 'werewolf']
-const ENEMY_TYPES:  EnemyType[]  = ['goblin', 'guardian', 'vampire', 'necromancer']
+const WIDTH = 78
+const line = (char = '═') => char.repeat(WIDTH)
 
-// Cards per hero class — executor needs to know what to play
-const HERO_CARDS: Record<HeroClass, string[]> = {
-  paladin:   ['righteous_strike', 'divine_charge', 'stubborn_recovery'],
-  bloodmage: ['chaos_bolt', 'open_the_wound', 'bloodrite'],
-  berserker: ['savage_lunge', 'primal_fury', 'primal_dodge'],
-  werewolf:  ['lunar_strike', 'pack_sense', 'stalk', 'rend', 'rampage', 'reality_crack'],
-}
-
-// ─── Auto-player ──────────────────────────────────────────────────────────────
-// Random greedy: each turn, try cards in shuffled order, play if affordable.
-// Target = first living enemy. Max 50 turns to prevent infinite loops.
-
-function autoPlay(seed: number, heroClass: HeroClass, enemyType: EnemyType): ReplayLog {
-  const game = createGame({ seed, heroClass, enemyType })
-  const rng = mulberry32(seed ^ 0xDEAD)  // separate RNG for card shuffle
-
-  for (let turn = 0; turn < 50; turn++) {
-    const state = game.getState()
-    if (state.isOver) break
-
-    // Play 1-2 random affordable cards per turn (not always optimal)
-    const cards = shuffle([...HERO_CARDS[heroClass]], rng)
-    const maxPlays = Math.floor(rng() * 3) + 1  // 1–3 cards per turn
-    let played = 0
-
-    for (const cardId of cards) {
-      if (played >= maxPlays) break
-      const s = game.getState()
-      if (s.isOver) break
-
-      const card = s.hero.hand?.includes(cardId) || HERO_CARDS[heroClass].includes(cardId)
-      const target = s.enemies.find(e => e.state !== 'dead')
-      const selfOnly = ['primal_dodge', 'stubborn_recovery', 'divine_charge', 'reality_crack', 'rampage']
-      if (!target && !selfOnly.includes(cardId)) continue
-
-      game.playCard(cardId, target?.id ?? '')
-      played++
-    }
-
-    if (game.getState().isOver) break
-    game.endTurn()
-  }
-
-  return game.getLog()
-}
-
-// ─── Stats ────────────────────────────────────────────────────────────────────
-
-interface ClassStats {
-  wins: number
-  losses: number
-  turns: number[]
-  corrupted: number
-}
-
-const stats: Record<HeroClass, ClassStats> = {
-  paladin:   { wins: 0, losses: 0, turns: [], corrupted: 0 },
-  bloodmage: { wins: 0, losses: 0, turns: [], corrupted: 0 },
-  berserker: { wins: 0, losses: 0, turns: [], corrupted: 0 },
-  werewolf:  { wins: 0, losses: 0, turns: [], corrupted: 0 },
-}
-
-let totalCorrupted = 0
-let failingSeeds: number[] = []
-
-// ─── Run simulation ───────────────────────────────────────────────────────────
+// ─── Прогон ───────────────────────────────────────────────────────────────────
 
 process.stdout.write('Scanning timelines')
+const progressStep = Math.max(1, Math.floor(RUNS / 20))
 
-for (let seed = 0; seed < RUNS; seed++) {
-  if (seed % (RUNS / 20) === 0) process.stdout.write('.')
-
-  const heroClass = HERO_CLASSES[seed % HERO_CLASSES.length]
-  const enemyType = ENEMY_TYPES[seed % ENEMY_TYPES.length]
-
-  let log: ReplayLog
-  let corrupted = false
-
-  try {
-    log = autoPlay(seed, heroClass, enemyType)
-  } catch (e) {
-    // TIMELINE CORRUPTED — invariant violation
-    corrupted = true
-    totalCorrupted++
-    failingSeeds.push(seed)
-    stats[heroClass].corrupted++
-    continue
-  }
-
-  const s = stats[heroClass]
-  const finalTurn = log.snapshots.length > 0
-    ? log.snapshots[log.snapshots.length - 1].turn
-    : 0
-
-  if (log.outcome === 'hero_wins')  { s.wins++;   s.turns.push(finalTurn) }
-  if (log.outcome === 'hero_loses') { s.losses++;  s.turns.push(finalTurn) }
-
-  // Save corrupted seeds from hash mismatches
-  const hashFailed = log.snapshots.some(snap => !snap.hashValid)
-  if (hashFailed && !failingSeeds.includes(seed)) {
-    failingSeeds.push(seed)
-    saveFailingRun(log)
-  }
-}
+const batch = runBatch(RUNS, BASE_SEED, {
+  onProgress: done => {
+    if (done % progressStep === 0) process.stdout.write('.')
+  },
+})
 
 process.stdout.write('\n\n')
 
-// ─── Save failing seeds ───────────────────────────────────────────────────────
+// ─── Стабильность таймлайнов ──────────────────────────────────────────────────
 
-if (failingSeeds.length > 0) {
-  console.log(`${failingSeeds.length} failing seed(s) archived to /artifacts/\n`)
-}
+const stable = RUNS - batch.corrupted
+const hashMismatches = batch.failingSeeds.length - batch.corrupted
 
-// ─── Report ───────────────────────────────────────────────────────────────────
-
-const totalStable = RUNS - totalCorrupted
-const stabilityPct = ((totalStable / RUNS) * 100).toFixed(1)
-
-const bar = (pct: number, width = 10) => {
-  const filled = Math.round(pct / 100 * width)
-  return '█'.repeat(filled) + '░'.repeat(width - filled)
-}
-
-const avg = (arr: number[]) =>
-  arr.length > 0 ? (arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1) : '—'
-
-console.log('═'.repeat(52))
+console.log(line())
 console.log('  TIMELINE STABILITY REPORT')
-console.log('═'.repeat(52))
+console.log(line())
 console.log()
-console.log(`  Seeds scanned    ${RUNS.toLocaleString()}`)
-console.log(`  Timelines stable ${totalStable.toLocaleString()}  (${stabilityPct}%)`)
-console.log(`  Corrupted        ${totalCorrupted}`)
+console.log(`  Seeds scanned      ${RUNS.toLocaleString()}  (base seed ${BASE_SEED.toLocaleString()})`)
+console.log(`  Timelines stable   ${stable.toLocaleString()}  (${pct(stable / RUNS)})`)
+console.log(`  Corrupted          ${batch.corrupted}`)
+console.log(`  Hash mismatches    ${Math.max(0, hashMismatches)}`)
 console.log()
-console.log('  WINRATE BY CLASS:')
+
+// ─── Винрейт по классам ───────────────────────────────────────────────────────
+
+const VERDICT_MARK: Record<Verdict, string> = {
+  PASS:         'PASS',
+  FAIL:         'FAIL',
+  INCONCLUSIVE: '????',
+}
+
+console.log(`  WINRATE BY CLASS — corridor ${pct(CLASS_WINRATE.min)}–${pct(CLASS_WINRATE.max)}`)
 console.log()
+console.log('  class        winrate            95% CI          verdict   turns (mean ± sd)   p95')
+console.log(`  ${'─'.repeat(WIDTH - 4)}`)
+
+const classVerdicts: Verdict[] = []
 
 for (const heroClass of HERO_CLASSES) {
-  const s = stats[heroClass]
-  const total = s.wins + s.losses
-  const winPct = total > 0 ? (s.wins / total * 100) : 0
-  const avgTurns = avg(s.turns)
-  const corruption = s.corrupted > 0 ? `  ⚠ ${s.corrupted} corrupted` : ''
+  const s = batch.perClass[heroClass]
+  const decided = s.wins + s.losses
+  const wr = winrateOf(s)
+  const ci = wilsonInterval(s.wins, decided)
+  const verdict = verdictFor(ci, CLASS_WINRATE)
+  classVerdicts.push(verdict)
+
+  const turnsMean = mean(s.turns)
+  const turnsSd   = stdDev(s.turns)
 
   console.log(
-    `  ${heroClass.padEnd(10)} ${bar(winPct)}  ${winPct.toFixed(1).padStart(5)}%` +
-    `  (avg ${avgTurns} turns)${corruption}`
+    `  ${heroClass.padEnd(11)}` +
+    `${bar(wr)} ${pct(wr).padStart(6)}   ` +
+    `[${pct(ci.low)}, ${pct(ci.high)}]`.padEnd(17) +
+    `${VERDICT_MARK[verdict].padEnd(9)} ` +
+    `${turnsMean.toFixed(1)} ± ${turnsSd.toFixed(1)}`.padEnd(19) +
+    `${percentile(s.turns, 95)}` +
+    (s.corrupted > 0 ? `   ⚠ ${s.corrupted} corrupted` : '')
   )
 }
 
 console.log()
 
-// Deadliest outcome analysis
-const allWins   = HERO_CLASSES.reduce((n, c) => n + stats[c].wins,   0)
-const totalRuns = HERO_CLASSES.reduce((n, c) => n + stats[c].wins + stats[c].losses, 0)
-const overallWinPct = totalRuns > 0 ? (allWins / totalRuns * 100).toFixed(1) : '0'
+// ─── Матрица пар ──────────────────────────────────────────────────────────────
+//
+// Печатается всегда, а не только при отклонении: именно эта таблица показывает,
+// какая часть пространства конфигураций вообще была просканирована. Пустая
+// клетка означает, что пара не встретилась ни на одном seed.
 
-console.log(`  Overall hero win rate:  ${overallWinPct}%`)
-console.log(`  Failing seeds archived: ${failingSeeds.length}`)
+const perCell = Math.floor(RUNS / (HERO_CLASSES.length * ENEMY_TYPES.length))
+
+console.log(`  MATCHUP MATRIX — winrate per pair, ~${perCell.toLocaleString()} runs per cell`)
+console.log(`  corridor ${pct(MATCHUP_WINRATE.min)}–${pct(MATCHUP_WINRATE.max)}, ! = outside`)
+console.log()
+console.log('  ' + 'hero \\ enemy'.padEnd(13) + ENEMY_TYPES.map(e => e.padStart(13)).join(''))
+
+let matchupOutside = 0
+let cellsCovered = 0
+
+for (const heroClass of HERO_CLASSES) {
+  const cells = ENEMY_TYPES.map(enemyType => {
+    const m = batch.perMatchup.get(matchupKey(heroClass, enemyType))
+    if (!m || m.wins + m.losses === 0) return '—'.padStart(13)
+
+    cellsCovered++
+    const wr = winrateOf(m)
+    const ci = wilsonInterval(m.wins, m.wins + m.losses)
+    const verdict = verdictFor(ci, MATCHUP_WINRATE)
+    if (verdict === 'FAIL') matchupOutside++
+
+    return `${pct(wr)}${verdict === 'FAIL' ? '!' : ' '}`.padStart(13)
+  })
+
+  console.log('  ' + heroClass.padEnd(13) + cells.join(''))
+}
+
+const totalCells = HERO_CLASSES.length * ENEMY_TYPES.length
+console.log()
+console.log(`  Configuration coverage: ${cellsCovered}/${totalCells} pairs scanned`)
+if (matchupOutside > 0) {
+  console.log(`  ${matchupOutside} pair(s) outside corridor — see ! marks`)
+}
 console.log()
 
-if (totalCorrupted === 0 && failingSeeds.length === 0) {
-  console.log('  Simulation stable. No invariant drift detected.')
+// ─── Распределение длительности ───────────────────────────────────────────────
+
+const allTurns = HERO_CLASSES.flatMap(c => batch.perClass[c].turns)
+const durationMean = mean(allTurns)
+const durationVerdict = durationMean >= BATTLE_DURATION.min && durationMean <= BATTLE_DURATION.max
+  ? 'PASS' : 'FAIL'
+
+console.log(`  BATTLE DURATION — corridor ${BATTLE_DURATION.min}–${BATTLE_DURATION.max} turns, mean ${durationMean.toFixed(1)}: ${durationVerdict}`)
+console.log()
+
+const dist = histogram(allTurns)
+const maxCount = Math.max(...dist.values())
+
+for (const [turns, count] of dist) {
+  if (count / maxCount < 0.005) continue  // хвост тоньше половины процента не печатаем
+  const width = Math.round((count / maxCount) * 40)
+  const outside = turns < BATTLE_DURATION.min || turns > BATTLE_DURATION.max
+  console.log(
+    `  ${String(turns).padStart(3)} turns  ${'▇'.repeat(width).padEnd(40)} ` +
+    `${count.toLocaleString().padStart(7)}${outside ? '  ·' : ''}`
+  )
+}
+
+console.log()
+console.log(`  p50 ${percentile(allTurns, 50)}   p95 ${percentile(allTurns, 95)}   ` +
+            `max ${Math.max(...allTurns)}   sd ${stdDev(allTurns).toFixed(2)}`)
+console.log()
+
+// ─── Итог ─────────────────────────────────────────────────────────────────────
+
+const passed = classVerdicts.filter(v => v === 'PASS').length
+const failed = classVerdicts.filter(v => v === 'FAIL').length
+const unclear = classVerdicts.filter(v => v === 'INCONCLUSIVE').length
+
+console.log(line('─'))
+console.log(`  CLASS VERDICTS: ${passed} PASS / ${failed} FAIL / ${unclear} INCONCLUSIVE`)
+
+if (batch.corrupted === 0 && batch.failingSeeds.length === 0) {
+  console.log('  Determinism: intact. No invariant drift, no hash divergence.')
 } else {
-  console.log(`  ⚠ Instability detected in ${failingSeeds.length} timeline(s).`)
-  console.log(`    Seeds: ${failingSeeds.slice(0, 10).join(', ')}${failingSeeds.length > 10 ? '...' : ''}`)
+  console.log(`  ⚠ Determinism: ${batch.failingSeeds.length} timeline(s) failed.`)
+  console.log(`    Seeds: ${batch.failingSeeds.slice(0, 10).join(', ')}` +
+              `${batch.failingSeeds.length > 10 ? '…' : ''}`)
+  console.log('    Archived to /artifacts/ — load in debugger/index.html')
 }
 
-console.log()
-console.log('═'.repeat(52))
-
-// ─── RNG + shuffle utils ──────────────────────────────────────────────────────
-
-function mulberry32(seed: number): () => number {
-  let s = seed >>> 0
-  return () => {
-    s += 0x6D2B79F5
-    let t = s
-    t = Math.imul(t ^ (t >>> 15), t | 1)
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
+if (unclear > 0) {
+  console.log(`  ${unclear} class(es) INCONCLUSIVE at ${RUNS.toLocaleString()} runs — ` +
+              `interval crosses the corridor edge, needs more runs`)
 }
 
-function shuffle<T>(arr: T[], rng: () => number): T[] {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1))
-    ;[arr[i], arr[j]] = [arr[j], arr[i]]
-  }
-  return arr
-}
+console.log(line())
+
+// ─── Exit code ────────────────────────────────────────────────────────────────
+
+const determinismBroken = batch.corrupted > 0 || batch.failingSeeds.length > 0
+const balanceBroken = failed > 0 || matchupOutside > 0 || durationVerdict === 'FAIL'
+
+if (determinismBroken) process.exit(1)
+if (GATE && balanceBroken) process.exit(1)

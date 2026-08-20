@@ -6,6 +6,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "simulate": "tsx scripts/simulate.ts",
+    "stability": "tsx scripts/stability.ts",
     "replay": "tsx scripts/generate-replay.ts",
     "test:mutation": "stryker run",
     "test:ui": "playwright test tests/ui",

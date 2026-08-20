@@ -37,7 +37,7 @@ No HTTP, no UI, no database — different layers, different tools, different pur
           ╱──────────────────────────────────╲
          ╱  Property (fast-check, 27 tests)   ╲  forAll — invariant coverage
         ╱────────────────────────────────────────╲
-       ╱       Unit (310 tests — engine + heroes)  ╲  base — per-function assertions
+       ╱       Unit (329 tests — engine + heroes)  ╲  base — per-function assertions
       ╱────────────────────────────────────────────╲
 ```
 
@@ -93,8 +93,20 @@ For a rule engine: built-in because RNG is seeded.
 **Mutation testing** — measures test quality, not just coverage. If 79% of mutations are caught,
 21% of bugs in those files could slip through unnoticed. This makes the pyramid self-auditing.
 
-**Monte Carlo** — statistical confidence. 10,000 seeds = 10,000 test cases generated automatically.
-Blood Mage 94.5% winrate reveals a design property that 310 unit tests didn't explicitly check.
+**Monte Carlo** — statistical confidence. 16,000 seeds = 16,000 test cases generated automatically,
+covering all 16 hero × enemy configurations. Every class metric carries a Wilson interval and a
+verdict against a corridor fixed before the run.
+
+What it caught that 329 unit tests did not: the Necromancer wins 0 of 4,000 battles, because its
+Raise Dead and Empower were never implemented in the engine (BUG-14). No unit test could see this —
+they all verify that existing code behaves correctly, and none asks whether the specified behaviour
+exists at all. Mutation testing is equally blind here: there is no code to mutate.
+
+**Statistical battery** — a distinct layer, not part of unit. `rng.test.ts` checks the RNG *contract*
+(same seed → same sequence, values in range). `rng-statistical.test.ts` checks its *distribution*: a
+generator that rolls 1 twice as often as 6 passes every contract test. Seeds are fixed, so the
+metrics are reproducible to the last digit — a statistical test that flakes once per N runs belongs
+in a lab, not in CI.
 
 ---
 
@@ -103,20 +115,22 @@ Blood Mage 94.5% winrate reveals a design property that 310 unit tests didn't ex
 ```
 Layer              | Tests    | Runtime  | Purpose
 -------------------|----------|----------|--------------------------------
-Unit               | 310      | 3s       | Per-rule correctness
-Property           | 27       | 2s       | Invariant coverage
-Replay             | 13       | 0.5s     | Determinism proof
-Executor property  | 7        | 2s       | End-to-end byte-perfect
-BDD (Cucumber)     | 11 scen  | 0.1s     | Rules as specification
-Playwright UI      | 13       | 14s      | Debugger verification
+Unit               | 329      | 2s       | Per-rule correctness
+Property           | 27       | 0.2s     | Invariant coverage
+Statistical (RNG)  | 15       | 0.6s     | Distribution + seed space
+Replay             | 13       | 0.04s    | Determinism proof
+Executor property  | 7        | 1s       | End-to-end byte-perfect
+BDD (Cucumber)     | 12 scen  | 0.04s    | Rules as specification
+Playwright UI      | 25       | 17s      | Debugger + game + visual
 Mutation           | 626 mut  | 4 min    | Test quality ~79%
-Monte Carlo        | 10,000   | 30s      | Statistical stability
+Monte Carlo        | 16,000   | 5s       | Corridors + matchup coverage
+Stability          | 64,000   | 40s      | Cross-batch spread, convergence
 Chaos Agent        | 200      | 3s       | Adversarial probe
 Trace Analysis     | 500      | 5s       | Pattern discovery
 ```
 
-**Total automated verification:** 310 + 27 + 13 + 7 + 11 + 13 = 381 test files/scenarios.
-**Total seeds probed:** 10,000+ across Monte Carlo, chaos, and property tests.
+**Total automated verification:** 329 + 27 + 15 + 13 + 7 + 12 + 25 = 428 tests/scenarios.
+**Total seeds probed:** 80,000+ across Monte Carlo, stability batches, chaos, and property tests.
 
 ---
 

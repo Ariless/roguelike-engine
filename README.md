@@ -20,7 +20,10 @@ The roguelike is a rule engine — the same class of system as a payment process
 | **Metamorphic testing** | `damage(lowHp) ≥ damage(highHp)` — formula without expected value | Relations between inputs, not exact outputs |
 | **`it.fails()` false invariant** | `healWerewolfIsAlwaysBeneficial` — intentionally failing test as domain spec | Documents rule violations; fails if someone "fixes" the wrong thing |
 | **Mutation testing** | Stryker ~79%; targeted kills: `hasStatus always-true`, `&&→||` | Finds gaps that code review misses |
-| **Monte Carlo simulation** | `npm run simulate 10000` → winrate by class; Blood Mage 94.5% | Statistical stability; reveals design signals |
+| **Monte Carlo simulation** | `npm run simulate` → winrate per class and per matchup, Wilson intervals, verdict against a target corridor | Statistical stability; caught a whole enemy that never got implemented |
+| **Sampling-bias detection** | Hero and enemy both derived from `seed % 4` → 4 of 16 configurations ever scanned | A biased sample returns a plausible number nobody rechecks |
+| **Metric stability** | `npm run stability` → cross-batch spread + convergence as runs double | An interval narrowing toward a seed-dependent answer looks *more* trustworthy |
+| **RNG statistical battery** | chi-square uniformity, runs test, autocorrelation, integer bias, permutation fairness, seed-space limits | Determinism tests pass on a generator that rolls 1 twice as often as 6 |
 | **BDD / Cucumber** | Natural language scenarios on the engine — no browser, no HTTP | Executable specification for rule engines |
 | **Decision tables** | Guardian: shield→stun→attack; each row = one test | Classic technique on non-classic system |
 | **AI chaos agent** | Adversarial play; 50/200 interesting timelines found automatically | LLM-guided stress testing |
@@ -37,10 +40,12 @@ The roguelike is a rule engine — the same class of system as a payment process
 
 ```bash
 npm install
-npm test                          # 371 tests — 3 seconds
-npm run test:bdd                  # 11 BDD scenarios
-npm run test:ui                   # 22 Playwright tests (game + visual regression)
-npm run simulate 10000            # Monte Carlo — 30 seconds
+npm test                          # 391 tests — 3 seconds
+npm run test:bdd                  # 12 BDD scenarios
+npm run test:ui                   # 25 Playwright tests (debugger + game + visual regression)
+npm run simulate 16000            # Monte Carlo + balance corridors — 5 seconds
+npm run simulate 16000 -- --gate  # same, but exit 1 if balance leaves the corridor
+npm run stability 8000 8          # cross-batch spread + convergence — 40 seconds
 npm run chaos 200                 # Adversarial agent
 npm run trace 500                 # Trace analysis + suggested invariants
 npm run replay 42                 # Generate replay.json for debugger
@@ -66,7 +71,8 @@ runtime/     wires engine + seeded RNG + fault injection; only layer that calls 
 telemetry/   replay log — every action recorded with pre/post state hashes
 debugger/    forensic timeline viewer — reads telemetry only
 game/        playable combat UI — reads telemetry, sends actions to runtime
-scripts/     simulate, chaos, trace, replay, ci-report
+scripts/     simulate, stability, chaos, trace, replay, ci-report
+scripts/lib/ harness (shared auto-player), stats, balance corridors
 docs/        DECISION-TABLES.md, TEST-PYRAMID.md
 ```
 
@@ -75,10 +81,10 @@ docs/        DECISION-TABLES.md, TEST-PYRAMID.md
 
 ---
 
-## Test suite (334 tests across 3 runners)
+## Test suite (428 tests across 3 runners)
 
 ```
-Vitest (310 tests):
+Vitest (391 tests):
   resolution.test.ts        — applyDamage, applyHeal, death_door state machine
   statuses.test.ts          — bleed, stun, defend, vulnerable + mutation killers
   heroes/ (4 files)         — paladin, bloodmage, berserker, werewolf
@@ -90,14 +96,19 @@ Vitest (310 tests):
   pipeline.test.ts          — 9-step Turn Pipeline
   action-resolution.test.ts — 5-step Action Resolution Pipeline
   rng.test.ts               — seeded RNG determinism
+  rng-statistical.test.ts   — distribution: chi-square uniformity, runs test,
+                              autocorrelation, integer bias, permutation fairness,
+                              seed space limits
 
-Cucumber (11 scenarios):
+Cucumber (12 scenarios):
   tests/bdd/features/combat.feature — stun, bleed, Death's Door, Paladin charges,
                                       Berserker Rage, Werewolf transform, false invariant
 
-Playwright (13 tests):
-  tests/ui/debugger.test.ts — load, segments, integrity bars, hash verification,
-                              navigation, corruption detection, export
+Playwright (25 tests):
+  tests/ui/debugger.test.ts          — load, segments, integrity bars, hash verification,
+                                       navigation, corruption detection, export
+  tests/ui/game.test.ts              — encounter panels, bleed kill regression, targeting
+  tests/ui/visual-regression.test.ts — screenshots vs baseline
 ```
 
 ---
@@ -120,15 +131,58 @@ Overall        | ~79%   | Above typical industry baseline (65–75%)
 
 ## Monte Carlo + Chaos Agent
 
+Every class metric carries a confidence interval and a verdict against a target
+corridor. The corridor is design intent fixed *before* the run — a corridor fitted
+to measured results always passes and therefore says nothing.
+
 ```
-npm run simulate 10000
+npm run simulate 16000
 
-  paladin    ██████████   99.8%  (avg 5.3 turns)
-  bloodmage  █████████░   94.5%  (avg 5.4 turns)  ← self-damage risk
-  berserker  ██████████   98.1%  (avg 4.8 turns)
-  werewolf   ██████████  100.0%  (avg 3.6 turns)
-  Simulation stable. No invariant drift detected.
+  class        winrate            95% CI          verdict   turns (mean ± sd)   p95
+  paladin    ███████░░░  70.5%   [68.9%, 72.0%]   PASS      9.9 ± 9.7          39
+  bloodmage  █████████░  94.1%   [93.3%, 94.8%]   FAIL      3.6 ± 1.4           7
+  berserker  ██████████  95.3%   [94.7%, 96.0%]   FAIL      7.4 ± 5.6          19
+  werewolf   ██████████  99.2%   [98.9%, 99.5%]   FAIL      4.6 ± 2.3           9
 
+  MATCHUP MATRIX — winrate per pair, ~1,000 runs per cell
+  hero \ enemy        goblin     guardian      vampire  necromancer
+  paladin             99.8%!       20.9%        29.6%       100.0%!
+  bloodmage          100.0%!       95.2%        81.1%       100.0%!
+  berserker          100.0%!       88.1%        93.3%       100.0%!
+  werewolf            99.9%!       99.7%!       97.3%!      100.0%!
+
+  Configuration coverage: 16/16 pairs scanned
+```
+
+Three of four classes are outside the corridor, and the matrix says why: every
+hero beats the Necromancer 100% of the time. That column is BUG-14 — the enemy's
+Raise Dead and Empower exist in `DESIGN.md`, `DECISION-TABLES.md` and the UI, but
+never reached the engine, so it can only apply bleed and cannot win.
+
+The matrix used to be invisible: `simulate.ts` derived hero *and* enemy from the
+same `seed % 4`, scanning 4 pairs out of 16 (BUG-13). The Necromancer only ever
+met the Werewolf, who wins everything anyway.
+
+```
+npm run stability 8000 8      # 8 batches × 8,000 runs on far-apart base seeds
+
+  class        min      max      spread   sd       CI half-width   verdict
+  paladin      68.8%    70.3%    1.52%    0.51%       1.01%      PASS
+  werewolf     99.1%    99.5%    0.35%    0.12%       0.19%      PASS
+
+  CONVERGENCE — overall hero winrate vs number of runs
+    1,000     90.2%   [88.21%, 91.96%]   ±1.876%
+   32,000     90.6%   [90.23%, 90.88%]   ±0.327%   Δ -0.021%
+
+  Cross-batch: stable. Estimates do not depend on the starting seed.
+```
+
+Two separate questions. The confidence interval measures noise *within* a batch;
+cross-batch spread measures whether the estimate depends on where sampling
+started. A metric can pass one and fail the other — an interval that narrows
+toward a seed-dependent answer looks more trustworthy the more runs you add.
+
+```
 npm run chaos 200
 
   Timelines probed: 200 | Stable: 200 (100%) | Interesting: 50
@@ -262,11 +316,16 @@ The bug was in the **implementation**, not the test. fast-check found it, not co
 ```
 Implementation:    ~2,500 LOC
 
-Tests:             334  (310 vitest + 13 Playwright + 11 BDD)
-                   + 10,000 seeds via Monte Carlo
+Tests:             428  (391 vitest + 25 Playwright + 12 BDD)
+                   + 16,000 seeds via Monte Carlo, all 16 configurations
+                   + 64,000 seeds across 8 batches via stability run
                    + 200 adversarial runs via chaos agent
 
-Real defects:      12  (see BUGS.md — each with root cause and fix)
+Real defects:      16  (see BUGS.md — each with root cause and fix)
+                   BUG-13…16 came from the simulation and the RNG battery,
+                   not from the unit suite: a biased sample, an enemy that was
+                   never implemented, a silently truncated seed, and a UI test
+                   whose assert did not check what its name promised.
 
 Mutation score:    ~79%  (above typical 65–75%)
 

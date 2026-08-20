@@ -1,4 +1,4 @@
-import { Given, When, Then } from '@cucumber/cucumber'
+import { Given, When, Then, defineParameterType } from '@cucumber/cucumber'
 import assert from 'assert'
 import { createGame, GameHandle } from '../../../src/runtime/executor'
 import { isInRage, rageDamage } from '../../../src/engine/heroes/berserker'
@@ -21,31 +21,44 @@ function makeTestHero(heroClass: HeroClass, hp: number, maxHp: number): Hero {
   }
 }
 
-function heroClassFromName(name: string): HeroClass {
-  const map: Record<string, HeroClass> = {
+// ─── Parameter types ─────────────────────────────────────────────────────────
+//
+// Имена героев и врагов объявлены как типы параметров, а не как {word}.
+// Причина конкретная: {word} матчит ровно одно слово, поэтому сценарий с
+// «Blood Mage» не находил ни одного определения шага и оставался undefined —
+// Cucumber помечал его жёлтым и шёл дальше, а прогон при этом завершался
+// успешно. Единственный герой из двух слов молча выпадал из BDD-набора.
+//
+// Явный тип параметра закрывает и обратную задачу: опечатка в имени героя
+// теперь тоже даёт undefined вместо тихого отката к 'paladin' через `?? `.
+
+defineParameterType({
+  name: 'hero',
+  regexp: /Blood Mage|Paladin|Berserker|Werewolf/,
+  transformer: (name: string): HeroClass => ({
     'Paladin': 'paladin', 'Blood Mage': 'bloodmage',
     'Berserker': 'berserker', 'Werewolf': 'werewolf',
-  }
-  return map[name] ?? 'paladin'
-}
+  }[name] as HeroClass),
+})
 
-function enemyTypeFromName(name: string): EnemyType {
-  const map: Record<string, EnemyType> = {
+defineParameterType({
+  name: 'enemy',
+  regexp: /Goblin|Guardian|Vampire|Necromancer/,
+  transformer: (name: string): EnemyType => ({
     'Goblin': 'goblin', 'Guardian': 'guardian',
     'Vampire': 'vampire', 'Necromancer': 'necromancer',
-  }
-  return map[name] ?? 'goblin'
-}
+  }[name] as EnemyType),
+})
 
 // ─── Given steps ─────────────────────────────────────────────────────────────
 
-Given('the hero is playing as {word} against a {word}', (heroName: string, enemyName: string) => {
-  game = createGame({ seed: 42, heroClass: heroClassFromName(heroName), enemyType: enemyTypeFromName(enemyName) })
+Given('the hero is playing as {hero} against a {enemy}', (heroClass: HeroClass, enemyType: EnemyType) => {
+  game = createGame({ seed: 42, heroClass, enemyType })
 })
 
-Given('the hero is playing as {word} with {int} HP against a {word}',
-  (heroName: string, targetHp: number, enemyName: string) => {
-    game = createGame({ seed: 42, heroClass: heroClassFromName(heroName), enemyType: enemyTypeFromName(enemyName) })
+Given('the hero is playing as {hero} with {int} HP against a {enemy}',
+  (heroClass: HeroClass, targetHp: number, enemyType: EnemyType) => {
+    game = createGame({ seed: 42, heroClass, enemyType })
     // Take endTurns until HP is at or below target (Goblin deals 6/turn)
     for (let i = 0; i < 20; i++) {
       if (game.getState().hero.hp <= targetHp || game.getState().isOver) break
@@ -56,11 +69,11 @@ Given('the hero is playing as {word} with {int} HP against a {word}',
 
 // For engine-function scenarios (isInRage, wolfDamage, checkWerewolfTransform)
 // we build a lightweight hero state directly — no need for full executor
-Given('the hero is playing as {word} with {int} HP out of {int}',
-  (heroName: string, hp: number, maxHp: number) => {
-    testHero = makeTestHero(heroClassFromName(heroName), hp, maxHp)
+Given('the hero is playing as {hero} with {int} HP out of {int}',
+  (heroClass: HeroClass, hp: number, maxHp: number) => {
+    testHero = makeTestHero(heroClass, hp, maxHp)
     // Also create a full game for scenarios that need endTurn
-    game = createGame({ seed: 42, heroClass: heroClassFromName(heroName), enemyType: 'goblin' })
+    game = createGame({ seed: 42, heroClass, enemyType: 'goblin' })
   }
 )
 

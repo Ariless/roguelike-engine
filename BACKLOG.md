@@ -4,9 +4,11 @@ Full design spec: `DESIGN.md` · Full invariant contract: `INVARIANTS.md`
 
 ---
 
-## Статус проекта (2026-05-30)
+## Статус проекта (2026-08-20)
 
-**334 теста** (310 vitest + 13 Playwright + 11 BDD) · **~79% mutation score** · **12 задокументированных багов**
+**428 тестов** (391 vitest + 25 Playwright + 12 BDD) · **~79% mutation score** · **16 задокументированных багов**
+
+Открыты: BUG-14 (механика некроманта не реализована в движке, живёт только в UI) и BUG-16 (UI-тест на скелета не проверяет скелета). Оба требуют переноса raise/empower в движок — отдельная задача, не правка.
 
 Portfolio-ready: README ✅ · CLAUDE.md ✅ · BUGS.md ✅ · DECISIONS.md (21 решение) ✅ · INVARIANTS.md ✅
 
@@ -57,7 +59,9 @@ Portfolio-ready: README ✅ · CLAUDE.md ✅ · BUGS.md ✅ · DECISIONS.md (21 
 |------|-----------|
 | `game/index.html` | 4 героя, multi-enemy, seed-based encounters, all mechanics |
 | `debugger/index.html` | Forensic timeline viewer: segments, hashes, stability % |
-| `scripts/simulate.ts` | Monte Carlo: winrate по классам (Blood Mage 94.5%, Werewolf 100%) |
+| `scripts/simulate.ts` | Monte Carlo: коридоры, интервалы Уилсона, матрица 16 пар, вердикт |
+| `scripts/stability.ts` | Разброс между батчами на разнесённых базовых seed + сходимость |
+| `scripts/lib/` | `harness.ts` (автоплеер, `configFor`, `runBatch`), `stats.ts`, `corridors.ts` |
 | `scripts/chaos-agent.ts` | Adversarial agent: 50/200 interesting timelines; ANTHROPIC_API_KEY → Claude |
 | `scripts/trace-analysis.ts` | 500 трасс → status combos + suggested invariants |
 | `scripts/ci-report.ts` | CI Stability Report HTML в Archivist стиле |
