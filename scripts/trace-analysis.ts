@@ -5,31 +5,18 @@
 //
 // Output: discovered patterns + suggested property invariants to add
 
-import { createGame } from '../src/runtime/executor'
-import type { HeroClass, EnemyType } from '../src/engine/types'
+import { autoPlay, configFor } from './lib/harness'
 import type { TurnSnapshot } from '../src/telemetry/types'
 
 const RUNS = parseInt(process.argv[2] ?? '2000')
 
-const HERO_CLASSES: HeroClass[] = ['paladin', 'bloodmage', 'berserker', 'werewolf']
-const ENEMY_TYPES: EnemyType[]  = ['goblin', 'guardian', 'vampire', 'necromancer']
-
-const CARDS: Record<HeroClass, string[]> = {
-  paladin:   ['righteous_strike', 'divine_charge', 'stubborn_recovery'],
-  bloodmage: ['chaos_bolt', 'open_the_wound', 'bloodrite'],
-  berserker: ['savage_lunge', 'primal_fury', 'primal_dodge'],
-  werewolf:  ['lunar_strike', 'pack_sense', 'stalk', 'rend', 'rampage', 'reality_crack'],
-}
-
-const SELF_CARDS = new Set(['primal_dodge', 'stubborn_recovery', 'divine_charge', 'reality_crack', 'rampage'])
-
-function mulberry32(s: number) {
-  return () => { s += 0x6D2B79F5; let t = s; t = Math.imul(t^(t>>>15),t|1); t^=t+Math.imul(t^(t>>>7),t|61); return ((t^(t>>>14))>>>0)/4294967296 }
-}
-
-function shuffle<T>(arr: T[], rng: ()=>number): T[] {
-  const a = [...arr]; for (let i=a.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[a[i],a[j]]=[a[j],a[i]]}; return a
-}
+// Автоплеер и раскладка seed берутся из lib/harness — те же, что в simulate.ts
+// и stability.ts. Раньше здесь лежала собственная копия генератора, колоды и
+// игрового цикла, и вместе с ней собственная копия ошибки выборки (BUG-13):
+// heroClass и enemyType выводились из одного и того же `seed % 4`, поэтому
+// трассы собирались с 4 конфигураций из 16. Инварианты в INVARIANTS.md,
+// выведенные из этих трасс, унаследовали смещение и помечены как требующие
+// перепроверки — первый из них уже опровергнут.
 
 // ─── Pattern collectors ───────────────────────────────────────────────────────
 
@@ -110,31 +97,15 @@ process.stdout.write(`Analyzing ${RUNS} traces`)
 for (let seed = 0; seed < RUNS; seed++) {
   if (seed % (RUNS / 20) === 0) process.stdout.write('.')
 
-  const heroClass = HERO_CLASSES[seed % HERO_CLASSES.length]
-  const enemyType = ENEMY_TYPES[seed % ENEMY_TYPES.length]
+  const { heroClass, enemyType } = configFor(seed)
 
   try {
-    const game = createGame({ seed, heroClass, enemyType })
-    const rng = mulberry32(seed ^ 0xFACE)
-
-    for (let t = 0; t < 30; t++) {
-      if (game.getState().isOver) break
-      const cards = shuffle([...CARDS[heroClass]], rng)
-      const max = Math.floor(rng() * 3) + 1
-      let played = 0
-      for (const c of cards) {
-        if (played >= max || game.getState().isOver) break
-        const target = game.getState().enemies.find(e => e.state !== 'dead')
-        if (!target && !SELF_CARDS.has(c)) continue
-        game.playCard(c, target?.id ?? '')
-        played++
-      }
-      if (!game.getState().isOver) game.endTurn()
-    }
-
-    const log = game.getLog()
+    const log = autoPlay(seed, heroClass, enemyType)
     collectPatterns(log.snapshots, log.outcome, stats)
-  } catch {}
+  } catch {
+    // Испорченный таймлайн — нарушен инвариант. Здесь это не отчётный факт:
+    // за нарушениями следит simulate.ts, который их считает и архивирует.
+  }
 }
 
 process.stdout.write('\n\n')

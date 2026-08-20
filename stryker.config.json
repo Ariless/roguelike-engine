@@ -7,10 +7,17 @@
   "mutate": [
     "src/engine/resolution.ts",
     "src/engine/statuses.ts",
+    "src/engine/turnPipeline.ts",
+    "src/engine/actionResolution.ts",
+    "src/engine/invariants.ts",
     "src/engine/heroes/paladin.ts",
     "src/engine/heroes/bloodmage.ts",
     "src/engine/heroes/berserker.ts",
-    "src/engine/heroes/werewolf.ts"
+    "src/engine/heroes/werewolf.ts",
+    "src/runtime/rng.ts",
+    "src/runtime/faults.ts",
+    "src/runtime/executor.ts",
+    "src/telemetry/replayer.ts"
   ],
   "coverageAnalysis": "perTest",
   "thresholds": {

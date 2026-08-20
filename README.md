@@ -26,6 +26,7 @@ The roguelike is a rule engine — the same class of system as a payment process
 | **RNG statistical battery** | chi-square uniformity, runs test, autocorrelation, integer bias, permutation fairness, seed-space limits | Determinism tests pass on a generator that rolls 1 twice as often as 6 |
 | **BDD / Cucumber** | Natural language scenarios on the engine — no browser, no HTTP | Executable specification for rule engines |
 | **Decision tables** | Guardian: shield→stun→attack; each row = one test | Classic technique on non-classic system |
+| **Spec-compliance testing** | `ENEMY_INTENTS` checked against the decision tables; two enemies diverge, and the gaps are pinned | Every other test verifies existing code is correct; none asks whether specified behaviour exists |
 | **AI chaos agent** | Adversarial play; 50/200 interesting timelines found automatically | LLM-guided stress testing |
 | **Pairwise testing** | 4×4×3=48 → 16 tests (67% reduction); all 2-way pairs covered | Multi-parameter combinatorial reduction |
 | **Visual regression** | Playwright screenshots vs baseline; catches rendering regressions | Orthogonal to replay — different bug class |
@@ -40,7 +41,7 @@ The roguelike is a rule engine — the same class of system as a payment process
 
 ```bash
 npm install
-npm test                          # 391 tests — 3 seconds
+npm test                          # 400 tests — 6 seconds
 npm run test:bdd                  # 12 BDD scenarios
 npm run test:ui                   # 25 Playwright tests (debugger + game + visual regression)
 npm run simulate 16000            # Monte Carlo + balance corridors — 5 seconds
@@ -81,10 +82,10 @@ docs/        DECISION-TABLES.md, TEST-PYRAMID.md
 
 ---
 
-## Test suite (428 tests across 3 runners)
+## Test suite (437 tests across 3 runners)
 
 ```
-Vitest (391 tests):
+Vitest (400 tests):
   resolution.test.ts        — applyDamage, applyHeal, death_door state machine
   statuses.test.ts          — bleed, stun, defend, vulnerable + mutation killers
   heroes/ (4 files)         — paladin, bloodmage, berserker, werewolf
@@ -99,6 +100,9 @@ Vitest (391 tests):
   rng-statistical.test.ts   — distribution: chi-square uniformity, runs test,
                               autocorrelation, integer bias, permutation fairness,
                               seed space limits
+  decision-tables.test.ts   — engine intents vs docs/DECISION-TABLES.md; known gaps
+                              pinned so they can be neither silently widened nor
+                              silently closed
 
 Cucumber (12 scenarios):
   tests/bdd/features/combat.feature — stun, bleed, Death's Door, Paladin charges,
@@ -110,6 +114,29 @@ Playwright (25 tests):
   tests/ui/game.test.ts              — encounter panels, bleed kill regression, targeting
   tests/ui/visual-regression.test.ts — screenshots vs baseline
 ```
+
+---
+
+## CI
+
+`.github/workflows/ci.yml` — four jobs, deliberately different in strictness.
+
+| Job | Runs | Blocks merge on |
+|-----|------|-----------------|
+| `verify` | typecheck, 400 vitest tests, 12 BDD scenarios | any failure |
+| `simulation` | Monte Carlo 16k + stability 4k×4 | broken determinism only |
+| `ui` | 25 Playwright tests on Chromium | any failure |
+| `mutation` | Stryker across engine, runtime and telemetry | score below the configured threshold |
+
+The simulation job is the interesting one. `simulate` exits non-zero when a timeline is corrupted or a
+state hash diverges, because "same seed produces the same log" is not negotiable. Balance leaving its
+corridor is *reported* rather than blocking, because three of four classes are currently outside it
+and half of that comes from BUG-14 — enemies that never got implemented. A gate that cannot go green
+teaches people to ignore red. Once the enemy mechanics land, the step becomes
+`npm run simulate 16000 -- --gate` and corridors block merges like any other test.
+
+Both reports are written to the job summary, so a run's statistics are readable without downloading
+artefacts.
 
 ---
 
@@ -316,7 +343,7 @@ The bug was in the **implementation**, not the test. fast-check found it, not co
 ```
 Implementation:    ~2,500 LOC
 
-Tests:             428  (391 vitest + 25 Playwright + 12 BDD)
+Tests:             437  (400 vitest + 25 Playwright + 12 BDD)
                    + 16,000 seeds via Monte Carlo, all 16 configurations
                    + 64,000 seeds across 8 batches via stability run
                    + 200 adversarial runs via chaos agent

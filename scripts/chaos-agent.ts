@@ -10,23 +10,18 @@
 import { createGame, GameConfig } from '../src/runtime/executor'
 import { replayGame } from '../src/telemetry/replayer'
 import { saveFailingRun } from '../src/telemetry/artifacts'
+import { HERO_CARDS, SELF_ONLY, configFor } from './lib/harness'
 import type { HeroClass, EnemyType } from '../src/engine/types'
 import type { ReplayLog } from '../src/telemetry/types'
 
 const RUNS = parseInt(process.argv[2] ?? '500')
 const USE_CLAUDE = !!process.env.ANTHROPIC_API_KEY
 
-const HERO_CLASSES: HeroClass[] = ['paladin', 'bloodmage', 'berserker', 'werewolf']
-const ENEMY_TYPES: EnemyType[]  = ['goblin', 'guardian', 'vampire', 'necromancer']
-
-// ─── Card tables ──────────────────────────────────────────────────────────────
-
-const HERO_CARDS: Record<HeroClass, string[]> = {
-  paladin:   ['righteous_strike', 'divine_charge', 'stubborn_recovery'],
-  bloodmage: ['chaos_bolt', 'open_the_wound', 'bloodrite'],
-  berserker: ['savage_lunge', 'primal_fury', 'primal_dodge'],
-  werewolf:  ['lunar_strike', 'pack_sense', 'stalk', 'rend', 'rampage', 'reality_crack'],
-}
+// Колода и раскладка seed общие с simulate.ts, стратегия игры — своя, и это
+// разделение принципиально. Общее обязано совпадать: агент, играющий другой
+// колодой или сканирующий другое подмножество конфигураций, находил бы
+// «интересные таймлайны» в игре, которую больше никто не проверяет.
+// Различаться должен только способ выбирать ход — в нём весь смысл агента.
 
 // Card priority: higher score = prefer to play this card
 // Adversarial: maximize pressure, ignore healing, deplete hero HP
@@ -49,7 +44,7 @@ const CARD_THREAT_SCORE: Record<string, number> = {
   divine_charge:     4,
 }
 
-const SELF_CARDS = new Set(['primal_dodge', 'stubborn_recovery', 'divine_charge', 'reality_crack', 'rampage'])
+const SELF_CARDS = new Set(SELF_ONLY)
 
 // ─── Adversarial strategy ─────────────────────────────────────────────────────
 // Prioritises high-threat cards; avoids healing; targets most dangerous enemy.
@@ -215,8 +210,7 @@ async function runChaosAgent(): Promise<void> {
   for (let seed = 0; seed < RUNS; seed++) {
     if (seed % Math.max(1, Math.floor(RUNS / 40)) === 0) process.stdout.write('▓')
 
-    const heroClass = HERO_CLASSES[seed % HERO_CLASSES.length]
-    const enemyType = ENEMY_TYPES[seed % ENEMY_TYPES.length]
+    const { heroClass, enemyType } = configFor(seed)
 
     let log: ReplayLog
     let corrupted = false

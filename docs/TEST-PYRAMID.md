@@ -25,11 +25,11 @@ No HTTP, no UI, no database — different layers, different tools, different pur
 
 ```
                     ╱──────────────╲
-                   ╱  BDD/Cucumber  ╲   11 scenarios — rules as specification
+                   ╱  BDD/Cucumber  ╲   12 scenarios — rules as specification
                   ╱──────────────────╲
-                 ╱  Playwright / UI   ╲  13 tests — debugger & game UI
+                 ╱  Playwright / UI   ╲  25 tests — debugger & game UI
                 ╱──────────────────────╲
-               ╱  Chaos / Monte Carlo   ╲  10k+ seeds — adversarial + statistical
+               ╱  Chaos / Monte Carlo   ╲  80k+ seeds — adversarial + statistical
               ╱────────────────────────╲
              ╱  Mutation (Stryker ~79%)  ╲  meta-layer — tests the tests
             ╱────────────────────────────╲
@@ -37,7 +37,7 @@ No HTTP, no UI, no database — different layers, different tools, different pur
           ╱──────────────────────────────────╲
          ╱  Property (fast-check, 27 tests)   ╲  forAll — invariant coverage
         ╱────────────────────────────────────────╲
-       ╱       Unit (329 tests — engine + heroes)  ╲  base — per-function assertions
+       ╱       Unit (338 tests — engine + heroes)  ╲  base — per-function assertions
       ╱────────────────────────────────────────────╲
 ```
 
@@ -52,7 +52,8 @@ No HTTP, no UI, no database — different layers, different tools, different pur
 | **Property** | Rarely used | `forAll(seeds) → invariant` | Find edge cases automatically |
 | **Replay** | Does not exist | `replayGame(log).success` | Prove determinism |
 | **Mutation** | Optional | Stryker ~79% | Measure test quality |
-| **Chaos/Monte Carlo** | Load tests | 10k adversarial seeds | Statistical stability |
+| **Chaos/Monte Carlo** | Load tests | 80k seeds across simulation, stability, chaos | Statistical stability |
+| **Spec compliance** | Rarely automated | `ENEMY_INTENTS` vs decision tables | Catches behaviour that was specified but never built |
 | **BDD** | Cucumber E2E | Cucumber on engine | Rules as specification |
 | **UI** | Selenium/Playwright | Playwright on debugger | Test the debugging tool |
 
@@ -97,7 +98,7 @@ For a rule engine: built-in because RNG is seeded.
 covering all 16 hero × enemy configurations. Every class metric carries a Wilson interval and a
 verdict against a corridor fixed before the run.
 
-What it caught that 329 unit tests did not: the Necromancer wins 0 of 4,000 battles, because its
+What it caught that 338 unit tests did not: the Necromancer wins 0 of 4,000 battles, because its
 Raise Dead and Empower were never implemented in the engine (BUG-14). No unit test could see this —
 they all verify that existing code behaves correctly, and none asks whether the specified behaviour
 exists at all. Mutation testing is equally blind here: there is no code to mutate.
@@ -115,7 +116,7 @@ in a lab, not in CI.
 ```
 Layer              | Tests    | Runtime  | Purpose
 -------------------|----------|----------|--------------------------------
-Unit               | 329      | 2s       | Per-rule correctness
+Unit               | 338      | 2s       | Per-rule correctness
 Property           | 27       | 0.2s     | Invariant coverage
 Statistical (RNG)  | 15       | 0.6s     | Distribution + seed space
 Replay             | 13       | 0.04s    | Determinism proof
@@ -129,7 +130,7 @@ Chaos Agent        | 200      | 3s       | Adversarial probe
 Trace Analysis     | 500      | 5s       | Pattern discovery
 ```
 
-**Total automated verification:** 329 + 27 + 15 + 13 + 7 + 12 + 25 = 428 tests/scenarios.
+**Total automated verification:** 338 + 27 + 15 + 13 + 7 + 12 + 25 = 437 tests/scenarios.
 **Total seeds probed:** 80,000+ across Monte Carlo, stability batches, chaos, and property tests.
 
 ---

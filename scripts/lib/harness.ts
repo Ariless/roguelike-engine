@@ -15,14 +15,18 @@ export const HERO_CLASSES: readonly HeroClass[] =
 export const ENEMY_TYPES: readonly EnemyType[] =
   ['goblin', 'guardian', 'vampire', 'necromancer']
 
-const HERO_CARDS: Record<HeroClass, string[]> = {
+// Карты, доступные автоплееру. Экспортируются, потому что chaos-agent играет по
+// своей стратегии, но теми же картами — а расхождение колод между скриптами
+// означало бы, что они гоняют разные игры под одинаковыми названиями отчётов.
+export const HERO_CARDS: Record<HeroClass, string[]> = {
   paladin:   ['righteous_strike', 'divine_charge', 'stubborn_recovery'],
   bloodmage: ['chaos_bolt', 'open_the_wound', 'bloodrite'],
   berserker: ['savage_lunge', 'primal_fury', 'primal_dodge'],
   werewolf:  ['lunar_strike', 'pack_sense', 'stalk', 'rend', 'rampage', 'reality_crack'],
 }
 
-const SELF_ONLY = [
+// Карты, которым не нужна живая цель.
+export const SELF_ONLY = [
   'primal_dodge', 'stubborn_recovery', 'divine_charge', 'reality_crack', 'rampage',
 ]
 
