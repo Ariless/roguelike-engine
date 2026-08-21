@@ -598,7 +598,7 @@ Tests:             532  (495 vitest + 25 Playwright + 12 BDD)
                    + 64,000 seeds across 8 batches via stability run
                    + 200 adversarial runs via chaos agent
 
-Real defects:      18  (see BUGS.md — 16 closed, 2 partially open, each with root cause)
+Real defects:      19  (see BUGS.md — 17 closed, 2 partially open, each with root cause)
                    BUG-13…16 came from the simulation and the RNG battery,
                    not from the unit suite: a biased sample, an enemy that was
                    never implemented, a silently truncated seed, and a UI test

@@ -585,6 +585,38 @@ this entry.
 
 ---
 
+## BUG-19 — the combat log sliced its top line in half ✅ CLOSED
+
+**Date:** 2026-08-21  
+**Found by:** looking at the game, not by a test
+
+**Symptom:** The oldest visible line in the combat log was cut horizontally through the
+middle of the glyphs. It read as broken text rendering rather than as a scrolled list.
+
+**Root cause:** Two numbers that nobody had reconciled. `renderLog()` emits five entries;
+`.combat-log` was `clamp(56px, 8vh, 80px)` with `overflow: hidden` and
+`justify-content: flex-end`, which fits two or three. Clipping a flex column does not hide
+the overflowing child, it cuts it at the container edge — and with no explicit
+`line-height`, the container height was never a whole number of lines, so the cut landed
+mid-glyph.
+
+**Fix:** `overflow-y: auto` with the newest entry scrolled into view after each rebuild,
+an explicit `line-height: 18px`, and a height of exactly three lines
+(3 × 18 + 2 × 3 gap + 2 × 4 padding = 68px). Entries are now either fully visible or
+scrolled out; nothing is half-drawn.
+
+**Why the height could not simply grow:** DECISIONS.md D-07 budgets the viewport of a 13"
+laptop line by line, and the log's share is about 60px. Fitting five entries would have
+taken the space from the battle area.
+
+**Why no test caught it:** every UI test asserts on `textContent`, which is complete
+regardless of what is painted, and the visual regression baselines were captured with the
+same defect in place — a wrong-but-stable rendering is exactly what a baseline preserves.
+Screenshot comparison answers "did this change", never "was this ever right". The defect
+survived because both layers agreed with each other and neither looked at the picture.
+
+---
+
 ## MUTATION-02 — Widening the scope: faults.ts turned out to be almost untested (2026-08-20)
 
 **Date:** 2026-08-20  

@@ -425,23 +425,41 @@
     /* ── Combat log ───────────────────────────────────────────── */
 
     .combat-log {
-      height: clamp(56px, 8vh, 80px);
+      /* Height is budgeted against the 13" viewport (see DECISIONS.md D-07), so the
+         log cannot simply grow to fit its entries. It used to clip with
+         overflow: hidden and justify-content: flex-end, which cut the topmost
+         entry in half rather than hiding it — the text looked broken rather than
+         scrolled. Scrolling with the newest entry pinned into view keeps the
+         budget and shows whole lines. */
+      /* Exactly three whole lines: 3 × 18px line-height + 2 × 3px gap + 2 × 4px
+         padding. A height that is not a whole number of lines leaves a sliced
+         row at the top edge, which is what this looked like before. */
+      height: 68px;
       margin: 0 auto;
       width: 560px;
       border-top: 1px solid var(--border);
       border-bottom: 1px solid var(--border);
-      overflow: hidden;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: none;          /* Firefox */
+      -ms-overflow-style: none;       /* legacy Edge */
       display: flex;
       flex-direction: column;
-      justify-content: flex-end;
-      padding: 8px 0;
+      justify-content: flex-start;
+      padding: 4px 0;
       gap: 3px;
       flex-shrink: 0;
     }
 
+    .combat-log::-webkit-scrollbar { display: none; }
+
     .log-entry {
       font-family: 'Crimson Text', serif;
       font-size: 15px;
+      /* Explicit, so the container height is a whole number of lines and a
+         partially visible row cannot appear. */
+      line-height: 18px;
+      flex-shrink: 0;
       padding: 0 4px;
       white-space: nowrap;
       overflow: hidden;
@@ -2602,6 +2620,10 @@ function renderLog() {
 
   if (el.innerHTML !== newHtml) {
     el.innerHTML = newHtml
+    // Keep the newest entry in view. Without this the log scrolls to the top on
+    // every rebuild and the player watches the oldest line instead of what just
+    // happened.
+    el.scrollTop = el.scrollHeight
   }
 }
 
