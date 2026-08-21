@@ -617,6 +617,51 @@ survived because both layers agreed with each other and neither looked at the pi
 
 ---
 
+## BUG-20 — the necromancer announced Raise while the goblin was still alive ✅ CLOSED
+
+**Date:** 2026-08-21  
+**Found by:** playing the game and watching the enemy intent panel
+
+**Symptom:** On turn 2 the necromancer's panel showed `💀 Raise` with both enemies alive and
+no corpse anywhere on the field, then the log recorded
+`💀 Necromancer attempts to raise dead — no corpse available`. A wasted turn presented as a
+normal one.
+
+**Root cause:** `game/index.html` read the intent straight out of the static table, in both
+places that need it:
+
+```js
+const intent = enemy.intents[enemy.intentIndex % enemy.intents.length]   // to execute
+const intent = e.intents[e.intentIndex % e.intents.length]               // to display
+```
+
+Neither looked at the board. `docs/DECISION-TABLES.md:79` is explicit — with no ally dead
+the turn is Wither, not a failed raise. The engine has resolved this correctly since BUG-14
+via `resolveIntent()`; the UI never got the same treatment, because BUG-14 was closed in the
+engine and the UI carries its own independent implementation of the combat rules.
+
+**Fix:** `resolveIntentUI(enemy, state)` in the UI, mirroring the engine's rule: a raise with
+no unraised corpse becomes Wither, an empower with no living skeleton becomes Wither. Used
+by both the execution path and the render path, so the announced intent and the executed one
+cannot disagree.
+
+**The test that was pinning the defect.** `necromancer log shows raise attempt` asserted the
+log *contained* "attempts to raise" on turn 2. It was written from observed behaviour, so it
+locked the bug in as the expected result and would have failed when the bug was fixed.
+Rewritten to assert the opposite: the panel announces Wither and no raise attempt appears.
+
+That makes three tests in this project that guarded a defect rather than catching one —
+BUG-16, the skeleton UI test, and this one. All three share an origin: written by looking at
+what the code did, rather than at what the specification said.
+
+**Why nothing else caught it:** the engine tests are right and pass, because the engine is
+correct. The UI tests assert on `textContent` and on class names, and the UI was
+self-consistent — it displayed exactly what it executed. Both layers agreed with each other;
+neither agreed with the decision table. Only `tests/decision-tables.test.ts` compares against
+the specification, and it covers the engine, not the 2,900-line UI.
+
+---
+
 ## MUTATION-02 — Widening the scope: faults.ts turned out to be almost untested (2026-08-20)
 
 **Date:** 2026-08-20  

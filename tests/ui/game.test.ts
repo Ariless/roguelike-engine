@@ -79,20 +79,24 @@ test.describe('Necromancer — raise dead mechanic', () => {
     await expect(skeletonPanel).toHaveCount(1)
   })
 
-  test('necromancer log shows raise attempt', async ({ page }) => {
+  test('with the goblin alive the necromancer withers instead of raising', async ({ page }) => {
+    // BUG-20. This test used to assert the log contained "attempts to raise" on
+    // turn 2 — it was pinning the defect. The UI read intents straight from the
+    // static table, so Raise was announced and "attempted" with no corpse on the
+    // field. DECISION-TABLES.md:79 is explicit: with no ally dead the turn is
+    // Wither. What the log should show is bleed, and what the panel should
+    // announce is Wither.
     await openGame(page, 5)
-    // End 2 turns — necromancer bleed on turn 1, raise on turn 2
     await page.click('#endTurnBtn')
     await page.waitForTimeout(200)
     await page.click('#endTurnBtn')
     await page.waitForTimeout(200)
 
+    const necroIntent = await page.locator('[id^="enemy-intent-"]').last().textContent()
+    expect(necroIntent).toContain('Wither')
+
     const logText = await page.locator('#combatLog').textContent()
-    // Also BUG-16: this was a disjunction covering both outcomes — a raise that
-    // worked and a raise that found nothing — so any log at all satisfied it.
-    // On turn 2 with the goblin still alive there is no corpse, so the only
-    // correct outcome is the attempt, and that is what gets asserted.
-    expect(logText).toContain('attempts to raise')
+    expect(logText).not.toContain('attempts to raise')
   })
 })
 

@@ -70,6 +70,7 @@ that would have caught it.
 | **BDD / Cucumber** | Natural language scenarios on the engine — no browser, no HTTP | Executable specification for rule engines |
 | **Decision tables** | Guardian: shield→stun→attack; each row = one test | Classic technique on non-classic system |
 | **Spec-compliance testing** | `ENEMY_INTENTS` checked against the decision tables; found a whole enemy that was specified and never built (BUG-14, now closed) | Every other test verifies existing code is correct; none asks whether specified behaviour exists |
+| **Tests that guard defects** | Three tests here pinned a bug as the expected result and would have failed when it was fixed — see `docs/TESTING_PATTERNS.md` | A test written from behaviour records the behaviour, wrong parts included |
 | **AI chaos agent** | Adversarial play; 50/200 interesting timelines found automatically | LLM-guided stress testing |
 | **Pairwise testing** | 4×4×3=48 → 16 tests (67% reduction); all 2-way pairs covered | Multi-parameter combinatorial reduction |
 | **Visual regression** | Playwright screenshots vs baseline; catches rendering regressions | Orthogonal to replay — different bug class |
@@ -598,7 +599,7 @@ Tests:             532  (495 vitest + 25 Playwright + 12 BDD)
                    + 64,000 seeds across 8 batches via stability run
                    + 200 adversarial runs via chaos agent
 
-Real defects:      19  (see BUGS.md — 17 closed, 2 partially open, each with root cause)
+Real defects:      20  (see BUGS.md — 18 closed, 2 partially open, each with root cause)
                    BUG-13…16 came from the simulation and the RNG battery,
                    not from the unit suite: a biased sample, an enemy that was
                    never implemented, a silently truncated seed, and a UI test

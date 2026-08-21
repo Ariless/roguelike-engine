@@ -1686,6 +1686,31 @@ const HERO_DEFS = {
 
 // ─── Encounter definitions ─────────────────────────────────────────────────
 
+// ─── Conditional intents ─────────────────────────────────────────────────────
+// BUG-20: the UI read intents straight out of the static table, both to display
+// them and to execute them, so the Necromancer announced "Raise" on turn 2 even
+// with no corpse on the field and then attempted it into thin air.
+// DECISION-TABLES.md:78-80 says otherwise: with no ally dead the turn is Wither,
+// and with no skeleton to empower the turn is Wither as well. The engine has
+// resolved this in resolveIntent() since BUG-14; this is the same rule for the UI.
+const WITHER_INTENT = { icon: '🩸', label: 'Wither', type: 'bleed', value: 3 }
+
+function resolveIntentUI(enemy, state) {
+  const intent = enemy.intents[enemy.intentIndex % enemy.intents.length]
+
+  if (intent.type === 'raise') {
+    const corpse = state.enemies.find(e => e.state === 'dead' && !e.raisedOnce)
+    return corpse ? intent : WITHER_INTENT
+  }
+
+  if (intent.type === 'empower') {
+    const skeleton = state.enemies.find(e => e.key === 'skeleton' && e.state !== 'dead')
+    return skeleton ? intent : WITHER_INTENT
+  }
+
+  return intent
+}
+
 const ENCOUNTER_DEFS = {
   'goblin':       [{ key: 'goblin',      id: 'e0' }],
   'goblin×2':     [{ key: 'goblin', id: 'e0' }, { key: 'goblin', id: 'e1', portrait: 'assets/enemy-goblin2.jpg' }],
@@ -2071,7 +2096,7 @@ function endTurn() {
       removeStatus(enemy, 'stun')
       continue
     }
-    const intent = enemy.intents[enemy.intentIndex % enemy.intents.length]
+    const intent = resolveIntentUI(enemy, gs)
     executeEnemyIntent(gs, enemy, intent)
     if (gs.isOver) { render(); return }
   }
@@ -2499,7 +2524,7 @@ function renderEnemies() {
     document.getElementById(`enemy-hptext-${e.id}`).textContent = `${e.hp}/${e.maxHp}`
     document.getElementById(`enemy-hpbar-${e.id}`).style.width = hpPct + '%'
 
-    const intent = e.intents[e.intentIndex % e.intents.length]
+    const intent = resolveIntentUI(e, gs)
     document.getElementById(`enemy-intent-${e.id}`).textContent =
       e.state === 'dead' ? '✦ Archived' : `${intent.icon} ${intent.label}`
 

@@ -222,6 +222,52 @@ it('Guardian turn 4 repeats turn 1 intent (cycle)', () => { ... })
 
 ---
 
+## Anti-pattern: the test that guards the defect
+
+Not a technique to use — a failure mode this project produced three times, worth naming
+because each instance looked like ordinary work.
+
+A test written by observing what the code does will encode whatever the code does,
+including the parts that are wrong. It then passes forever, and fails the day someone
+fixes the bug. The suite stops being a check on the system and becomes a check that the
+system has not changed.
+
+**The three instances here:**
+
+| Test | What it asserted | What it should have asserted |
+|---|---|---|
+| BUG-16 — `skeleton appears as 3rd panel` | `toBeGreaterThanOrEqual(2)`, while two panels exist from the start | that a skeleton panel exists |
+| BUG-16 — the same file's log check | `includes('Skeleton') \|\| includes('attempts to raise')` — a disjunction covering both outcomes | the one outcome the board makes correct |
+| BUG-20 — `necromancer log shows raise attempt` | that the log *contains* "attempts to raise" on turn 2 | that the necromancer withers, per the decision table |
+
+The third is the clearest. The UI announced Raise with no corpse on the field, which
+contradicts `docs/DECISION-TABLES.md:79`. A test was written that required exactly that
+string in the log — so the defect became the expected result, and fixing it broke the test.
+
+**What they have in common.** All three were written from behaviour rather than from
+specification. That is the whole mechanism: if the question is "what does it do", the
+answer is always "this", and the test records it. The question has to be "what should it
+do", and the answer has to come from somewhere other than the code.
+
+**What actually caught them.** Not another test — a person looking at the screen, and a
+comparison against the decision tables. `tests/decision-tables.test.ts` exists precisely
+because every other test in the suite verifies that the implemented code is correct, and
+none asks whether the implemented behaviour is the specified one. It covers the engine;
+the UI has no equivalent, which is why BUG-20 lived in the UI.
+
+**The countermeasure that works.** Where a test must pin current behaviour — because the
+proper fix is a separate task — say so in the test and give it an expiry condition:
+
+```ts
+// This test documents current behavior and will fail when corpse system is added
+```
+
+That comment sat in `executor.test.ts` from May. When BUG-14 landed, the test failed
+exactly as promised, and the failure was a signal rather than a nuisance. A pinned defect
+with a stated expiry is documentation; a pinned defect without one is a trap.
+
+---
+
 ## Hierarchy of patterns
 
 ```
