@@ -17,7 +17,7 @@ The roguelike is a rule engine — the same class of system as a payment process
 | **Property-based testing** | `forAll(seeds) → hp ∈ [0, maxHp]`; bleed cap ≤ 10; state machine | Generates thousands of inputs automatically; shrinks to minimal failing case |
 | **Seeded deterministic RNG** | Same seed → same encounter; byte-perfect replay | Any failing run reproducible exactly by seed |
 | **State machine coverage** | `alive → death_door → dead`; werewolf `human ↔ wolf` | Tests transitions, not just happy paths |
-| **Fault injection** | `bleedOffByOne: true` → property test catches the bug | Controlled bug insertion; fast-check shrinks to minimal failing sequence |
+| **Fault injection** | `bleedOffByOne: true` → property test catches the bug; the injector itself is tested, which found 3 of its 4 flags injecting nothing (BUG-18) | The instrument that proves tests notice a planted bug is itself unaudited by default |
 | **Replay system** | `replayGame(log).success === true` for any random game | Byte-perfect verification via pre/post state hashes per event |
 | **Metamorphic testing** | `damage(lowHp) ≥ damage(highHp)` — formula without expected value | Relations between inputs, not exact outputs |
 | **`it.fails()` false invariant** | `healWerewolfIsAlwaysBeneficial` — intentionally failing test as domain spec | Documents rule violations; fails if someone "fixes" the wrong thing |
@@ -45,7 +45,7 @@ The roguelike is a rule engine — the same class of system as a payment process
 
 ```bash
 npm install
-npm test                          # 467 tests — 6 seconds
+npm test                          # 489 tests — 6 seconds
 npm run test:bdd                  # 12 BDD scenarios
 npm run test:ui                   # 25 Playwright tests (debugger + game + visual regression)
 npm run simulate 16000            # Monte Carlo + balance corridors — 5 seconds
@@ -90,10 +90,10 @@ docs/        DECISION-TABLES.md, TEST-PYRAMID.md
 
 ---
 
-## Test suite (504 tests across 3 runners)
+## Test suite (526 tests across 3 runners)
 
 ```
-Vitest (467 tests):
+Vitest (489 tests):
   resolution.test.ts        — applyDamage, applyHeal, death_door state machine
   statuses.test.ts          — bleed, stun, defend, vulnerable + mutation killers
   heroes/ (4 files)         — paladin, bloodmage, berserker, werewolf
@@ -137,7 +137,7 @@ Playwright (25 tests):
 
 | Job | Trigger | Runs | Blocks merge on |
 |-----|---------|------|-----------------|
-| `verify` | push, PR | typecheck, 467 vitest tests, 12 BDD scenarios | any failure |
+| `verify` | push, PR | typecheck, 489 vitest tests, 12 BDD scenarios | any failure |
 | `simulation` | push, PR | Monte Carlo 16k + stability 4k×4 | broken determinism only |
 | `ui` | push, PR | 25 Playwright tests on Chromium | any failure |
 | `mutation` | nightly, manual | Stryker across engine, runtime and telemetry | score below the configured threshold |
@@ -504,12 +504,12 @@ The bug was in the **implementation**, not the test. fast-check found it, not co
 ```
 Implementation:    ~2,500 LOC
 
-Tests:             504  (467 vitest + 25 Playwright + 12 BDD)
+Tests:             526  (489 vitest + 25 Playwright + 12 BDD)
                    + 16,000 seeds via Monte Carlo, all 16 configurations
                    + 64,000 seeds across 8 batches via stability run
                    + 200 adversarial runs via chaos agent
 
-Real defects:      17  (see BUGS.md — 15 closed, 1 open, each with root cause and fix)
+Real defects:      18  (see BUGS.md — 16 closed, 2 partially open, each with root cause)
                    BUG-13…16 came from the simulation and the RNG battery,
                    not from the unit suite: a biased sample, an enemy that was
                    never implemented, a silently truncated seed, and a UI test

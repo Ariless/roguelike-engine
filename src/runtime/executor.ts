@@ -540,7 +540,10 @@ export function createGame(config: GameConfig): GameHandle {
       {
         const pre = state
         state = tickWithFaults(state, state.enemies[0]?.id ?? 'enemy', faults)
-        state = checkWin(state)
+        // BUG-18: this call used to omit `faults`. Three of the four win checks
+        // passed them through and this one did not, so ignoreDeathDoor was
+        // bypassed here on every turn and the flag injected nothing at all.
+        state = checkWin(state, faults)
         record('status_tick', pre, state, { targetId: 'enemy' })
         if (state.isOver) {
           log.outcome = 'hero_wins'

@@ -531,6 +531,60 @@ if anyone reintroduces a spread.
 
 ---
 
+## BUG-18 — three of the four fault-injection flags injected nothing ⚠️ PARTIALLY OPEN
+
+**Date:** 2026-08-21  
+**Found by:** writing the first tests for `faults.ts` after MUTATION-02 put it at 26%
+
+**Symptom:** `FaultConfig` declares four flags. Only one of them changed behaviour.
+
+| Flag | State when found |
+|---|---|
+| `bleedOffByOne` | works |
+| `ignoreDeathDoor` | read, but bypassed on every turn — **fixed** |
+| `ignoreStun` | read, but the condition it guards is unreachable — open |
+| `allowDeadToAct` | declared and documented, never read by any code — open |
+
+**Root cause, `ignoreDeathDoor`.** `executor.ts` has four win checks. Three passed the
+fault config through; the fourth, the status tick on the enemy, called `checkWin(state)`
+with no faults at all. Since that check runs every turn, it converted `death_door → dead`
+regardless of the flag, and the injection was undone as fast as it was applied. Fixed by
+passing `faults` through. Exactly the shape of BUG-12: the code was updated in three of
+four places, and the fourth threw no error — it just quietly did the default thing.
+
+**Remaining limitation, `ignoreDeathDoor`.** Now that it works, it reaches only deaths
+resolved in the executor — a status tick, for instance. A death from a second hit is
+resolved by `applyDamage` inside `engine/`, which by design takes no `FaultConfig`. The
+flag's own comment says "no kill on second hit", which is more than it can deliver at this
+architecture. Pinned by a test rather than fixed: making `engine/` fault-aware would
+trade a documentation defect for an architectural one.
+
+**Root cause, `ignoreStun`.** The guard `!isStunned || faults.ignoreStun` is real code on
+a real path, but no hero card applies stun to an enemy — the only source of stun in the
+game is the Guardian, and it stuns the hero. So `isStunned` is never true for an enemy and
+the flag cannot change anything. The mechanic is not missing; the situation it applies to
+cannot arise.
+
+**Root cause, `allowDeadToAct`.** No code reads it. It is declared in the interface and
+documented as "dead entities can still execute intents (triggers TIMELINE CORRUPTED)".
+
+**Why this is the worst place for it.** This module is the instrument that proves the test
+suite notices a planted defect. A flag that injects nothing does not fail — it produces a
+run identical to the clean one, and any test built on it passes for the wrong reason. The
+project already has a name for that shape: BUG-16, an assertion that could not fail. Here
+the same shape sat inside the tool used to validate other tests.
+
+It is also the answer to why `faults.ts` scored 26%. Two of the four flags had no
+behaviour to cover, so there was nothing for a test to assert and nothing for a mutant to
+break.
+
+**Pinned by:** `tests/runtime/faults.test.ts` — 22 tests. The working flags are checked
+for exact effect and for byte-identical behaviour when disabled; the two broken ones are
+pinned in tests that fail the moment either starts working, which is the signal to close
+this entry.
+
+---
+
 ## MUTATION-02 — Widening the scope: faults.ts turned out to be almost untested (2026-08-20)
 
 **Date:** 2026-08-20  
