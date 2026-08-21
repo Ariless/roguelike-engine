@@ -92,6 +92,21 @@ export function histogram(xs: readonly number[]): Map<number, number> {
   return new Map([...result.entries()].sort((a, b) => a[0] - b[0]))
 }
 
+// ─── Comparing two measurements ──────────────────────────────────────────────
+//
+// Whether two runs can be told apart at all. Point estimates always differ;
+// what matters is whether the difference survives the sampling. Overlapping
+// intervals mean the runs cannot distinguish the builds, however far apart the
+// midpoints look — reporting such a gap as a finding is reporting noise.
+//
+// Deliberately conservative: overlapping intervals do not prove the values are
+// equal, only that this sample cannot separate them. "Not distinguishable" is
+// the honest reading, not "unchanged".
+
+export function intervalsOverlap(a: Interval, b: Interval): boolean {
+  return a.low <= b.high && b.low <= a.high
+}
+
 // ─── Extremes over large collections ─────────────────────────────────────────
 //
 // `Math.max(...xs)` passes every element as a separate argument, so it throws

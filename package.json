@@ -19,7 +19,8 @@
     "spec-to-test": "tsx scripts/spec-to-test.ts",
     "ci-summary": "tsx scripts/ci-summary.ts",
     "meta-oracle": "tsx scripts/meta-oracle.ts",
-    "cert-evidence": "tsx scripts/cert-evidence.ts"
+    "cert-evidence": "tsx scripts/cert-evidence.ts",
+    "delta": "tsx scripts/delta.ts"
   },
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.100.1",

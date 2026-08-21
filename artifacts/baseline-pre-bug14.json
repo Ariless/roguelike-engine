@@ -1,0 +1,226 @@
+{
+  "build": {
+    "commit": "ea10886bedb9a1ea6ccee8f4035d405bdf89acee",
+    "shortCommit": "ea10886",
+    "branch": "HEAD",
+    "dirty": "yes — uncommitted changes present",
+    "engineHash": "1ba47076b96679e2",
+    "corridorHash": "98358dca8bf71d89",
+    "generatedAt": "2026-08-21T12:59:16.492Z"
+  },
+  "runs": 8000,
+  "baseSeed": 0,
+  "configurationsScanned": 16,
+  "configurationsTotal": 16,
+  "corrupted": 0,
+  "hashDivergences": 0,
+  "rng": [
+    {
+      "test": "Frequency (Monobit)",
+      "reference": "NIST SP 800-22 §2.1",
+      "seeds": "31337",
+      "samples": 500000,
+      "pValue": 0.9436280222029858
+    },
+    {
+      "test": "Frequency within a Block",
+      "reference": "NIST SP 800-22 §2.2",
+      "seeds": "24680",
+      "samples": 500000,
+      "pValue": 0.8417469695472882
+    },
+    {
+      "test": "Runs",
+      "reference": "NIST SP 800-22 §2.3",
+      "seeds": "4242",
+      "samples": 200000,
+      "pValue": 0.027498550417295778
+    },
+    {
+      "test": "Longest Run of Ones",
+      "reference": "NIST SP 800-22 §2.4",
+      "seeds": "13579",
+      "samples": 6272,
+      "pValue": 0.4459553813823266
+    },
+    {
+      "test": "Uniformity, 100 bins",
+      "reference": "classical χ² goodness-of-fit",
+      "seeds": "12345",
+      "samples": 200000,
+      "pValue": 0.8000479579090045
+    },
+    {
+      "test": "Serial, adjacent pairs",
+      "reference": "Diehard overlapping pairs",
+      "seeds": "777",
+      "samples": 200000,
+      "pValue": 0.11282953738065846
+    },
+    {
+      "test": "Integer reduction, range 1–10",
+      "reference": "classical χ² on the wrapper",
+      "seeds": "555",
+      "samples": 500000,
+      "pValue": 0.23385936492087725
+    },
+    {
+      "test": "Permutation fairness, order 4",
+      "reference": "Diehard permutation test",
+      "seeds": "1234",
+      "samples": 240000,
+      "pValue": 0.06596642380011253
+    },
+    {
+      "test": "Uniformity of p-values",
+      "reference": "NIST SP 800-22 §4.2.2",
+      "seeds": "7919·k, k = 1…300",
+      "samples": 6000000,
+      "pValue": 0.3041258164122027
+    }
+  ],
+  "classes": {
+    "paladin": {
+      "wins": 1177,
+      "losses": 502,
+      "winrate": 0.7010125074449077,
+      "ci": {
+        "low": 0.6786750420748004,
+        "high": 0.7224322279142468
+      },
+      "verdict": "PASS",
+      "turnsMean": 9.89100655151876,
+      "rtp": 0.7732818048882389,
+      "hitFrequency": 0.22931461601981834,
+      "maxWin": 10,
+      "volatility": 2.2310175139691033
+    },
+    "bloodmage": {
+      "wins": 1888,
+      "losses": 112,
+      "winrate": 0.944,
+      "ci": {
+        "low": 0.9330457781265368,
+        "high": 0.9532518214442077
+      },
+      "verdict": "FAIL",
+      "turnsMean": 3.5915,
+      "rtp": 5.122788999201187,
+      "hitFrequency": 0.823805060918463,
+      "maxWin": 21,
+      "volatility": 0.4998382451195414
+    },
+    "berserker": {
+      "wins": 1913,
+      "losses": 87,
+      "winrate": 0.9565,
+      "ci": {
+        "low": 0.9466508254413576,
+        "high": 0.9645988461893741
+      },
+      "verdict": "FAIL",
+      "turnsMean": 7.286,
+      "rtp": 2.252336923389555,
+      "hitFrequency": 0.4132231404958678,
+      "maxWin": 15,
+      "volatility": 0.9822629557762385
+    },
+    "werewolf": {
+      "wins": 1984,
+      "losses": 16,
+      "winrate": 0.992,
+      "ci": {
+        "low": 0.9870438100676844,
+        "high": 0.9950697462134108
+      },
+      "verdict": "FAIL",
+      "turnsMean": 4.5745,
+      "rtp": 3.517403732974609,
+      "hitFrequency": 0.5313013596294636,
+      "maxWin": 26,
+      "volatility": 0.8616006392329932
+    }
+  },
+  "matchups": {
+    "paladin|goblin": {
+      "wins": 499,
+      "losses": 1,
+      "winrate": 0.998
+    },
+    "bloodmage|goblin": {
+      "wins": 500,
+      "losses": 0,
+      "winrate": 1
+    },
+    "berserker|goblin": {
+      "wins": 500,
+      "losses": 0,
+      "winrate": 1
+    },
+    "werewolf|goblin": {
+      "wins": 500,
+      "losses": 0,
+      "winrate": 1
+    },
+    "paladin|guardian": {
+      "wins": 40,
+      "losses": 139,
+      "winrate": 0.22346368715083798
+    },
+    "bloodmage|guardian": {
+      "wins": 476,
+      "losses": 24,
+      "winrate": 0.952
+    },
+    "berserker|guardian": {
+      "wins": 445,
+      "losses": 55,
+      "winrate": 0.89
+    },
+    "werewolf|guardian": {
+      "wins": 498,
+      "losses": 2,
+      "winrate": 0.996
+    },
+    "paladin|vampire": {
+      "wins": 138,
+      "losses": 362,
+      "winrate": 0.276
+    },
+    "bloodmage|vampire": {
+      "wins": 412,
+      "losses": 88,
+      "winrate": 0.824
+    },
+    "berserker|vampire": {
+      "wins": 468,
+      "losses": 32,
+      "winrate": 0.936
+    },
+    "werewolf|vampire": {
+      "wins": 486,
+      "losses": 14,
+      "winrate": 0.972
+    },
+    "paladin|necromancer": {
+      "wins": 500,
+      "losses": 0,
+      "winrate": 1
+    },
+    "bloodmage|necromancer": {
+      "wins": 500,
+      "losses": 0,
+      "winrate": 1
+    },
+    "berserker|necromancer": {
+      "wins": 500,
+      "losses": 0,
+      "winrate": 1
+    },
+    "werewolf|necromancer": {
+      "wins": 500,
+      "losses": 0,
+      "winrate": 1
+    }
+  }
+}

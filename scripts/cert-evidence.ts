@@ -37,6 +37,10 @@ import { chiSquarePValue, normalTwoSidedPValue, pValueUniformity } from '../src/
 const RUNS = parseInt(process.argv[2] ?? '50000')
 const OUT_DIR = resolve('artifacts')
 const OUT_FILE = resolve(OUT_DIR, 'CERT-EVIDENCE.md')
+// The same run, machine-readable. The Markdown is for a person; this is what
+// `npm run delta` diffs against a later build. Two formats of one measurement,
+// never two measurements.
+const OUT_JSON = resolve(OUT_DIR, 'cert-evidence.json')
 
 // ─── Build identity ───────────────────────────────────────────────────────────
 // Which artefact these numbers describe. Without this the pack cannot be tied to
@@ -458,8 +462,45 @@ w('simulation figures are reproducible from the base seed for the same seed coun
 mkdirSync(OUT_DIR, { recursive: true })
 writeFileSync(OUT_FILE, lines.join('\n') + '\n', 'utf8')
 
+const snapshot = {
+  build,
+  runs: batch.runs,
+  baseSeed: batch.baseSeed,
+  configurationsScanned: batch.perMatchup.size,
+  configurationsTotal: HERO_CLASSES.length * ENEMY_TYPES.length,
+  corrupted: batch.corrupted,
+  hashDivergences: batch.failingSeeds.length,
+  rng: rng.map(r => ({ test: r.test, reference: r.reference, seeds: r.seeds, samples: r.samples, pValue: r.pValue })),
+  classes: Object.fromEntries(HERO_CLASSES.map(heroClass => {
+    const s = batch.perClass[heroClass]
+    const decided = s.wins + s.losses
+    const interval = wilsonInterval(s.wins, decided)
+    const economy = combineEconomies(s.economies)
+    return [heroClass, {
+      wins: s.wins,
+      losses: s.losses,
+      winrate: winrateOf(s),
+      ci: { low: interval.low, high: interval.high },
+      verdict: verdictFor(interval, CLASS_WINRATE),
+      turnsMean: s.turns.length > 0 ? mean(s.turns) : null,
+      rtp: economy.rtp,
+      hitFrequency: economy.hitFrequency,
+      maxWin: economy.maxWin,
+      volatility: economy.volatility,
+    }]
+  })),
+  matchups: Object.fromEntries(
+    [...batch.perMatchup.entries()].map(([key, m]) => [key, {
+      wins: m.wins, losses: m.losses, winrate: winrateOf(m),
+    }])
+  ),
+}
+
+writeFileSync(OUT_JSON, JSON.stringify(snapshot, null, 2) + '\n', 'utf8')
+
 console.log()
 console.log(`Evidence pack written to ${OUT_FILE}`)
+console.log(`Machine-readable snapshot: ${OUT_JSON}`)
 console.log(`  RNG battery:     ${rng.length - rngFailures}/${rng.length} passed`)
 console.log(`  Simulation:      ${batch.runs.toLocaleString()} seeds, ${batch.perMatchup.size}/${HERO_CLASSES.length * ENEMY_TYPES.length} configurations`)
 console.log(`  Determinism:     ${batch.corrupted} corrupted, ${batch.failingSeeds.length} hash divergences`)

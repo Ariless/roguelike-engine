@@ -7,12 +7,12 @@ that wrote this file; nothing is quoted from documentation.
 
 | Field | Value |
 |---|---|
-| Commit | `a40e954` (`a40e954ee5518f78fdcc0d7ced8f1720dfd759e7`) |
+| Commit | `01aec51` (`01aec5143073136ec5df879a330fd01b30a2d9fc`) |
 | Branch | main |
 | Uncommitted changes | yes — uncommitted changes present |
-| Engine + RNG hash | `1ba47076b96679e2` |
+| Engine + RNG hash | `4631adaa7de3f7e3` |
 | Corridor definition hash | `98358dca8bf71d89` |
-| Generated at | 2026-08-20T16:47:41.675Z |
+| Generated at | 2026-08-21T12:50:21.570Z |
 
 The engine hash covers the rule resolution, the turn and action pipelines and the
 generator. The corridor hash covers the acceptance bounds. If either changes, the
@@ -55,7 +55,7 @@ Recorded as BUG-15 and pinned by tests.
 
 | Field | Value |
 |---|---|
-| Seeds executed | 20,000 |
+| Seeds executed | 8,000 |
 | Base seed | 0 |
 | Configurations scanned | 16 of 16 |
 | Corrupted timelines | 0 |
@@ -74,10 +74,10 @@ outcome, INCONCLUSIVE, exists for the case where the interval straddles a bound.
 
 | Class | Wins | Losses | Win rate | 95% CI | Verdict |
 |---|---:|---:|---:|---|---|
-| paladin | 2,958 | 1,260 | 70.1% | [68.7%, 71.5%] | PASS |
-| bloodmage | 4,703 | 297 | 94.1% | [93.4%, 94.7%] | FAIL |
-| berserker | 4,768 | 232 | 95.4% | [94.7%, 95.9%] | FAIL |
-| werewolf | 4,961 | 39 | 99.2% | [98.9%, 99.4%] | FAIL |
+| paladin | 960 | 716 | 57.3% | [54.9%, 59.6%] | PASS |
+| bloodmage | 1,462 | 538 | 73.1% | [71.1%, 75.0%] | PASS |
+| berserker | 1,631 | 369 | 81.5% | [79.8%, 83.2%] | INCONCLUSIVE |
+| werewolf | 1,954 | 46 | 97.7% | [96.9%, 98.3%] | FAIL |
 
 ### Return metrics
 
@@ -87,10 +87,10 @@ paytable or house edge here. What transfers is the question and the arithmetic.
 
 | Class | RTP | Hit frequency | Max win | × stake | Volatility | p95 |
 |---|---:|---:|---:|---:|---:|---:|
-| paladin | 0.78 | 23.1% | 10 | 5.0 | 2.21 | 7.5 |
-| bloodmage | 5.12 | 82.0% | 21 | 12.8 | 0.50 | 17.5 |
-| berserker | 2.24 | 40.9% | 15 | 7.8 | 0.99 | 12.5 |
-| werewolf | 3.50 | 53.3% | 29 | 16.3 | 0.86 | 17.5 |
+| paladin | 0.90 | 26.9% | 10 | 5.0 | 1.93 | 7.5 |
+| bloodmage | 4.87 | 81.0% | 21 | 12.8 | 0.52 | 17.5 |
+| berserker | 2.14 | 38.0% | 15 | 7.7 | 1.00 | 12.5 |
+| werewolf | 3.71 | 54.8% | 28 | 15.7 | 0.86 | 17.5 |
 
 ### Battle duration
 
@@ -98,10 +98,10 @@ Corridor 3–12 turns.
 
 | Class | Mean | SD | Runs measured |
 |---|---:|---:|---:|
-| paladin | 10.0 | 9.8 | 4,218 |
-| bloodmage | 3.6 | 1.4 | 5,000 |
-| berserker | 7.4 | 5.6 | 5,000 |
-| werewolf | 4.6 | 2.3 | 5,000 |
+| paladin | 11.9 | 10.8 | 1,676 |
+| bloodmage | 4.1 | 1.5 | 2,000 |
+| berserker | 7.9 | 5.5 | 2,000 |
+| werewolf | 5.1 | 2.4 | 2,000 |
 
 ### Matchup coverage
 
@@ -118,7 +118,7 @@ Corridor 15.0%–95.0% per pair.
 
 | Property | Result |
 |---|---|
-| Corrupted timelines | 0 of 20,000 |
+| Corrupted timelines | 0 of 8,000 |
 | State-hash divergences | 0 |
 | Replay verification | pre/post state hash recorded per event; any run reproducible from its seed alone |
 
@@ -141,11 +141,11 @@ showed only the green parts would be a brochure.
 ## Reproduction
 
 ```bash
-git checkout a40e954
+git checkout 01aec51
 npm ci
 npm test                      # unit, property, statistical, replay
 npm run test:bdd              # executable specification
-npm run cert-evidence 20000  # regenerates this file
+npm run cert-evidence 8000  # regenerates this file
 ```
 
 Every p-value above is computed on a fixed seed and is reproducible exactly. The

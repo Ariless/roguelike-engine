@@ -28,6 +28,7 @@ The roguelike is a rule engine — the same class of system as a payment process
 | **RNG statistical battery** | NIST SP 800-22 and Diehard tests reported as p-values; fault injection proves each one can go red | Determinism tests pass on a generator that rolls 1 twice as often as 6 |
 | **Return metrics** | RTP, hit frequency, max win, volatility per class, derived from the replay log | A win rate inside its corridor hides a class returning a sixth of another's |
 | **Evidence pack** | `npm run cert-evidence` → build hashes, p-values, coverage, open defects, reproduction steps | A suite convinces whoever ran it; a pack has to convince someone who was not there |
+| **Delta between builds** | `npm run delta` → win rates compared by interval overlap, p-values compared exactly | Every digit moves between runs; the question is which movement survived the sampling |
 | **BDD / Cucumber** | Natural language scenarios on the engine — no browser, no HTTP | Executable specification for rule engines |
 | **Decision tables** | Guardian: shield→stun→attack; each row = one test | Classic technique on non-classic system |
 | **Spec-compliance testing** | `ENEMY_INTENTS` checked against the decision tables; found a whole enemy that was specified and never built (BUG-14, now closed) | Every other test verifies existing code is correct; none asks whether specified behaviour exists |
@@ -45,7 +46,7 @@ The roguelike is a rule engine — the same class of system as a payment process
 
 ```bash
 npm install
-npm test                          # 489 tests — 6 seconds
+npm test                          # 495 tests — 6 seconds
 npm run test:bdd                  # 12 BDD scenarios
 npm run test:ui                   # 25 Playwright tests (debugger + game + visual regression)
 npm run simulate 16000            # Monte Carlo + balance corridors — 5 seconds
@@ -62,7 +63,8 @@ npm run semantic-mutations src/engine/statuses.ts tickStatuses   # AI upstream S
 npm run spec-to-test "Bleed deals damage equal to stacks per turn"
 npm run meta-oracle               # Test the AI judge quality
 npm run ci-summary                # AI-generated CI narrative
-npm run cert-evidence 50000       # regenerates artifacts/CERT-EVIDENCE.md
+npm run cert-evidence 50000       # evidence pack + machine-readable snapshot
+npm run delta artifacts/baseline-pre-bug14.json   # diff two snapshots
 npm run ci-report                 # HTML stability report
 npm run test:mutation             # Stryker 86.1% across 13 files — 38 minutes
 ```
@@ -90,10 +92,10 @@ docs/        DECISION-TABLES.md, TEST-PYRAMID.md
 
 ---
 
-## Test suite (526 tests across 3 runners)
+## Test suite (532 tests across 3 runners)
 
 ```
-Vitest (489 tests):
+Vitest (495 tests):
   resolution.test.ts        — applyDamage, applyHeal, death_door state machine
   statuses.test.ts          — bleed, stun, defend, vulnerable + mutation killers
   heroes/ (4 files)         — paladin, bloodmage, berserker, werewolf
@@ -137,7 +139,7 @@ Playwright (25 tests):
 
 | Job | Trigger | Runs | Blocks merge on |
 |-----|---------|------|-----------------|
-| `verify` | push, PR | typecheck, 489 vitest tests, 12 BDD scenarios | any failure |
+| `verify` | push, PR | typecheck, 495 vitest tests, 12 BDD scenarios | any failure |
 | `simulation` | push, PR | Monte Carlo 16k + stability 4k×4 | broken determinism only |
 | `ui` | push, PR | 25 Playwright tests on Chromium | any failure |
 | `mutation` | nightly, manual | Stryker across engine, runtime and telemetry | score below the configured threshold |
@@ -189,6 +191,55 @@ had carried since May while the engine had no concept of it.
 
 That is the shape of the whole exercise: a simulation is what tells you a change did nothing,
 and a diff of two runs is what tells you what it did.
+
+---
+
+## Delta — telling a change from noise
+
+One evidence pack says what a build does. After a shared mechanic changes, the question is
+what it does *differently*, and whether any of it is real. Diffing the Markdown answers
+neither: every digit moves between runs.
+
+```
+npm run cert-evidence 8000                        # snapshot the current build
+npm run delta artifacts/baseline-pre-bug14.json   # compare against an earlier one
+```
+
+Two rules decide what counts as a change.
+
+**Win rates are compared by confidence interval, not by point estimate.** If the intervals
+overlap, this sample cannot distinguish the builds, and reporting "70.5% → 70.1%, down 0.4
+points" would be presenting noise as a finding. Overlap is read conservatively: it does not
+prove the values are equal, only that the run cannot separate them.
+
+**RNG p-values are compared exactly.** Every seed in the battery is fixed, so a p-value that
+moves at all means the generator changed. There is no noise band, and a small change is
+exactly as alarming as a large one.
+
+`artifacts/DELTA-BUG14.txt` holds a real one — the engine before and after the Necromancer's
+mechanics landed:
+
+```
+  engine hash     1ba47076b96679e2 → 4631adaa7de3f7e3  CHANGED
+  corridor hash   unchanged
+
+  RNG BATTERY
+    identical — every p-value reproduced exactly, the generator is untouched
+
+    class        before    after     change   verdict                significance
+    berserker     95.7%    81.5%    -14.1pp  FAIL → INCONCLUSIVE   SIGNIFICANT
+    bloodmage     94.4%    73.1%    -21.3pp  FAIL → PASS           SIGNIFICANT
+    paladin       70.1%    57.3%    -12.8pp  PASS                  SIGNIFICANT
+    werewolf      99.2%    97.7%     -1.5pp  FAIL                  SIGNIFICANT
+```
+
+The three lines at the top are the ones that matter before reading any number below them:
+the rules changed, the acceptance bounds did not, and the generator is untouched. Without
+them a shifted win rate has no attribution — it could be a rules change, a re-tuned corridor
+or a different RNG, and the numbers look identical in all three cases.
+
+Determinism and RNG movement exit non-zero; a balance shift does not. Same split the CI
+workflow applies: a broken invariant is a defect, drifted balance is material for a decision.
 
 ---
 
@@ -504,7 +555,7 @@ The bug was in the **implementation**, not the test. fast-check found it, not co
 ```
 Implementation:    ~2,500 LOC
 
-Tests:             526  (489 vitest + 25 Playwright + 12 BDD)
+Tests:             532  (495 vitest + 25 Playwright + 12 BDD)
                    + 16,000 seeds via Monte Carlo, all 16 configurations
                    + 64,000 seeds across 8 batches via stability run
                    + 200 adversarial runs via chaos agent

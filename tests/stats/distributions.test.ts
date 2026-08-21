@@ -7,6 +7,7 @@ import {
   normalTwoSidedPValue,
   pValueUniformity,
 } from '../../src/stats/distributions'
+import { intervalsOverlap } from '../../scripts/lib/stats'
 
 // ─── Why this file exists ─────────────────────────────────────────────────────
 //
@@ -167,5 +168,45 @@ describe('pValueUniformity', () => {
 
   it('rejects an empty sample instead of returning a number', () => {
     expect(() => pValueUniformity([])).toThrow(RangeError)
+  })
+})
+
+// ─── Interval comparison ──────────────────────────────────────────────────────
+// Used by `npm run delta` to decide whether two runs can be told apart. The
+// verdict a regression report prints rests on this three-line function, which is
+// exactly the kind of code nobody re-derives while reading a report.
+
+describe('intervalsOverlap', () => {
+  it('separate intervals do not overlap', () => {
+    expect(intervalsOverlap({ low: 0.10, high: 0.20 }, { low: 0.30, high: 0.40 })).toBe(false)
+    expect(intervalsOverlap({ low: 0.30, high: 0.40 }, { low: 0.10, high: 0.20 })).toBe(false)
+  })
+
+  it('intervals that touch at a single point count as overlapping', () => {
+    // The conservative reading: a shared boundary is not evidence of difference.
+    expect(intervalsOverlap({ low: 0.10, high: 0.20 }, { low: 0.20, high: 0.30 })).toBe(true)
+  })
+
+  it('a contained interval overlaps its container', () => {
+    expect(intervalsOverlap({ low: 0.10, high: 0.50 }, { low: 0.20, high: 0.30 })).toBe(true)
+    expect(intervalsOverlap({ low: 0.20, high: 0.30 }, { low: 0.10, high: 0.50 })).toBe(true)
+  })
+
+  it('the order of arguments does not matter', () => {
+    const a = { low: 0.68, high: 0.72 }
+    const b = { low: 0.71, high: 0.75 }
+    expect(intervalsOverlap(a, b)).toBe(intervalsOverlap(b, a))
+  })
+
+  it('real case: the BUG-14 regression was distinguishable', () => {
+    // bloodmage before [93.4%, 94.7%] and after [71.4%, 74.1%] — far apart, and
+    // the delta report calls it SIGNIFICANT.
+    expect(intervalsOverlap({ low: 0.934, high: 0.947 }, { low: 0.714, high: 0.741 })).toBe(false)
+  })
+
+  it('real case: two runs of the same build are not distinguishable', () => {
+    // Same build, different sample: the intervals sit on top of each other, and
+    // calling that a change would make every re-run look like a regression.
+    expect(intervalsOverlap({ low: 0.689, high: 0.720 }, { low: 0.695, high: 0.699 })).toBe(true)
   })
 })
