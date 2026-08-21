@@ -1,6 +1,29 @@
 {
   "name": "roguelike-engine",
   "version": "0.1.0",
+  "description": "A deterministic rule engine used as a system under test: property-based testing, seeded RNG with a NIST/Diehard statistical battery, byte-perfect replay, Monte Carlo simulation with return metrics, and a certification-style evidence pack.",
+  "keywords": [
+    "testing",
+    "property-based-testing",
+    "fast-check",
+    "mutation-testing",
+    "stryker",
+    "deterministic",
+    "seeded-rng",
+    "monte-carlo",
+    "nist-sp-800-22",
+    "replay",
+    "invariants",
+    "bdd",
+    "cucumber",
+    "playwright",
+    "qa"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Ariless/roguelike-engine.git"
+  },
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",

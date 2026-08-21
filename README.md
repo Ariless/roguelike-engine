@@ -10,6 +10,44 @@ The roguelike is a rule engine — the same class of system as a payment process
 
 ---
 
+## Contents
+
+**The findings** — [Regression](#regression--what-closing-one-defect-does-to-the-numbers) ·
+[Delta](#delta--telling-a-change-from-noise) ·
+[Scale](#scale--what-changes-between-16000-runs-and-1000000) ·
+[Bug Cemetery](#bug-cemetery-bugsmd) ·
+[Testing ROI](#testing-roi)
+
+**The machinery** — [Quick start](#quick-start) ·
+[Architecture](#architecture) ·
+[Test suite](#test-suite-532-tests-across-3-runners) ·
+[CI](#ci) ·
+[RNG battery](#rng-battery--correspondence-with-published-test-suites) ·
+[Mutation testing](#mutation-testing) ·
+[Monte Carlo](#monte-carlo--chaos-agent)
+
+**The reasoning** — [Why deterministic matters](#why-deterministic-matters) ·
+[Test pyramid](#test-pyramid-for-rule-engines) ·
+[What this deliberately does NOT test](#what-this-project-intentionally-does-not-test) ·
+[Enterprise mapping](#enterprise-mapping)
+
+In a hurry? The two most useful sections are
+[Regression](#regression--what-closing-one-defect-does-to-the-numbers), where a simulation
+catches a mechanic that was implemented and unreachable, and
+[Bug Cemetery](#bug-cemetery-bugsmd), where every defect is written up with the invariant
+that would have caught it.
+
+---
+
+## The system under test
+
+| Playable combat UI | Forensic replay debugger |
+|---|---|
+| ![Combat UI](docs/screenshots/game.png) | ![Replay debugger](docs/screenshots/debugger.png) |
+| Seed 5 — a goblin escorting a necromancer, whose intent this turn is Raise. The encounter comes from the seed alone, so the screenshot is reproducible. | Any run replayed from its seed: one segment per turn, per-event hashes, and a verdict on whether every hash re-verified. |
+
+---
+
 ## What this demonstrates
 
 | Technique | Concrete scenario | Why it matters |
