@@ -25,57 +25,116 @@ test.describe('Necromancer — raise dead mechanic', () => {
   test('after goblin dies and necromancer raises, skeleton appears as 3rd panel', async ({ page }) => {
     // Seed 5 is the goblin+necro encounter (pickEncounter: keys[seed % 7]).
     //
-    // BUG-16: this test used to assert `toBeGreaterThanOrEqual(2)` while its
-    // name and its own comment talked about a third panel. Two panels exist
-    // from the start, so it passed whether or not the goblin died and whether
-    // or not a skeleton ever appeared — it asserted the starting condition and
-    // called it a result.
+    // BUG-16: this test used to assert `toBeGreaterThanOrEqual(2)` while its name
+    // talked about a third panel. Two panels exist from the start, so it passed
+    // whether or not a skeleton ever appeared.
     //
-    // Fixing the assertion exposed a second problem: the old scenario played
-    // Blood Mage and spammed Chaos Bolt, which picks targets at random and
-    // finished both enemies before the necromancer ever reached his raise turn.
-    // The scenario now targets the goblin deliberately and leaves the
-    // necromancer alive, which is the only board on which raise can fire.
+    // On timing: an earlier version drove the scenario with fixed waits and a
+    // fixed number of turns. It passed locally and failed inside the CI container
+    // twice — the machine was slower, the pauses were not, and the loop ran out
+    // of turns before the goblin died. Nothing here waits for a duration now:
+    // every step waits for the state it needs, and the whole scenario is bounded
+    // by one deadline rather than by an iteration count. A test for a
+    // deterministic engine has no business being timing-dependent.
+    // The scenario plays a full battle through the UI, so it needs more than the
+    // default per-test budget. Stated explicitly rather than left to chance.
+    test.setTimeout(90_000)
+
     await openGame(page, 5)
     await page.click('button[data-hero="paladin"]')
-    await page.waitForTimeout(150)
 
     const goblinPanel = page.locator('[id^="enemy-panel-"]').filter({ hasText: 'Goblin' }).first()
+    const goblinHp = goblinPanel.locator('.hp-text')
+    const skeletonPanel = page.locator('[id^="enemy-panel-"]').filter({ hasText: 'Skeleton' })
+    const endTurnBtn = page.locator('#endTurnBtn')
 
-    // Strike the goblin until it is archived, ending turns to refresh energy.
-    for (let turn = 0; turn < 8; turn++) {
-      const dead = await goblinPanel.evaluate(el => el.className.includes('dead')).catch(() => false)
-      if (dead) break
+    await expect(goblinHp).toBeVisible()
 
-      for (let card = 0; card < 3; card++) {
-        const strike = page.locator('.hand-card').filter({ hasText: 'Righteous Strike' }).first()
-        if (await strike.count() === 0) break
+    // The `dead` class lands on the .portrait-frame inside the panel, not on the
+    // panel itself. An earlier version of this test checked the panel, never saw
+    // the goblin die, and spun until its deadline — which read as flakiness and
+    // was in fact a wrong selector. Timing was never the problem.
+    const isArchived = () =>
+      goblinPanel
+        .locator('.portrait-frame')
+        .evaluate(el => /\bdead\b/.test(el.className))
+        .catch(() => false)
+
+    // One fingerprint of everything a turn can move: the turn counter, the log and
+    // every HP readout. Waiting on any single one of them is fragile — a turn can
+    // pass without the counter changing, or without a new log line — and that
+    // fragility is what made the earlier version flake in CI.
+    const fingerprint = () => page.evaluate(() => [
+      document.getElementById('turnDisplay')?.textContent,
+      document.getElementById('combatLog')?.textContent,
+      [...document.querySelectorAll('.hp-text')].map(e => e.textContent).join('|'),
+    ].join('§'))
+
+    /** Ends the turn and waits for the board to actually move. False if it did not. */
+    async function advanceTurn(): Promise<boolean> {
+      const before = await fingerprint()
+      await endTurnBtn.click()
+      return page
+        .waitForFunction(
+          prev => [
+            document.getElementById('turnDisplay')?.textContent,
+            document.getElementById('combatLog')?.textContent,
+            [...document.querySelectorAll('.hp-text')].map(e => e.textContent).join('|'),
+          ].join('§') !== prev,
+          before,
+          { timeout: 5000 },
+        )
+        .then(() => true)
+        .catch(() => false)
+    }
+
+    const deadline = Date.now() + 45_000
+    const outOfTime = () => Date.now() > deadline
+
+    // ── Phase 1: strike the goblin down, leaving the necromancer alive ──────
+    while (!(await isArchived()) && !outOfTime()) {
+      if (await page.locator('.overlay-gameover').isVisible()) break
+
+      const strike = page.locator('.hand-card').filter({ hasText: 'Righteous Strike' }).first()
+      if (await strike.isVisible()) {
+        const hpBefore = await goblinHp.textContent().catch(() => null)
+        if (hpBefore === null) break   // the panel is gone: the goblin is already archived
         await strike.click()
-        await page.waitForTimeout(60)
         await goblinPanel.click()
-        await page.waitForTimeout(80)
+
+        // The card landed when the target's HP changes, or when the goblin is
+        // archived and its HP text goes away. A card can also legitimately not
+        // land — with no energy left the click is a no-op — so this is a soft
+        // wait: if nothing moved, fall through and end the turn to refresh
+        // energy. Asserting here would fail the test on a normal game state.
+        const landed = await page
+          .waitForFunction(
+            ([sel, before]) => {
+              const el = document.querySelector(sel)
+              return el === null || el.textContent !== before
+            },
+            [`#${await goblinHp.evaluate(el => el.id)}`, hpBefore],
+            { timeout: 1500 },
+          )
+          .then(() => true)
+          .catch(() => false)
+
+        if (landed) continue
       }
 
-      if (await page.isVisible('.overlay-gameover')) break
-      const endTurn = page.locator('#endTurnBtn')
-      if (!(await endTurn.isEnabled())) break
-      await endTurn.click()
-      await page.waitForTimeout(150)
+      if (!(await endTurnBtn.isEnabled())) break
+      if (!(await advanceTurn())) break
     }
 
-    // With a corpse on the field the necromancer's raise row can fire. Give it
-    // the turns it needs to come around in the intent cycle.
-    for (let turn = 0; turn < 4; turn++) {
-      const skeleton = page.locator('[id^="enemy-panel-"]').filter({ hasText: 'Skeleton' })
-      if (await skeleton.count() > 0) break
-      if (await page.isVisible('.overlay-gameover')) break
-      const endTurn = page.locator('#endTurnBtn')
-      if (!(await endTurn.isEnabled())) break
-      await endTurn.click()
-      await page.waitForTimeout(200)
+    expect(await isArchived(), 'the goblin has to be archived before raise can fire').toBe(true)
+
+    // ── Phase 2: end turns until the raise row comes around the intent cycle ──
+    while ((await skeletonPanel.count()) === 0 && !outOfTime()) {
+      if (await page.locator('.overlay-gameover').isVisible()) break
+      if (!(await endTurnBtn.isEnabled())) break
+      if (!(await advanceTurn())) break
     }
 
-    const skeletonPanel = page.locator('[id^="enemy-panel-"]').filter({ hasText: 'Skeleton' })
     await expect(skeletonPanel).toHaveCount(1)
   })
 
