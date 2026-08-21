@@ -28,8 +28,11 @@ jobs:
           cache: npm
       - run: npm ci
 
+      # npm run typecheck, not a bare tsc: since 2026-08-21 there are two configs — the root one
+      # for the engine and tests/ui/tsconfig.json for the browser specs — and a bare tsc only
+      # checks the first.
       - name: Type check
-        run: npx tsc --noEmit
+        run: npm run typecheck
 
       - name: Unit, property, statistical, replay
         run: npm test

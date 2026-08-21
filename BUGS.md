@@ -662,6 +662,37 @@ the specification, and it covers the engine, not the 2,900-line UI.
 
 ---
 
+## BUG-21 — the type check guarded the engine and skipped the layer that broke ✅ CLOSED
+
+**Date:** 2026-08-21
+**Found by:** running `npx tsc --noEmit` during a documentation audit, one commit after the break
+
+**Symptom:** Seven `TS2584: Cannot find name 'document'` errors in `tests/ui/game.test.ts`. The
+type check is the first step of the `verify` job, and `simulation` and `ui` both declare
+`needs: verify` — so the whole pipeline stopped, on a commit whose 495 unit tests, 12 BDD
+scenarios and 25 Playwright tests all pass locally.
+
+**Root cause:** `tsconfig.json` set `"lib": ["ES2022"]` and included `tests/**/*`. That pairing
+was correct for one layer and wrong for the other. The engine must not see DOM types — a
+`document` in `src/` would mean the rule engine grew a browser dependency, and that should fail
+the build. But the Playwright specs assert *inside* the page through `page.evaluate()`, where
+`document` is exactly the right thing to reference. Commit `c52dfd6` added a fingerprint helper
+that reads `turnDisplay`, `combatLog` and every `.hp-text` node, and the single config had no way
+to be right about both layers at once.
+
+**Fix:** split the configs. The root one keeps `lib: ["ES2022"]` and now excludes `tests/ui/**`;
+`tests/ui/tsconfig.json` extends it with `DOM` and `DOM.Iterable`. `npm run typecheck` runs both,
+and the CI step calls the script instead of a bare `tsc` — a bare `tsc` would silently check only
+half the repository again. Verified in both directions: the suite type-checks clean, and a probe
+file with `document.title` in `src/` still fails the engine config.
+
+**Why it matters beyond the fix:** a green barrier job means "everything downstream is worth
+spending". This one was red for a reason unrelated to correctness, and the cost was not the seven
+errors — it was the three jobs that never ran, including the Monte Carlo run that is the only
+thing watching balance drift.
+
+---
+
 ## MUTATION-02 — Widening the scope: faults.ts turned out to be almost untested (2026-08-20)
 
 **Date:** 2026-08-20  

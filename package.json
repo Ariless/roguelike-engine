@@ -26,7 +26,7 @@
   },
   "type": "module",
   "scripts": {
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tests/ui/tsconfig.json",
     "test": "vitest run",
     "simulate": "tsx scripts/simulate.ts",
     "stability": "tsx scripts/stability.ts",

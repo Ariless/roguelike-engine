@@ -1,4 +1,10 @@
 {
+  // The engine and its unit suites must not see DOM types: `document` inside src/ would mean the
+  // rule engine grew a browser dependency, and that has to fail the build rather than compile.
+  // Browser-side Playwright specs need the opposite, so they carry their own config —
+  // tests/ui/tsconfig.json — and `npm run typecheck` runs both. Split on 2026-08-21, after
+  // page.evaluate() callbacks in tests/ui/game.test.ts put seven TS2584 errors into the CI barrier
+  // job and stopped every downstream job with them.
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",
@@ -7,5 +13,6 @@
     "skipLibCheck": true,
     "lib": ["ES2022"]
   },
-  "include": ["src/**/*", "tests/**/*"]
+  "include": ["src/**/*", "tests/**/*"],
+  "exclude": ["tests/ui/**/*"]
 }

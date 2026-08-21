@@ -1,0 +1,11 @@
+{
+  // Playwright specs run assertions inside the page via page.evaluate(), so they legitimately
+  // reference `document` and the rest of the DOM. The root config deliberately withholds those
+  // types from the engine; this one hands them back to the browser layer only.
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"]
+  },
+  "include": ["./**/*.ts"],
+  "exclude": []
+}
