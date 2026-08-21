@@ -408,6 +408,48 @@ Next to it, line 64: `logText?.includes('Skeleton') || logText?.includes('attemp
 
 ---
 
+## BUG-17 — the aggregation died at a million runs and worked at sixteen thousand
+
+**Date:** 2026-08-20  
+**Found by:** the first 1,000,000-seed run of `npm run simulate`
+
+**Symptom:** The simulation completed its million timelines, printed the stability
+report and the win rates, reached the return-metrics table and threw:
+
+```
+scripts/lib/economy.ts:156
+  const maxWin = Math.max(...nonEmpty.map(e => e.maxWin))
+                      ^
+RangeError: Maximum call stack size exceeded
+```
+
+**Root cause:** `Math.max(...xs)` passes every array element as a separate function
+argument. Past roughly 10⁵ arguments that exceeds the call-stack limit and throws.
+At 16,000 runs each class holds about 4,000 economies and the spread is harmless;
+at 1,000,000 it holds 250,000 and the call is impossible.
+
+**Fix:** `maxOf` / `minOf` in `scripts/lib/stats.ts`, a plain loop over the array,
+and every call site that scales with the number of runs moved onto them:
+`economy.ts` (two), `simulate.ts` (two), `trace-analysis.ts`, `stability.ts`.
+
+**Why it is worth recording.** The failure profile is the bad one: correct at every
+scale anybody tests interactively, fatal at the scale the work is actually for. It
+cannot be caught by a unit test written from the same intuition that wrote the code,
+because the intuition is not about correctness — the arithmetic was right. It is
+about a limit nobody thinks in.
+
+Two properties made it survivable rather than embarrassing: the crash was loud, and
+it happened after the determinism check rather than before it, so the million-seed
+verdict on timeline stability was already printed and valid. Had `maxOf` silently
+returned a wrong number instead of throwing, the report would have carried a plausible
+max win and nobody would have re-derived it — the BUG-13 pattern again.
+
+**Pinned by:** `tests/economy.test.ts` — aggregation over 300,000 runs and a single
+run of 200,000 turns. The sizes are chosen above the stack limit, so the test fails
+if anyone reintroduces a spread.
+
+---
+
 ## MUTATION-02 — Widening the scope: faults.ts turned out to be almost untested (2026-08-20)
 
 **Date:** 2026-08-20  

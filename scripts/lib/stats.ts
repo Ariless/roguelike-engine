@@ -92,6 +92,26 @@ export function histogram(xs: readonly number[]): Map<number, number> {
   return new Map([...result.entries()].sort((a, b) => a[0] - b[0]))
 }
 
+// ─── Extremes over large collections ─────────────────────────────────────────
+//
+// `Math.max(...xs)` passes every element as a separate argument, so it throws
+// RangeError once the array outgrows the call-stack limit — somewhere around
+// 10⁵ elements, depending on the engine. It works fine at 16,000 runs and dies
+// at 1,000,000, which is the worst possible failure profile: invisible until the
+// scale that matters. Found by the first million-seed run (BUG-17).
+
+export function maxOf(xs: readonly number[]): number {
+  let max = -Infinity
+  for (const x of xs) if (x > max) max = x
+  return max
+}
+
+export function minOf(xs: readonly number[]): number {
+  let min = Infinity
+  for (const x of xs) if (x < min) min = x
+  return min
+}
+
 // ─── Formatting ──────────────────────────────────────────────────────────────
 
 export function pct(x: number, digits = 1): string {

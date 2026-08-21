@@ -7,6 +7,7 @@
 
 import { autoPlay, configFor } from './lib/harness'
 import type { TurnSnapshot } from '../src/telemetry/types'
+import { maxOf } from './lib/stats'
 
 const RUNS = parseInt(process.argv[2] ?? '2000')
 
@@ -168,7 +169,7 @@ const winsCount = stats.turnsByOutcome.hero_wins.length
 const lossesCount = stats.turnsByOutcome.hero_loses.length
 
 if (winsCount > 0) {
-  const maxWinTurns = Math.max(...stats.turnsByOutcome.hero_wins)
+  const maxWinTurns = maxOf(stats.turnsByOutcome.hero_wins)
   console.log(`  1. Game terminates within ${maxWinTurns + 2} turns (observed max: ${maxWinTurns})`)
   console.log(`     forAll(seeds, s => simulateTurns(s) <= ${maxWinTurns + 2})\n`)
 }

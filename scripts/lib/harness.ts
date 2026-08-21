@@ -6,6 +6,7 @@
 import { createGame } from '../../src/runtime/executor'
 import { createRng, shuffle } from '../../src/runtime/rng'
 import { saveFailingRun } from '../../src/telemetry/artifacts'
+import { payoutsFrom, economyOf, combineEconomies, type EconomyStats } from './economy'
 import type { HeroClass, EnemyType } from '../../src/engine/types'
 import type { ReplayLog } from '../../src/telemetry/types'
 
@@ -98,6 +99,8 @@ export interface ClassStats {
   losses: number
   turns: number[]
   corrupted: number
+  /** Per-run economies, folded together at the end of the batch. */
+  economies: EconomyStats[]
 }
 
 export interface MatchupStats {
@@ -116,7 +119,7 @@ export interface BatchResult {
 }
 
 function emptyClassStats(): ClassStats {
-  return { wins: 0, losses: 0, turns: [], corrupted: 0 }
+  return { wins: 0, losses: 0, turns: [], corrupted: 0, economies: [] }
 }
 
 export interface BatchOptions {
@@ -175,6 +178,10 @@ export function runBatch(runs: number, baseSeed = 0, options: BatchOptions = {})
       perClass[heroClass].turns.push(finalTurn)
       matchup.turns.push(finalTurn)
     }
+
+    // Return metrics are derived from the log after the fact — the engine is
+    // untouched, so collecting them cannot affect determinism.
+    perClass[heroClass].economies.push(economyOf(payoutsFrom(log)))
 
     // A hash divergence means broken determinism, not broken balance. A separate failure class.
     if (log.snapshots.some(snap => !snap.hashValid)) {

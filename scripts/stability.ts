@@ -21,7 +21,7 @@
 
 import { runBatch, winrateOf, HERO_CLASSES } from './lib/harness'
 import {
-  mean, stdDev, wilsonInterval, marginOfError, pct,
+  mean, stdDev, wilsonInterval, marginOfError, pct, maxOf, minOf,
 } from './lib/stats'
 import { CROSS_BATCH_SPREAD_MAX } from './lib/corridors'
 import type { HeroClass } from '../src/engine/types'
@@ -89,8 +89,8 @@ let widerThanInterval = 0
 
 for (const heroClass of HERO_CLASSES) {
   const rates = batchWinrates[heroClass]
-  const lo = Math.min(...rates)
-  const hi = Math.max(...rates)
+  const lo = minOf(rates)
+  const hi = maxOf(rates)
   const spread = hi - lo
   const sd = stdDev(rates)
 

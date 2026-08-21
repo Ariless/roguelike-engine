@@ -1,0 +1,86 @@
+Monte Carlo — 1,000,000 seeds, base seed 0
+Generated 2026-08-21T09:54:01Z at commit a40e954
+Reproduce: npm run simulate 1000000
+
+Scanning timelines....................
+
+══════════════════════════════════════════════════════════════════════════════
+  TIMELINE STABILITY REPORT
+══════════════════════════════════════════════════════════════════════════════
+
+  Seeds scanned      1,000,000  (base seed 0)
+  Timelines stable   1,000,000  (100.0%)
+  Corrupted          0
+  Hash mismatches    0
+
+  WINRATE BY CLASS — corridor 45.0%–80.0%
+
+  class        winrate            95% CI          verdict   turns (mean ± sd)   p95
+  ──────────────────────────────────────────────────────────────────────────
+  paladin    ███████░░░  69.7%   [69.5%, 69.9%]   PASS      9.9 ± 9.7          39
+  bloodmage  █████████░  94.1%   [94.0%, 94.2%]   FAIL      3.6 ± 1.3          7
+  berserker  ██████████  95.4%   [95.4%, 95.5%]   FAIL      7.3 ± 5.5          19
+  werewolf   ██████████  99.2%   [99.2%, 99.3%]   FAIL      4.6 ± 2.2          9
+
+  RETURN METRICS — per unit staked (stake = one card played)
+
+  class          RTP   hit freq  max win  × stake  volatility    p95
+  ──────────────────────────────────────────────────────────────────
+  paladin       0.77      22.9%       10      5.0        2.23    7.5
+  bloodmage     5.14      81.8%       21     12.9        0.50   17.5
+  berserker     2.24      41.0%       15      7.8        0.99   12.5
+  werewolf      3.52      53.9%       33     18.5        0.86   17.5
+
+  MATCHUP MATRIX — winrate per pair, ~62,500 runs per cell
+  corridor 15.0%–95.0%, ! = outside
+
+  hero \ enemy        goblin     guardian      vampire  necromancer
+  paladin             99.7%!       19.9%        27.4%       100.0%!
+  bloodmage          100.0%!       94.6%        81.7%       100.0%!
+  berserker          100.0%!       89.1%        92.6%       100.0%!
+  werewolf           100.0%!       99.8%!       97.2%!      100.0%!
+
+  Configuration coverage: 16/16 pairs scanned
+  10 pair(s) outside corridor — see ! marks
+
+  BATTLE DURATION — corridor 3–12 turns, mean 6.2: PASS
+
+    2 turns  ▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇                         85,018  ·
+    3 turns  ▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇ 203,850
+    4 turns  ▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇  198,790
+    5 turns  ▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇               130,455
+    6 turns  ▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇                         86,824
+    7 turns  ▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇                           78,898
+    8 turns  ▇▇▇▇▇                                     24,727
+    9 turns  ▇▇▇▇▇▇▇                                   35,874
+   10 turns  ▇▇▇▇▇▇                                    28,985
+   11 turns  ▇                                          4,910
+   12 turns                                             1,360
+   13 turns  ▇▇▇                                       13,905  ·
+   14 turns  ▇                                          3,596  ·
+   15 turns                                             2,189  ·
+   16 turns  ▇▇▇                                       14,283  ·
+   17 turns  ▇                                          3,498  ·
+   18 turns                                             2,042  ·
+   19 turns  ▇▇                                         8,024  ·
+   20 turns                                             1,843  ·
+   21 turns  ▇                                          3,650  ·
+   22 turns  ▇                                          2,942  ·
+   24 turns                                             1,652  ·
+   25 turns                                             1,161  ·
+   27 turns                                             1,943  ·
+   30 turns                                             1,952  ·
+   33 turns                                             1,747  ·
+   36 turns                                             1,969  ·
+   39 turns                                             2,034  ·
+   42 turns                                             1,909  ·
+   45 turns                                             1,926  ·
+   46 turns                                             1,149  ·
+   48 turns                                             1,929  ·
+
+  p50 4   p95 16   max 49   sd 5.99
+
+──────────────────────────────────────────────────────────────────────────────
+  CLASS VERDICTS: 1 PASS / 3 FAIL / 0 INCONCLUSIVE
+  Determinism: intact. No invariant drift, no hash divergence.
+══════════════════════════════════════════════════════════════════════════════

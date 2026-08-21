@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  schedule:
+    # 03:17 UTC nightly. Off the hour on purpose: scheduled jobs cluster at :00
+    # across GitHub and get queued behind everyone else's cron.
+    - cron: '17 3 * * *'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -111,13 +115,24 @@ jobs:
           retention-days: 7
 
   # ─── Test quality ───────────────────────────────────────────────────────────
+  # Deliberately NOT run on every push. A full Stryker pass over 13 files takes
+  # around 38 minutes; feedback that arrives after the author has moved on is not
+  # feedback, and a job nobody waits for stops being a gate and becomes noise. That
+  # is the same argument this workflow already applies to the balance corridors.
+  #
+  # What it costs to move it off the push path: a score can now drift for up to a
+  # day before anyone sees it. That is acceptable because the score moves slowly —
+  # it changes when tests are added or weakened, not with every commit — while the
+  # 38-minute wait was paid on every single push.
+  #
   # The threshold lives in stryker.config.json (thresholds.break), not here: it is
   # part of the project contract rather than a build setting. Stryker returns code 1
   # by itself when the score drops below it — CI must not duplicate that number.
   mutation:
     name: Mutation score
     runs-on: ubuntu-latest
-    needs: verify
+    # Nightly, or on demand. Not on push, not on pull_request.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -136,3 +151,27 @@ jobs:
           name: mutation-report
           path: reports/mutation/
           retention-days: 14
+
+      - name: Publish score to job summary
+        if: always()
+        run: |
+          if [ -f reports/mutation/mutation.json ]; then
+            node -e "
+              const d = require('./reports/mutation/mutation.json');
+              const c = {};
+              for (const f of Object.values(d.files)) {
+                for (const m of f.mutants) c[m.status] = (c[m.status] || 0) + 1;
+              }
+              const killed = (c.Killed||0) + (c.Timeout||0);
+              const valid = killed + (c.Survived||0) + (c.NoCoverage||0);
+              console.log('## Mutation score');
+              console.log('');
+              console.log('**' + (killed/valid*100).toFixed(2) + '%** — ' + killed + ' of ' + valid + ' mutants killed');
+              console.log('');
+              console.log('| Status | Count |');
+              console.log('|---|---:|');
+              for (const [k, v] of Object.entries(c)) console.log('| ' + k + ' | ' + v + ' |');
+            " >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'Stryker produced no report — see the job log.' >> "$GITHUB_STEP_SUMMARY"
+          fi

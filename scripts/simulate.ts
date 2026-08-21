@@ -19,10 +19,11 @@ import {
   HERO_CLASSES, ENEMY_TYPES,
 } from './lib/harness'
 import {
-  mean, stdDev, percentile, wilsonInterval, verdictFor, histogram, pct, bar,
+  mean, stdDev, percentile, wilsonInterval, verdictFor, histogram, pct, bar, maxOf,
   type Verdict,
 } from './lib/stats'
 import { CLASS_WINRATE, MATCHUP_WINRATE, BATTLE_DURATION } from './lib/corridors'
+import { combineEconomies } from './lib/economy'
 
 const RUNS      = parseInt(process.argv[2] ?? '10000')
 const BASE_SEED = parseInt(process.argv[3] ?? '0')
@@ -98,6 +99,48 @@ for (const heroClass of HERO_CLASSES) {
 
 console.log()
 
+// ─── Return metrics ──────────────────────────────────────────────────────────
+//
+// What the win rate cannot say. Win rate answers "did the hero win"; this
+// answers "what came back per unit staked, and how evenly". A class can sit
+// comfortably inside the win-rate corridor while returning a third of what
+// another class returns for the same spend — same verdict, different game.
+//
+// stake = cards played in a turn, return = damage dealt that turn. See
+// scripts/lib/economy.ts for why the mapping is drawn this way.
+
+console.log('  RETURN METRICS — per unit staked (stake = one card played)')
+console.log()
+console.log(
+  '  ' + 'class'.padEnd(11) +
+  'RTP'.padStart(7) +
+  'hit freq'.padStart(11) +
+  'max win'.padStart(9) +
+  '× stake'.padStart(9) +
+  'volatility'.padStart(12) +
+  'p95'.padStart(7),
+)
+console.log('  ' + '─'.repeat(66))
+
+for (const heroClass of HERO_CLASSES) {
+  const economy = combineEconomies(batch.perClass[heroClass].economies)
+  if (economy.spins === 0) {
+    console.log(`  ${heroClass.padEnd(11)}${'no spins recorded'.padStart(55)}`)
+    continue
+  }
+  console.log(
+    '  ' + heroClass.padEnd(11) +
+    economy.rtp.toFixed(2).padStart(7) +
+    `${(economy.hitFrequency * 100).toFixed(1)}%`.padStart(11) +
+    String(economy.maxWin).padStart(9) +
+    economy.maxWinMultiple.toFixed(1).padStart(9) +
+    economy.volatility.toFixed(2).padStart(12) +
+    economy.p95.toFixed(1).padStart(7),
+  )
+}
+
+console.log()
+
 // ─── Matchup matrix ──────────────────────────────────────────────────────────
 //
 // Always printed, not only on deviation: this table is what shows
@@ -150,7 +193,7 @@ console.log(`  BATTLE DURATION — corridor ${BATTLE_DURATION.min}–${BATTLE_DU
 console.log()
 
 const dist = histogram(allTurns)
-const maxCount = Math.max(...dist.values())
+const maxCount = maxOf([...dist.values()])
 
 for (const [turns, count] of dist) {
   if (count / maxCount < 0.005) continue  // a tail thinner than half a percent is not printed
@@ -164,7 +207,7 @@ for (const [turns, count] of dist) {
 
 console.log()
 console.log(`  p50 ${percentile(allTurns, 50)}   p95 ${percentile(allTurns, 95)}   ` +
-            `max ${Math.max(...allTurns)}   sd ${stdDev(allTurns).toFixed(2)}`)
+            `max ${maxOf(allTurns)}   sd ${stdDev(allTurns).toFixed(2)}`)
 console.log()
 
 // ─── Summary ─────────────────────────────────────────────────────────────────

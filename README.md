@@ -26,6 +26,8 @@ The roguelike is a rule engine — the same class of system as a payment process
 | **Sampling-bias detection** | Hero and enemy both derived from `seed % 4` → 4 of 16 configurations ever scanned | A biased sample returns a plausible number nobody rechecks |
 | **Metric stability** | `npm run stability` → cross-batch spread + convergence as runs double | An interval narrowing toward a seed-dependent answer looks *more* trustworthy |
 | **RNG statistical battery** | NIST SP 800-22 and Diehard tests reported as p-values; fault injection proves each one can go red | Determinism tests pass on a generator that rolls 1 twice as often as 6 |
+| **Return metrics** | RTP, hit frequency, max win, volatility per class, derived from the replay log | A win rate inside its corridor hides a class returning a sixth of another's |
+| **Evidence pack** | `npm run cert-evidence` → build hashes, p-values, coverage, open defects, reproduction steps | A suite convinces whoever ran it; a pack has to convince someone who was not there |
 | **BDD / Cucumber** | Natural language scenarios on the engine — no browser, no HTTP | Executable specification for rule engines |
 | **Decision tables** | Guardian: shield→stun→attack; each row = one test | Classic technique on non-classic system |
 | **Spec-compliance testing** | `ENEMY_INTENTS` checked against the decision tables; two enemies diverge, and the gaps are pinned | Every other test verifies existing code is correct; none asks whether specified behaviour exists |
@@ -43,7 +45,7 @@ The roguelike is a rule engine — the same class of system as a payment process
 
 ```bash
 npm install
-npm test                          # 400 tests — 6 seconds
+npm test                          # 446 tests — 6 seconds
 npm run test:bdd                  # 12 BDD scenarios
 npm run test:ui                   # 25 Playwright tests (debugger + game + visual regression)
 npm run simulate 16000            # Monte Carlo + balance corridors — 5 seconds
@@ -60,6 +62,7 @@ npm run semantic-mutations src/engine/statuses.ts tickStatuses   # AI upstream S
 npm run spec-to-test "Bleed deals damage equal to stacks per turn"
 npm run meta-oracle               # Test the AI judge quality
 npm run ci-summary                # AI-generated CI narrative
+npm run cert-evidence 50000       # regenerates artifacts/CERT-EVIDENCE.md
 npm run ci-report                 # HTML stability report
 npm run test:mutation             # Stryker 86.1% across 13 files — 38 minutes
 ```
@@ -87,10 +90,10 @@ docs/        DECISION-TABLES.md, TEST-PYRAMID.md
 
 ---
 
-## Test suite (437 tests across 3 runners)
+## Test suite (483 tests across 3 runners)
 
 ```
-Vitest (400 tests):
+Vitest (446 tests):
   resolution.test.ts        — applyDamage, applyHeal, death_door state machine
   statuses.test.ts          — bleed, stun, defend, vulnerable + mutation killers
   heroes/ (4 files)         — paladin, bloodmage, berserker, werewolf
@@ -102,9 +105,12 @@ Vitest (400 tests):
   pipeline.test.ts          — 9-step Turn Pipeline
   action-resolution.test.ts — 5-step Action Resolution Pipeline
   rng.test.ts               — seeded RNG determinism
-  rng-statistical.test.ts   — distribution: chi-square uniformity, runs test,
-                              autocorrelation, integer bias, permutation fairness,
-                              seed space limits
+  rng-statistical.test.ts   — NIST SP 800-22 and Diehard as p-values; fault
+                              injection proving each test can go red
+  stats/distributions.test.ts — the p-value arithmetic itself, against published
+                              table values
+  economy.test.ts           — RTP, hit frequency, volatility from the replay log;
+                              scale regression pinned at 300,000 runs (BUG-17)
   decision-tables.test.ts   — engine intents vs docs/DECISION-TABLES.md; known gaps
                               pinned so they can be neither silently widened nor
                               silently closed
@@ -126,12 +132,12 @@ Playwright (25 tests):
 
 `.github/workflows/ci.yml` — four jobs, deliberately different in strictness.
 
-| Job | Runs | Blocks merge on |
-|-----|------|-----------------|
-| `verify` | typecheck, 400 vitest tests, 12 BDD scenarios | any failure |
-| `simulation` | Monte Carlo 16k + stability 4k×4 | broken determinism only |
-| `ui` | 25 Playwright tests on Chromium | any failure |
-| `mutation` | Stryker across engine, runtime and telemetry | score below the configured threshold |
+| Job | Trigger | Runs | Blocks merge on |
+|-----|---------|------|-----------------|
+| `verify` | push, PR | typecheck, 446 vitest tests, 12 BDD scenarios | any failure |
+| `simulation` | push, PR | Monte Carlo 16k + stability 4k×4 | broken determinism only |
+| `ui` | push, PR | 25 Playwright tests on Chromium | any failure |
+| `mutation` | nightly, manual | Stryker across engine, runtime and telemetry | score below the configured threshold |
 
 The simulation job is the interesting one. `simulate` exits non-zero when a timeline is corrupted or a
 state hash diverges, because "same seed produces the same log" is not negotiable. Balance leaving its
@@ -142,6 +148,44 @@ teaches people to ignore red. Once the enemy mechanics land, the step becomes
 
 Both reports are written to the job summary, so a run's statistics are readable without downloading
 artefacts.
+
+The mutation job runs nightly rather than on every push, and that is a trade rather than a
+concession. A full Stryker pass over 13 files takes about 38 minutes. Feedback that arrives after
+the author has moved on is not feedback, and a job nobody waits for stops being a gate and turns
+into noise — the same reasoning the balance corridors get above. What it costs: a score can drift
+for up to a day before anyone sees it. That is affordable because the score moves slowly, when
+tests are added or weakened rather than with every commit, whereas the 38-minute wait was paid on
+every single push. The score lands in the job summary, so reading it does not require downloading
+the report.
+
+---
+
+## Scale — what changes between 16,000 runs and 1,000,000
+
+`artifacts/SIMULATION-1M.txt` holds a full million-seed run. Determinism held across
+all of it: zero corrupted timelines, zero hash divergences, all 16 configurations
+scanned.
+
+The interesting part is which numbers moved and which did not.
+
+| Metric (werewolf) | 16,000 runs | 20,000 runs | 1,000,000 runs |
+|---|---:|---:|---:|
+| win rate | 99.2% | 99.2% | 99.2% |
+| RTP | 3.57 | 3.50 | 3.52 |
+| **max win** | **26** | **29** | **33** |
+| CI half-width (paladin) | ±1.4pp | ±1.4pp | ±0.2pp |
+
+Averages converged early — the win rate and the RTP were already stable at sixteen
+thousand, and a hundred times more work bought only a narrower interval. The maximum
+did not converge at all: it grew at every scale, because a maximum is not an average
+and does not settle. It is the tail, and the tail keeps producing new record values
+for as long as you keep sampling.
+
+That distinction decides how much simulation a question needs. "What does this class
+return per unit staked" is answered at sixteen thousand. "What is the largest single
+payout this build can produce" is not answered at a million either — that question
+needs an explicit cap in the rules, not a bigger sample, because sampling can only
+ever report the largest value seen so far.
 
 ---
 
@@ -428,12 +472,12 @@ The bug was in the **implementation**, not the test. fast-check found it, not co
 ```
 Implementation:    ~2,500 LOC
 
-Tests:             437  (400 vitest + 25 Playwright + 12 BDD)
+Tests:             483  (446 vitest + 25 Playwright + 12 BDD)
                    + 16,000 seeds via Monte Carlo, all 16 configurations
                    + 64,000 seeds across 8 batches via stability run
                    + 200 adversarial runs via chaos agent
 
-Real defects:      16  (see BUGS.md — each with root cause and fix)
+Real defects:      17  (see BUGS.md — each with root cause and fix)
                    BUG-13…16 came from the simulation and the RNG battery,
                    not from the unit suite: a biased sample, an enemy that was
                    never implemented, a silently truncated seed, and a UI test
