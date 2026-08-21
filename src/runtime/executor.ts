@@ -10,7 +10,7 @@ import { playRighteousStrike, playStubbornRecovery, playDivineCharge } from '../
 import { playOpenTheWound, playBloodrite, playChaosBolt } from '../engine/heroes/bloodmage'
 import { playSavageLunge, playPrimalFury, playPrimalDodge } from '../engine/heroes/berserker'
 import { playLunarStrike, playPackSense, playStalk, playRend, playRampage, playRealityCrack } from '../engine/heroes/werewolf'
-import type { GameState, HeroClass, EnemyType, Intent } from '../engine/types'
+import type { GameState, HeroClass, EnemyType, Intent, Enemy } from '../engine/types'
 import type { ReplayEvent, ReplayLog } from '../telemetry/types'
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -41,7 +41,9 @@ export const ENEMY_INTENTS: Record<EnemyType, Intent[]> = {
   goblin:      [{ type: 'attack', value: 6 }, { type: 'attack', value: 6 }, { type: 'attack', value: 6 }],
   guardian:    [{ type: 'defend' },           { type: 'stun' },             { type: 'attack', value: 10 }],
   vampire:     [{ type: 'attack', value: 6, lifesteal: true }, { type: 'bleed', value: 2 },  { type: 'attack', value: 12 }],
-  necromancer: [{ type: 'bleed', value: 3 },  { type: 'bleed', value: 3 },  { type: 'bleed', value: 3 }],
+  necromancer: [{ type: 'bleed', value: 3 },  { type: 'raise' },            { type: 'empower', value: 3 }],
+  // A skeleton never cycles a table: it is spawned with its intent already set.
+  skeleton:    [{ type: 'attack', value: 4 }],
 }
 
 const ENEMY_STATS: Record<EnemyType, { name: string; hp: number }> = {
@@ -49,6 +51,51 @@ const ENEMY_STATS: Record<EnemyType, { name: string; hp: number }> = {
   guardian:    { name: 'Guardian',    hp: 35 },
   vampire:     { name: 'Vampire',     hp: 30 },
   necromancer: { name: 'Necromancer', hp: 25 },
+  // Not an encounter type: a skeleton only ever enters play through Raise Dead.
+  skeleton:    { name: 'Skeleton',    hp: 8 },
+}
+
+/** A skeleton's only move. Held here so the spawn site has nothing to invent. */
+const SKELETON_INTENT: Intent = { type: 'attack', value: 4 }
+
+// ─── Conditional intents ──────────────────────────────────────────────────────
+//
+// Until BUG-14 the intent was `intents[turn % length]` — a pure function of the
+// turn number, blind to the board. That is why two rows of the Necromancer's
+// decision table were unimplementable rather than merely unimplemented: "raise
+// if an ally corpse is present" cannot be expressed by a lookup that never sees
+// the board.
+//
+// The table stays the declaration of what an enemy does; this function resolves
+// the rows that carry a condition. Enemies without conditional rows fall
+// straight through and behave exactly as before.
+export function resolveIntent(
+  enemyType: EnemyType,
+  turnIndex: number,
+  state: GameState,
+): Intent {
+  const intents = ENEMY_INTENTS[enemyType]
+  const intent = intents[turnIndex % intents.length]
+
+  if (intent.type === 'raise') {
+    // DECISION-TABLES.md:78-79 — a corpse that has not been raised before, else Wither.
+    return hasRaisableCorpse(state) ? intent : { type: 'bleed', value: 3 }
+  }
+
+  if (intent.type === 'empower') {
+    // DECISION-TABLES.md:80 — a living skeleton to empower, else Wither.
+    return hasLivingSkeleton(state) ? intent : { type: 'bleed', value: 3 }
+  }
+
+  return intent
+}
+
+function hasRaisableCorpse(state: GameState): boolean {
+  return state.enemies.some(e => e.state === 'dead' && e.raisedOnce !== true)
+}
+
+function hasLivingSkeleton(state: GameState): boolean {
+  return state.enemies.some(e => e.enemyType === 'skeleton' && e.state !== 'dead')
 }
 
 // ─── Hero stat tables ─────────────────────────────────────────────────────────
@@ -81,18 +128,44 @@ function makeInitialState(config: GameConfig): GameState {
       ...(config.heroClass === 'berserker' ? { rageStacks: 0 }   : {}),
       ...(config.heroClass === 'werewolf'  ? { werewolfTurnsLeft: 0 } : {}),
     },
-    enemies: [{
-      id: 'enemy',
-      name: e.name,
-      hp: e.hp, maxHp: e.hp,
+    enemies: makeEncounter(config.enemyType),
+    isOver: false,
+  }
+}
+
+// ─── Encounters ───────────────────────────────────────────────────────────────
+//
+// Until BUG-14 every encounter was exactly one enemy. That was invisible as a
+// limitation until Raise Dead landed: the Necromancer raises *ally* corpses, and
+// with no ally there is never a corpse, so the mechanic was implemented and
+// unreachable at the same time. The simulation reported no change at all —
+// correct code, zero effect.
+//
+// game/index.html has carried a `goblin+necro` encounter since May
+// (ENCOUNTER_DEFS, line 1676). The engine simply never had the concept. This
+// brings the engine in line with the definition the UI was already using.
+function makeEncounter(enemyType: EnemyType): Enemy[] {
+  const spawn = (type: EnemyType, id: string): Enemy => {
+    const stats = ENEMY_STATS[type]
+    return {
+      id,
+      name: stats.name,
+      hp: stats.hp, maxHp: stats.hp,
       state: 'alive',
       statuses: [],
       row: 'front',
-      enemyType: config.enemyType,
-      intent: ENEMY_INTENTS[config.enemyType][0],
-    }],
-    isOver: false,
+      enemyType: type,
+      intent: ENEMY_INTENTS[type][0],
+    }
   }
+
+  // The Necromancer is "The Accumulator": his table is built around a body to
+  // raise. Alone he is a bleed dispenser, which is exactly what BUG-14 measured.
+  if (enemyType === 'necromancer') {
+    return [spawn('goblin', 'e0'), spawn('necromancer', 'e1')]
+  }
+
+  return [spawn(enemyType, 'enemy')]
 }
 
 // ─── Card energy costs ────────────────────────────────────────────────────────
@@ -175,12 +248,32 @@ function dispatchCard(
 }
 
 // ─── Enemy intent execution ───────────────────────────────────────────────────
-function executeIntent(state: GameState, intent: Intent): GameState {
+// Exported for tests/necromancer.test.ts: choosing an intent and executing it are
+// separate failures, and the execution side needs to be checked on a board built
+// by hand rather than only through whole battles.
+export function executeIntent(state: GameState, intent: Intent, actorId?: string): GameState {
   const heroId = state.hero.id
+  // Which enemy is acting. Defaults to the first for every caller written before
+  // more than one enemy could act in a turn.
+  const actor = actorId ?? state.enemies[0]?.id
+
   switch (intent.type) {
     case 'attack': {
       const heroBefore = state.hero.hp
-      let s = applyDamage(state, heroId, intent.value)
+      const acting = state.enemies.find(e => e.id === actor)
+      // Empower is spent on the next attack whether or not it lands: the bonus
+      // was granted a turn earlier, and holding it until a hit would let a
+      // skeleton bank empowerments across turns.
+      const bonus = acting?.empowered ?? 0
+      let s = applyDamage(state, heroId, intent.value + bonus)
+
+      if (bonus > 0) {
+        s = {
+          ...s,
+          enemies: s.enemies.map(e => (e.id === actor ? { ...e, empowered: 0 } : e)),
+        }
+      }
+
       // Lifesteal: heals attacker for actual damage dealt (post-defend), capped at missing HP
       if (intent.lifesteal) {
         const actualDmg = heroBefore - s.hero.hp  // real HP lost after defend absorption
@@ -188,7 +281,7 @@ function executeIntent(state: GameState, intent: Intent): GameState {
           s = {
             ...s,
             enemies: s.enemies.map(e =>
-              e.id === state.enemies[0]?.id
+              e.id === actor
                 ? { ...e, hp: Math.min(e.maxHp, e.hp + Math.min(actualDmg, e.maxHp - e.hp)) }
                 : e
             ),
@@ -200,9 +293,53 @@ function executeIntent(state: GameState, intent: Intent): GameState {
     case 'bleed':
       return addStatus(state, heroId, { name: 'bleed', stacks: intent.value })
     case 'defend':
-      return addStatus(state, state.enemies[0].id, { name: 'defend', stacks: 8 })
+      return addStatus(state, actor!, { name: 'defend', stacks: 8 })
     case 'stun':
       return addStatus(state, heroId, { name: 'stun', stacks: 1 })
+
+    case 'raise': {
+      // The corpse is consumed, not merely read: raisedOnce is what stops one
+      // body from supplying skeletons forever.
+      const corpse = state.enemies.find(e => e.state === 'dead' && e.raisedOnce !== true)
+      if (!corpse) return state  // graceful no-op — DECISIONS.md:335
+
+      // A deterministic id. The UI builds this as `skeleton-${Date.now()}`,
+      // which breaks "same seed, same log" in the game layer; the engine cannot
+      // afford that, so the id counts skeletons ever raised in this battle.
+      const raisedSoFar = state.enemies.filter(e => e.enemyType === 'skeleton').length
+      const skeleton: Enemy = {
+        id: `skeleton-${raisedSoFar + 1}`,
+        name: ENEMY_STATS.skeleton.name,
+        hp: ENEMY_STATS.skeleton.hp,
+        maxHp: ENEMY_STATS.skeleton.hp,
+        state: 'alive',
+        statuses: [],
+        row: 'front',
+        enemyType: 'skeleton',
+        intent: SKELETON_INTENT,
+      }
+
+      return {
+        ...state,
+        enemies: [
+          ...state.enemies.map(e => (e.id === corpse.id ? { ...e, raisedOnce: true } : e)),
+          skeleton,
+        ],
+      }
+    }
+
+    case 'empower': {
+      const skeleton = state.enemies.find(e => e.enemyType === 'skeleton' && e.state !== 'dead')
+      if (!skeleton) return state  // graceful no-op
+
+      return {
+        ...state,
+        enemies: state.enemies.map(e =>
+          e.id === skeleton.id ? { ...e, empowered: (e.empowered ?? 0) + intent.value } : e
+        ),
+      }
+    }
+
     default:
       return state
   }
@@ -345,35 +482,56 @@ export function createGame(config: GameConfig): GameHandle {
         }
       }
 
-      // Step 5: enemy acts (unless stunned + ignoreStun=false)
-      if (state.enemies[0]?.state !== 'dead') {
-        const enemy = state.enemies[0]
-        const isStunned = enemy.statuses.some(s => s.name === 'stun')
+      // Step 5: enemies act (unless stunned + ignoreStun=false)
+      //
+      // Iterates over a snapshot of the ids taken before the loop. Raise Dead
+      // appends a skeleton mid-step, and a skeleton must not act on the turn it
+      // was raised — iterating the live array would let it attack immediately,
+      // which is neither in the decision table nor survivable for the hero.
+      {
+        const actingIds = state.enemies.filter(e => e.state !== 'dead').map(e => e.id)
 
-        if (!isStunned || faults.ignoreStun) {
-          const intents = ENEMY_INTENTS[config.enemyType]
-          const intent = intents[intentIndex % intents.length]
-          const pre = state
-          state = executeIntent(state, intent)
-          state = checkWin(state, faults)
-          record('enemy_action', pre, state, { targetId: 'hero' })
-          if (state.isOver) {
-            log.outcome = 'hero_loses'
-            record('turn_end', turnEndPre, state)
-            recordSnapshot(state)
-            record('game_over', state, state)
-            return state
+        for (const actorId of actingIds) {
+          const enemy = state.enemies.find(e => e.id === actorId)
+          // The hero may have killed it earlier in this same step, and a
+          // skeleton's own attack can end the battle.
+          if (!enemy || enemy.state === 'dead' || state.isOver) continue
+
+          const isStunned = enemy.statuses.some(s => s.name === 'stun')
+
+          if (!isStunned || faults.ignoreStun) {
+            // A skeleton carries its intent; every other enemy cycles its table,
+            // resolved against the board so conditional rows can fire.
+            // Resolved against the acting enemy's own type, not the encounter's
+            // headline type. With an escort on the field those differ, and using
+            // the config type would have a goblin performing necromancy.
+            const intent = enemy.enemyType === 'skeleton'
+              ? enemy.intent
+              : resolveIntent(enemy.enemyType, intentIndex, state)
+
+            const pre = state
+            state = executeIntent(state, intent, actorId)
+            state = checkWin(state, faults)
+            record('enemy_action', pre, state, { targetId: 'hero' })
+            if (state.isOver) {
+              log.outcome = 'hero_loses'
+              record('turn_end', turnEndPre, state)
+              recordSnapshot(state)
+              record('game_over', state, state)
+              return state
+            }
           }
-        }
 
-        // Clear stun after skip
-        if (isStunned && !faults.ignoreStun) {
-          state = {
-            ...state,
-            enemies: state.enemies.map(e => ({
-              ...e,
-              statuses: e.statuses.filter(s => s.name !== 'stun'),
-            })),
+          // Clear stun after skip
+          if (isStunned && !faults.ignoreStun) {
+            state = {
+              ...state,
+              enemies: state.enemies.map(e =>
+                e.id === actorId
+                  ? { ...e, statuses: e.statuses.filter(s => s.name !== 'stun') }
+                  : e
+              ),
+            }
           }
         }
       }

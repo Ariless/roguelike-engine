@@ -15,6 +15,12 @@ export type Intent =
   | { type: 'bleed';  value: number }
   | { type: 'defend' }
   | { type: 'stun' }
+  // Raise Dead: spawns a skeleton from an ally corpse that has not been raised
+  // before. Declared in docs/DECISION-TABLES.md since May; existed only in the
+  // UI until BUG-14 was closed.
+  | { type: 'raise' }
+  // Empower: adds to the next attack of an allied skeleton.
+  | { type: 'empower'; value: number }
 
 // ─── Entities ─────────────────────────────────────────────────────────────────
 
@@ -55,11 +61,22 @@ export interface Hero extends Entity {
   werewolfTurnsLeft?: number // Berserker only; 0 = not in werewolf form
 }
 
-export type EnemyType = 'goblin' | 'guardian' | 'vampire' | 'necromancer'
+export type EnemyType = 'goblin' | 'guardian' | 'vampire' | 'necromancer' | 'skeleton'
 
 export interface Enemy extends Entity {
   enemyType: EnemyType
   intent: Intent       // what it will do this turn
+  /**
+   * Bonus damage added to this entity's next attack, then consumed.
+   * Set by the Necromancer's Empower.
+   */
+  empowered?: number
+  /**
+   * True once this corpse has been used by Raise Dead. Prevents an endless
+   * skeleton supply from a single body — the rule DECISIONS.md:335 calls a
+   * "graceful no-op" when there is nothing left to raise.
+   */
+  raisedOnce?: boolean
 }
 
 // ─── Game state ───────────────────────────────────────────────────────────────

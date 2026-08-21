@@ -30,7 +30,7 @@ The roguelike is a rule engine — the same class of system as a payment process
 | **Evidence pack** | `npm run cert-evidence` → build hashes, p-values, coverage, open defects, reproduction steps | A suite convinces whoever ran it; a pack has to convince someone who was not there |
 | **BDD / Cucumber** | Natural language scenarios on the engine — no browser, no HTTP | Executable specification for rule engines |
 | **Decision tables** | Guardian: shield→stun→attack; each row = one test | Classic technique on non-classic system |
-| **Spec-compliance testing** | `ENEMY_INTENTS` checked against the decision tables; two enemies diverge, and the gaps are pinned | Every other test verifies existing code is correct; none asks whether specified behaviour exists |
+| **Spec-compliance testing** | `ENEMY_INTENTS` checked against the decision tables; found a whole enemy that was specified and never built (BUG-14, now closed) | Every other test verifies existing code is correct; none asks whether specified behaviour exists |
 | **AI chaos agent** | Adversarial play; 50/200 interesting timelines found automatically | LLM-guided stress testing |
 | **Pairwise testing** | 4×4×3=48 → 16 tests (67% reduction); all 2-way pairs covered | Multi-parameter combinatorial reduction |
 | **Visual regression** | Playwright screenshots vs baseline; catches rendering regressions | Orthogonal to replay — different bug class |
@@ -45,7 +45,7 @@ The roguelike is a rule engine — the same class of system as a payment process
 
 ```bash
 npm install
-npm test                          # 446 tests — 6 seconds
+npm test                          # 467 tests — 6 seconds
 npm run test:bdd                  # 12 BDD scenarios
 npm run test:ui                   # 25 Playwright tests (debugger + game + visual regression)
 npm run simulate 16000            # Monte Carlo + balance corridors — 5 seconds
@@ -90,10 +90,10 @@ docs/        DECISION-TABLES.md, TEST-PYRAMID.md
 
 ---
 
-## Test suite (483 tests across 3 runners)
+## Test suite (504 tests across 3 runners)
 
 ```
-Vitest (446 tests):
+Vitest (467 tests):
   resolution.test.ts        — applyDamage, applyHeal, death_door state machine
   statuses.test.ts          — bleed, stun, defend, vulnerable + mutation killers
   heroes/ (4 files)         — paladin, bloodmage, berserker, werewolf
@@ -109,6 +109,9 @@ Vitest (446 tests):
                               injection proving each test can go red
   stats/distributions.test.ts — the p-value arithmetic itself, against published
                               table values
+  necromancer.test.ts       — Raise Dead and Empower: spawn, corpse consumption,
+                              deterministic ids, replay with entities spawning
+                              mid-battle (BUG-14)
   economy.test.ts           — RTP, hit frequency, volatility from the replay log;
                               scale regression pinned at 300,000 runs (BUG-17)
   decision-tables.test.ts   — engine intents vs docs/DECISION-TABLES.md; known gaps
@@ -134,7 +137,7 @@ Playwright (25 tests):
 
 | Job | Trigger | Runs | Blocks merge on |
 |-----|---------|------|-----------------|
-| `verify` | push, PR | typecheck, 446 vitest tests, 12 BDD scenarios | any failure |
+| `verify` | push, PR | typecheck, 467 vitest tests, 12 BDD scenarios | any failure |
 | `simulation` | push, PR | Monte Carlo 16k + stability 4k×4 | broken determinism only |
 | `ui` | push, PR | 25 Playwright tests on Chromium | any failure |
 | `mutation` | nightly, manual | Stryker across engine, runtime and telemetry | score below the configured threshold |
@@ -157,6 +160,35 @@ for up to a day before anyone sees it. That is affordable because the score move
 tests are added or weakened rather than with every commit, whereas the 38-minute wait was paid on
 every single push. The score lands in the job summary, so reading it does not require downloading
 the report.
+
+---
+
+## Regression — what closing one defect does to the numbers
+
+`artifacts/REGRESSION-BUG14.txt` holds a before/after pair at 16,000 seeds each, taken when
+the Necromancer's Raise Dead and Empower finally reached the engine (BUG-14).
+
+| Class | Before | After | Verdict |
+|---|---:|---:|---|
+| paladin | 70.5% | 58.1% | PASS → PASS |
+| bloodmage | 94.1% | 72.8% | FAIL → **PASS** |
+| berserker | 95.3% | 81.1% | FAIL → INCONCLUSIVE |
+| werewolf | 99.2% | 97.8% | FAIL → FAIL |
+
+The Necromancer column went from `100% / 100% / 100% / 100%` to `58.3% / 14.8% / 42.9% /
+94.2%`. The Blood Mage now loses to him 85 times in 100 — from the most harmless enemy in the
+game to the hardest matchup one class has. Pairs outside their corridor fell from 10 to 6.
+
+**The step that made the difference was not the mechanic.** The first regression run after
+implementing raise and empower showed *no change at all* — every figure identical. The
+Necromancer raises the corpses of allies, and the engine had always built encounters of
+exactly one enemy: with no ally there is never a corpse, so both conditional rows fell
+through to their fallback forever. The code was correct, complete and unreachable. What
+turned it into a working mechanic was giving him an escort — a definition `game/index.html`
+had carried since May while the engine had no concept of it.
+
+That is the shape of the whole exercise: a simulation is what tells you a change did nothing,
+and a diff of two runs is what tells you what it did.
 
 ---
 
@@ -472,12 +504,12 @@ The bug was in the **implementation**, not the test. fast-check found it, not co
 ```
 Implementation:    ~2,500 LOC
 
-Tests:             483  (446 vitest + 25 Playwright + 12 BDD)
+Tests:             504  (467 vitest + 25 Playwright + 12 BDD)
                    + 16,000 seeds via Monte Carlo, all 16 configurations
                    + 64,000 seeds across 8 batches via stability run
                    + 200 adversarial runs via chaos agent
 
-Real defects:      17  (see BUGS.md — each with root cause and fix)
+Real defects:      17  (see BUGS.md — 15 closed, 1 open, each with root cause and fix)
                    BUG-13…16 came from the simulation and the RNG battery,
                    not from the unit suite: a biased sample, an enemy that was
                    never implemented, a silently truncated seed, and a UI test

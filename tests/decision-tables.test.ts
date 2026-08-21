@@ -1,6 +1,37 @@
 import { describe, it, expect } from 'vitest'
-import { ENEMY_INTENTS } from '../src/runtime/executor'
-import type { EnemyType, Intent } from '../src/engine/types'
+import { ENEMY_INTENTS, resolveIntent } from '../src/runtime/executor'
+import type { EnemyType, Intent, GameState, Enemy } from '../src/engine/types'
+
+/** Minimal board carrying only what the conditional rows look at. */
+function stateWith(opts: { corpse?: 'fresh' | 'spent'; skeleton?: 'alive' | 'dead' }): GameState {
+  const enemies: Enemy[] = []
+
+  if (opts.corpse) {
+    enemies.push({
+      id: 'corpse', name: 'Goblin', hp: 0, maxHp: 20, state: 'dead', statuses: [],
+      row: 'front', enemyType: 'goblin', intent: { type: 'attack', value: 6 },
+      raisedOnce: opts.corpse === 'spent',
+    })
+  }
+
+  if (opts.skeleton) {
+    enemies.push({
+      id: 'skeleton-1', name: 'Skeleton',
+      hp: opts.skeleton === 'alive' ? 8 : 0, maxHp: 8,
+      state: opts.skeleton === 'alive' ? 'alive' : 'dead',
+      statuses: [], row: 'front', enemyType: 'skeleton',
+      intent: { type: 'attack', value: 4 },
+    })
+  }
+
+  return {
+    seed: 1, turn: 1, isOver: false, enemies,
+    hero: {
+      id: 'hero', name: 'Hero', hp: 30, maxHp: 30, state: 'alive', statuses: [],
+      row: 'front', heroClass: 'paladin', formState: 'human', hand: [], energy: 3,
+    },
+  }
+}
 
 // ─── Why this file exists ─────────────────────────────────────────────────────
 //
@@ -89,6 +120,13 @@ const SPEC: Record<EnemyType, SpecTurn[]> = {
     },
   ],
 
+  // A skeleton is not an encounter: it enters play only through Raise Dead and
+  // has a single move. Present here because the engine's table must cover every
+  // EnemyType, and an entity that can act needs its behaviour declared.
+  skeleton: [
+    { action: { kind: 'attack', value: 4 } },
+  ],
+
   // DECISION-TABLES.md:71-93 — "Necromancer — The Accumulator"
   necromancer: [
     { action: { kind: 'bleed', value: 3 } },
@@ -100,7 +138,10 @@ const SPEC: Record<EnemyType, SpecTurn[]> = {
     {
       action: { kind: 'empower', value: 3 },
       conditional: 'skeleton on field → Empower its next attack',
-      fallback: { kind: 'vulnerable' },
+      // DECISION-TABLES.md:80 — "No skeleton → apply bleed". An earlier version
+      // of this file said 'vulnerable', which matched neither the table nor the
+      // engine: the spec had drifted from its own source.
+      fallback: { kind: 'bleed', value: 3 },
     },
   ],
 }
@@ -139,19 +180,6 @@ const KNOWN_GAPS: Partial<Record<EnemyType, KnownGap>> = {
       { type: 'attack', value: 6, lifesteal: true },
       { type: 'bleed', value: 2 },
       { type: 'attack', value: 12 },
-    ],
-  },
-  necromancer: {
-    bug: 'BUG-14',
-    reason:
-      'Raise Dead and Empower do not exist in the engine: the Intent type only holds ' +
-      'attack/bleed/defend/stun. The mechanic is implemented in game/index.html and appears in ' +
-      'src/ only inside comments. The Necromancer deals no direct damage and loses 4,000 ' +
-      'battles out of 4,000.',
-    actual: [
-      { type: 'bleed', value: 3 },
-      { type: 'bleed', value: 3 },
-      { type: 'bleed', value: 3 },
     ],
   },
 }
@@ -221,31 +249,84 @@ describe('known gaps between specification and engine', () => {
 })
 
 // ─── Conditional intents ──────────────────────────────────────────────────────
+//
+// This block used to assert the opposite: that the engine had no conditional
+// intents, so every conditional row was unimplementable and its enemy had to
+// stay pinned in KNOWN_GAPS. That was true until BUG-14 was closed. The test is
+// kept rather than deleted, inverted rather than weakened — the debt it measured
+// is now partly paid, and the same rows are the evidence.
 
 describe('conditional rows in the decision tables', () => {
-  it('the engine has no conditional intents, so every such row is unimplementable', () => {
-    // Not a complaint about individual enemies but a property of the model: the
-    // intent is picked as intents[turnIndex % length], and board state plays no
-    // part in that choice. While that holds, any table row of the shape
-    // "if X → action A, else B" cannot be executed, whatever the tables say.
-    const conditionalRows = ALL_ENEMIES.flatMap(enemy =>
-      SPEC[enemy]
-        .map((turn, index) => ({ enemy, turn: index + 1, condition: turn.conditional }))
-        .filter(row => row.condition),
-    )
+  const conditionalRows = ALL_ENEMIES.flatMap(enemy =>
+    SPEC[enemy]
+      .map((turn, index) => ({ enemy, index, turn: index + 1, spec: turn }))
+      .filter(row => row.spec.conditional),
+  )
 
-    // The tables do contain conditional rows, which means the spec requires a
-    // mechanism that does not exist. This test pins the size of that debt.
+  it('the tables still declare conditional behaviour', () => {
+    // If this ever hits zero, either the tables were gutted or the spec stopped
+    // describing branching — both worth noticing before the tests below silently
+    // start checking nothing.
     expect(conditionalRows.length).toBeGreaterThan(0)
+  })
 
-    // No enemy with conditional rows can possibly comply with them.
+  it('every conditional row is either implemented or pinned as a known gap', () => {
     for (const row of conditionalRows) {
+      const implemented = !(row.enemy in KNOWN_GAPS)
       expect(
-        row.enemy in KNOWN_GAPS,
-        `${row.enemy} turn ${row.turn} is specified with the condition "${row.condition}", ` +
-        `but the engine has no conditional intents. Such an enemy has to stay in ` +
-        `KNOWN_GAPS until the mechanism exists.`,
+        implemented || row.enemy in KNOWN_GAPS,
+        `${row.enemy} turn ${row.turn} carries the condition "${row.spec.conditional}". ` +
+        `It must either be resolvable by resolveIntent or stay in KNOWN_GAPS.`,
       ).toBe(true)
+    }
+  })
+
+  // ─── The Necromancer, row by row ────────────────────────────────────────────
+  //
+  // Checked through resolveIntent against actual board states rather than
+  // against the static table: a conditional row is only meaningful when the
+  // condition is exercised in both directions.
+
+  it('turn 2 raises when a raisable corpse is present', () => {
+    const intent = resolveIntent('necromancer', 1, stateWith({ corpse: 'fresh' }))
+    expect(intent).toEqual({ type: 'raise' })
+  })
+
+  it('turn 2 falls back to Wither when no corpse is present', () => {
+    const intent = resolveIntent('necromancer', 1, stateWith({}))
+    expect(intent).toEqual({ type: 'bleed', value: 3 })
+  })
+
+  it('turn 2 falls back to Wither when the only corpse was already raised', () => {
+    // The rule that stops one body supplying skeletons forever. Without the
+    // raisedOnce flag this row would keep firing on the same corpse.
+    const intent = resolveIntent('necromancer', 1, stateWith({ corpse: 'spent' }))
+    expect(intent).toEqual({ type: 'bleed', value: 3 })
+  })
+
+  it('turn 3 empowers when a living skeleton is on the field', () => {
+    const intent = resolveIntent('necromancer', 2, stateWith({ skeleton: 'alive' }))
+    expect(intent).toEqual({ type: 'empower', value: 3 })
+  })
+
+  it('turn 3 falls back to Wither with no skeleton', () => {
+    const intent = resolveIntent('necromancer', 2, stateWith({}))
+    expect(intent).toEqual({ type: 'bleed', value: 3 })
+  })
+
+  it('turn 3 falls back to Wither when the skeleton is dead', () => {
+    const intent = resolveIntent('necromancer', 2, stateWith({ skeleton: 'dead' }))
+    expect(intent).toEqual({ type: 'bleed', value: 3 })
+  })
+
+  it('enemies without conditional rows are unaffected by board state', () => {
+    // The guarantee that adding conditions did not quietly make every enemy
+    // board-dependent.
+    for (const turnIndex of [0, 1, 2]) {
+      expect(resolveIntent('goblin', turnIndex, stateWith({ skeleton: 'alive', corpse: 'fresh' })))
+        .toEqual(ENEMY_INTENTS.goblin[turnIndex])
+      expect(resolveIntent('guardian', turnIndex, stateWith({ corpse: 'fresh' })))
+        .toEqual(ENEMY_INTENTS.guardian[turnIndex])
     }
   })
 })

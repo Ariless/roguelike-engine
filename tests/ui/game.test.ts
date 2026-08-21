@@ -23,32 +23,60 @@ test.describe('Necromancer — raise dead mechanic', () => {
   })
 
   test('after goblin dies and necromancer raises, skeleton appears as 3rd panel', async ({ page }) => {
+    // Seed 5 is the goblin+necro encounter (pickEncounter: keys[seed % 7]).
+    //
+    // BUG-16: this test used to assert `toBeGreaterThanOrEqual(2)` while its
+    // name and its own comment talked about a third panel. Two panels exist
+    // from the start, so it passed whether or not the goblin died and whether
+    // or not a skeleton ever appeared — it asserted the starting condition and
+    // called it a result.
+    //
+    // Fixing the assertion exposed a second problem: the old scenario played
+    // Blood Mage and spammed Chaos Bolt, which picks targets at random and
+    // finished both enemies before the necromancer ever reached his raise turn.
+    // The scenario now targets the goblin deliberately and leaves the
+    // necromancer alive, which is the only board on which raise can fire.
     await openGame(page, 5)
+    await page.click('button[data-hero="paladin"]')
+    await page.waitForTimeout(150)
 
-    // Kill the goblin (e0) by playing damage cards
-    // Select Blood Mage which has chaos_bolt
-    await page.click('button[data-hero="bloodmage"]')
-    await page.waitForTimeout(100)
+    const goblinPanel = page.locator('[id^="enemy-panel-"]').filter({ hasText: 'Goblin' }).first()
 
-    // Play chaos_bolt repeatedly to kill goblin
-    for (let i = 0; i < 6; i++) {
-      const boltCard = page.locator('.hand-card').filter({ hasText: 'Chaos Bolt' })
-      if (await boltCard.count() > 0) {
-        await boltCard.first().click()
-        await page.waitForTimeout(100)
+    // Strike the goblin until it is archived, ending turns to refresh energy.
+    for (let turn = 0; turn < 8; turn++) {
+      const dead = await goblinPanel.evaluate(el => el.className.includes('dead')).catch(() => false)
+      if (dead) break
+
+      for (let card = 0; card < 3; card++) {
+        const strike = page.locator('.hand-card').filter({ hasText: 'Righteous Strike' }).first()
+        if (await strike.count() === 0) break
+        await strike.click()
+        await page.waitForTimeout(60)
+        await goblinPanel.click()
+        await page.waitForTimeout(80)
       }
-      if (i % 2 === 1) {
-        await page.click('#endTurnBtn')
-        await page.waitForTimeout(200)
-      }
+
       if (await page.isVisible('.overlay-gameover')) break
+      const endTurn = page.locator('#endTurnBtn')
+      if (!(await endTurn.isEnabled())) break
+      await endTurn.click()
+      await page.waitForTimeout(150)
     }
 
-    // Check if skeleton panel appeared
-    const panels = page.locator('[id^="enemy-panel-"]')
-    const count = await panels.count()
-    // If goblin is dead and necromancer raised it, we should have 3 panels total (goblin archived + necromancer + skeleton)
-    expect(count).toBeGreaterThanOrEqual(2)
+    // With a corpse on the field the necromancer's raise row can fire. Give it
+    // the turns it needs to come around in the intent cycle.
+    for (let turn = 0; turn < 4; turn++) {
+      const skeleton = page.locator('[id^="enemy-panel-"]').filter({ hasText: 'Skeleton' })
+      if (await skeleton.count() > 0) break
+      if (await page.isVisible('.overlay-gameover')) break
+      const endTurn = page.locator('#endTurnBtn')
+      if (!(await endTurn.isEnabled())) break
+      await endTurn.click()
+      await page.waitForTimeout(200)
+    }
+
+    const skeletonPanel = page.locator('[id^="enemy-panel-"]').filter({ hasText: 'Skeleton' })
+    await expect(skeletonPanel).toHaveCount(1)
   })
 
   test('necromancer log shows raise attempt', async ({ page }) => {
@@ -60,9 +88,11 @@ test.describe('Necromancer — raise dead mechanic', () => {
     await page.waitForTimeout(200)
 
     const logText = await page.locator('#combatLog').textContent()
-    // Either "raises X as a Skeleton" or "no corpse available"
-    const hasRaiseLog = logText?.includes('Skeleton') || logText?.includes('attempts to raise')
-    expect(hasRaiseLog).toBe(true)
+    // Also BUG-16: this was a disjunction covering both outcomes — a raise that
+    // worked and a raise that found nothing — so any log at all satisfied it.
+    // On turn 2 with the goblin still alive there is no corpse, so the only
+    // correct outcome is the attempt, and that is what gets asserted.
+    expect(logText).toContain('attempts to raise')
   })
 })
 

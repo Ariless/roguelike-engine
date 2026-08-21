@@ -402,13 +402,25 @@ describe('Necromancer — bleed accumulation', () => {
     expect(bleed!.stacks).toBeLessThanOrEqual(10)  // cap invariant holds
   })
 
-  it('raise dead intent is a no-op in executor (no corpse system yet)', () => {
-    // Raise = always no-op since corpse tracking not implemented in engine
-    // This test documents current behavior and will fail when corpse system is added
+  it('the necromancer arrives with an escort, because his table needs a corpse', () => {
+    // This test used to assert the opposite — that raise was permanently a
+    // no-op — and carried the note "will fail when corpse system is added".
+    // It did exactly that when BUG-14 was closed, which is the whole point of
+    // pinning current behaviour rather than deleting the row.
+    const game = createGame({ seed: 42, heroClass: 'paladin', enemyType: 'necromancer' })
+    const enemies = game.getState().enemies
+    expect(enemies).toHaveLength(2)
+    expect(enemies.map(e => e.enemyType)).toEqual(['goblin', 'necromancer'])
+  })
+
+  it('raise stays a graceful no-op while the escort is alive', () => {
+    // No corpse yet, so the conditional row falls back to Wither instead of
+    // spawning from nothing.
     const game = createGame({ seed: 42, heroClass: 'paladin', enemyType: 'necromancer' })
     game.endTurn()
-    game.endTurn()  // raise dead fires — should be graceful no-op
-    expect(game.getState().enemies).toHaveLength(1)  // no extra entity spawned
-    expect(game.getState().isOver).toBe(false)       // game continues normally
+    game.endTurn()  // the raise row comes up here
+    const state = game.getState()
+    expect(state.enemies.filter(e => e.enemyType === 'skeleton')).toHaveLength(0)
+    expect(state.isOver).toBe(false)
   })
 })

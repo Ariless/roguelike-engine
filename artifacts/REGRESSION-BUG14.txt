@@ -1,0 +1,75 @@
+Regression: closing BUG-14 (Necromancer mechanics)
+16,000 seeds per run, base seed 0. Reproduce: npm run simulate 16000
+
+The Necromancer's Raise Dead and Empower reached the engine, and he now
+arrives with a goblin escort — without an ally there is no corpse to raise,
+so the mechanic was implemented and unreachable at the same time.
+
+============================================================================
+  BEFORE
+============================================================================
+  WINRATE BY CLASS — corridor 45.0%–80.0%
+
+  class        winrate            95% CI          verdict   turns (mean ± sd)   p95
+  ──────────────────────────────────────────────────────────────────────────
+  paladin    ███████░░░  70.5%   [68.9%, 72.0%]   PASS      9.9 ± 9.7          39
+  bloodmage  █████████░  94.1%   [93.3%, 94.8%]   FAIL      3.6 ± 1.4          7
+  berserker  ██████████  95.3%   [94.7%, 96.0%]   FAIL      7.4 ± 5.6          19
+  werewolf   ██████████  99.2%   [98.9%, 99.5%]   FAIL      4.6 ± 2.3          9
+
+
+  RETURN METRICS — per unit staked (stake = one card played)
+
+  class          RTP   hit freq  max win  × stake  volatility    p95
+  ──────────────────────────────────────────────────────────────────
+  paladin       0.78      23.1%       10      5.1        2.22    7.5
+  bloodmage     5.12      81.9%       21     12.8        0.50   17.5
+  berserker     2.24      40.9%       15      7.8        0.99   12.5
+  werewolf      3.49      53.3%       29     16.2        0.86   17.5
+
+
+  MATCHUP MATRIX — winrate per pair, ~1,000 runs per cell
+  corridor 15.0%–95.0%, ! = outside
+
+  hero \ enemy        goblin     guardian      vampire  necromancer
+  paladin             99.8%!       20.9%        29.6%       100.0%!
+  bloodmage          100.0%!       95.2%        81.1%       100.0%!
+  berserker          100.0%!       88.1%        93.3%       100.0%!
+  werewolf            99.9%!       99.7%!       97.3%!      100.0%!
+
+  Configuration coverage: 16/16 pairs scanned
+
+============================================================================
+  AFTER
+============================================================================
+  WINRATE BY CLASS — corridor 45.0%–80.0%
+
+  class        winrate            95% CI          verdict   turns (mean ± sd)   p95
+  ──────────────────────────────────────────────────────────────────────────
+  paladin    ██████░░░░  58.1%   [56.4%, 59.7%]   PASS      11.9 ± 10.7        39
+  bloodmage  ███████░░░  72.8%   [71.4%, 74.1%]   PASS      4.1 ± 1.5          7
+  berserker  ████████░░  81.1%   [79.8%, 82.3%]   ????      8.0 ± 5.6          19
+  werewolf   ██████████  97.8%   [97.3%, 98.2%]   FAIL      5.2 ± 2.3          10
+
+
+  RETURN METRICS — per unit staked (stake = one card played)
+
+  class          RTP   hit freq  max win  × stake  volatility    p95
+  ──────────────────────────────────────────────────────────────────
+  paladin       0.91      27.1%       10      5.0        1.93    7.5
+  bloodmage     4.85      80.8%       21     12.8        0.52   17.5
+  berserker     2.13      37.6%       15      7.7        1.01   12.5
+  werewolf      3.69      55.2%       30     16.7        0.86   17.5
+
+
+  MATCHUP MATRIX — winrate per pair, ~1,000 runs per cell
+  corridor 15.0%–95.0%, ! = outside
+
+  hero \ enemy        goblin     guardian      vampire  necromancer
+  paladin             99.8%!       20.9%        29.6%        58.3% 
+  bloodmage          100.0%!       95.2%        81.1%        14.8% 
+  berserker          100.0%!       88.1%        93.3%        42.9% 
+  werewolf            99.9%!       99.7%!       97.3%!       94.2% 
+
+  Configuration coverage: 16/16 pairs scanned
+

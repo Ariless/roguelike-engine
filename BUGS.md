@@ -310,7 +310,7 @@ A full cycle over all 16 pairs, each getting 1/16 of the runs. The report gained
 
 ---
 
-## BUG-14 — Necromancer: Raise Dead and Empower do not exist in the engine ⚠️ OPEN
+## BUG-14 — Necromancer: Raise Dead and Empower do not exist in the engine ✅ CLOSED
 
 **Date:** 2026-08-20  
 **Found by:** the matchup matrix in `npm run simulate` after BUG-13 was fixed
@@ -339,7 +339,7 @@ The engine has neither: `Intent` in `src/engine/types.ts:13-17` contains only `a
 
 Related: `game/index.html:2148` builds the skeleton id as `` `skeleton-${Date.now()}` ``. The same seed produces a different id, so determinism is already broken in the game layer, while the entire engine is built around the promise "same seed → byte-identical log".
 
-**Status:** OPEN. Fixing it means introducing a new Intent type into the engine, an entity lifecycle (spawning mid-battle), a spent-corpse flag and the ordering "raise → empower → skeleton attack". That touches `types.ts`, `actionResolution.ts` and `executor.ts`, and needs new invariants on spawning. A separate task, not an edit.
+**Status:** CLOSED 2026-08-21. See "Resolution" below.
 
 **The project rule that makes this a bug:** `CLAUDE.md`, Rule priority — "If Decision Tables conflict with engine code, treat tables as **intended spec** — file a bug".
 
@@ -350,6 +350,71 @@ Related: `game/index.html:2148` builds the skeleton id as `` `skeleton-${Date.no
 **Closed by a check (2026-08-20):** `tests/decision-tables.test.ts` compares `ENEMY_INTENTS` against the decision tables. The gap is pinned in `KNOWN_GAPS` with the exact current behaviour, so the suite stays green while the gap can be neither silently widened (the check "the gap has not changed" fails) nor silently closed (the check "the gap still exists" fails, demanding the enemy be removed from the list).
 
 **A side finding while writing that check.** The first version of the test described the specification in terms of the `Intent` type — and immediately lied: `raise` and `empower` do not exist in that type, so only the fallback branches (`bleed 3`) made it into the spec, and those do match the implementation. The test reported "compliance" in exactly the place where the gap was widest. A specification written in the vocabulary of the implementation cannot describe what the implementation lacks — the test now has its own `SpecAction` type, unrelated to `Intent`.
+
+---
+
+### Resolution (2026-08-21)
+
+`Intent` gained `raise` and `empower`, `EnemyType` gained `skeleton`, and `Enemy` gained
+`empowered` and `raisedOnce`. Skeleton ids are derived from the count of skeletons already
+raised in the battle rather than from a clock, so determinism survives entity spawning —
+the UI's `skeleton-${Date.now()}` was never an option here.
+
+Two changes were needed beyond the mechanic itself.
+
+**Intents became conditional.** The engine picked `intents[turn % length]`, a pure function
+of the turn number that never saw the board. "Raise if an ally corpse is present" is not
+expressible that way — which is why those rows were unimplementable rather than merely
+unimplemented. `resolveIntent()` now resolves the conditional rows; enemies without them
+fall straight through and behave exactly as before.
+
+**Every living enemy acts, not only the first.** The turn loop ran `state.enemies[0]`, so a
+raised skeleton would have stood still. It now iterates a snapshot of ids taken before the
+loop starts, so a skeleton raised mid-step does not also attack on the turn it appeared.
+
+**The finding that made the fix real.** The first regression run after implementing the
+mechanic showed *no change whatsoever* — every number identical. The Necromancer raises the
+corpses of allies, and `makeInitialState` had always built encounters of exactly one enemy.
+With no ally there is never a corpse, so both conditional rows fell through to Wither
+forever: the mechanic was correct, complete and unreachable. `game/index.html` had carried
+a `goblin+necro` encounter since May (ENCOUNTER_DEFS:1676); the engine had no concept of an
+escort at all. Adding it is what turned a correct implementation into a working one.
+
+**Regression, 16,000 seeds before and after** (`artifacts/REGRESSION-BUG14.txt`):
+
+| Class | Before | After | Verdict |
+|---|---:|---:|---|
+| paladin | 70.5% | 58.1% | PASS -> PASS |
+| bloodmage | 94.1% | 72.8% | FAIL -> **PASS** |
+| berserker | 95.3% | 81.1% | FAIL -> INCONCLUSIVE |
+| werewolf | 99.2% | 97.8% | FAIL -> FAIL |
+
+The Necromancer column went from `100% / 100% / 100% / 100%` to
+`58.3% / 14.8% / 42.9% / 94.2%`. The Blood Mage now loses to him 85 times in 100 — from the
+most harmless enemy in the game to the hardest matchup one class has. Pairs outside their
+corridor fell from 10 to 6.
+
+Two classes are back inside the corridor and a third is INCONCLUSIVE, which is the honest
+verdict for an interval straddling a bound rather than a rounded-up pass. The balance gate
+still cannot be switched on: the Werewolf remains outside at 97.8%, and that is a design
+question, not a missing mechanic.
+
+**Pinned by:** `tests/necromancer.test.ts` (12 tests — spawn, corpse consumption,
+deterministic ids, empower consumed on the next attack whether or not it lands, replay
+verification with entities spawning mid-battle) and `tests/decision-tables.test.ts`, where
+the Necromancer left KNOWN_GAPS and the conditional rows are exercised in both directions.
+
+**A test that did its job.** `executor.test.ts` carried a row asserting raise was a
+permanent no-op, with the note "will fail when corpse system is added". It failed exactly
+then. Pinning current behaviour with an explicit expiry note is what made the change
+visible instead of silent.
+
+**A test that did not.** The first version of `necromancer.test.ts` checked the mechanic by
+watching the hero's HP over 30 idle turns. It passed — and would have passed on the old
+engine too, since bleed alone wears down a passive hero. A test that cannot fail for the
+reason its name claims, written in the file closing BUG-14, is the BUG-16 pattern
+reproduced by hand. Replaced with a direct check: a skeleton's attack removes exactly 4 HP,
+7 when empowered, and the bonus is spent.
 
 ---
 
@@ -382,7 +447,7 @@ It checks that no exception is thrown. Truncation throws no exception, so the te
 
 ---
 
-## BUG-16 — the UI test for the skeleton appearing does not check that a skeleton appears ⚠️ OPEN
+## BUG-16 — the UI test for the skeleton appearing does not check that a skeleton appears ✅ CLOSED
 
 **Date:** 2026-08-20  
 **Found by:** investigating BUG-14 — looking for why a mechanic with no engine implementation was covered by green tests
@@ -400,7 +465,23 @@ The comment talks about three panels, the assertion demands "at least two". Ther
 
 Next to it, line 64: `logText?.includes('Skeleton') || logText?.includes('attempts to raise')` — a disjunction covering both outcomes at once, so any log will do as well.
 
-**Status:** OPEN. Fixing the assertion without fixing BUG-14 turns the test red, and rightly so: it would start reporting a real divergence. But it is worth fixing together with moving the mechanic into the engine, otherwise the branch gains a failing test with no way to close it.
+**Status:** CLOSED 2026-08-21, together with BUG-14.
+
+**Resolution.** The assertion now names what the test name promises:
+`expect(skeletonPanel).toHaveCount(1)` instead of `toBeGreaterThanOrEqual(2)`, and the log
+check asserts the raise attempt instead of a disjunction that any log satisfied.
+
+**What tightening it exposed.** The corrected assertion failed — and not because the UI was
+broken. The old scenario played Blood Mage and spammed Chaos Bolt, which picks targets at
+random; it finished both enemies before the necromancer ever reached the raise row of his
+cycle. So the test had two independent defects layered on top of each other: an assertion
+that could not fail, and a scenario that never produced the state the assertion was meant to
+check. The weak assertion hid the broken scenario, because nothing ever went red.
+
+The scenario now plays Paladin, strikes the goblin deliberately by clicking its panel, leaves
+the necromancer alive, and then ends turns until raise comes around. On that board the
+skeleton appears, and the UI mechanic — which has existed since May — is verified for the
+first time.
 
 **Invariant:** The assertion checks what the test name promises. "A third panel appears" is `toHaveCount(3)`, not `toBeGreaterThanOrEqual(2)`.
 
