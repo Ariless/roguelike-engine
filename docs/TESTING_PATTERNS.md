@@ -1,12 +1,12 @@
 # Testing Patterns
 
-Паттерны которые используются в тестах движка. Все реализованы — не "планируется".
+Patterns actually used in the engine's tests. All of them are implemented — none is "planned".
 
 ---
 
 ## 1. AAA (Arrange / Act / Assert)
 
-Каждый тест разбит на три части. Суть теста видна с первого взгляда.
+Every test splits into three parts, so what it checks is visible at a glance.
 
 ```ts
 it('defend absorbs damage before HP', () => {
@@ -20,57 +20,57 @@ it('defend absorbs damage before HP', () => {
 })
 ```
 
-**Правило:** один тест — одна проверка. Два `expect` на разные вещи = два теста.
+**Rule:** one test, one check. Two `expect`s about different things means two tests.
 
 ---
 
 ## 2. Test Builder / makeState()
 
-Каждый тест-файл имеет локальную `makeState()` с разумными дефолтами. Видно только то что важно для теста.
+Every test file has its own local `makeState()` with sensible defaults, so only what matters to the test is visible.
 
 ```ts
-// ← шум, суть теряется
+// ← noise; the point is lost
 const state: GameState = {
   seed: 1, turn: 1, isOver: false,
-  hero: { id: 'hero', hp: 45, maxHp: 90, ... 12 полей ... },
+  hero: { id: 'hero', hp: 45, maxHp: 90, ... 12 fields ... },
   enemies: [...]
 }
 
-// ← сигнал: test cares about HP and no more
-const state = makeState(45)  // heroHp = 45, всё остальное — дефолты
+// ← signal: the test cares about HP and nothing else
+const state = makeState(45)  // heroHp = 45, everything else is a default
 ```
 
-**Правило:** makeState() локальна в каждом тест-файле. Shared helpers = coupling.
+**Rule:** makeState() stays local to each test file. Shared helpers mean coupling.
 
 ---
 
 ## 3. Boundary values
 
-Для каждого числового лимита и перехода — отдельный тест на точную границу:
+Every numeric limit and every transition gets its own test on the exact boundary:
 
 ```ts
-it('HP не уходит ниже 0')
-it('HP не превышает maxHp')
-it('bleed стакается максимум до 10')
-it('stun длится ровно 1 ход')
-it('alive → death_door при HP = 0')
-it('HP = 50% (15/30) → transform (граница включительно)')
-it('HP = 16/30 (>50%) → НЕ transform')
+it('HP never goes below 0')
+it('HP never exceeds maxHp')
+it('bleed stacks up to 10 at most')
+it('stun lasts exactly 1 turn')
+it('alive → death_door at HP = 0')
+it('HP = 50% (15/30) → transform (boundary inclusive)')
+it('HP = 16/30 (>50%) → does NOT transform')
 ```
 
-**Mutation testing note:** если мутант `≤` → `<` выживает, граничного теста нет.
+**Mutation testing note:** if the `≤` → `<` mutant survives, the boundary test is missing.
 
 ---
 
 ## 4. Property-based testing (fast-check)
 
-Инварианты которые должны держаться для ЛЮБЫХ входных данных:
+Invariants that must hold for ANY input:
 
 ```ts
-// Юнит тест — один случай
-it('HP не уходит ниже 0 при 100 урона', () => { ... })
+// Unit test — one case
+it('HP never goes below 0 on 100 damage', () => { ... })
 
-// Property тест — для любого урона
+// Property test — for any damage
 it('HP always >= 0', () => {
   fc.assert(fc.property(
     fc.integer({ min: 0, max: 99999 }),
@@ -82,53 +82,53 @@ it('HP always >= 0', () => {
 })
 ```
 
-**Когда использовать:** когда хочется написать `forAll` вместо конкретного значения.
+**When to use:** when you want to write `forAll` instead of a specific value.
 
-**Shrinking:** fast-check автоматически сжимает failing case до минимального контрпримера.
+**Shrinking:** fast-check reduces a failing case to the minimal counterexample automatically.
 
 ---
 
 ## 5. False invariant (it.fails())
 
-Документирует намеренное нарушение интуиции как domain rule, не как баг:
+Documents a deliberate violation of intuition as a domain rule rather than a bug:
 
 ```ts
 describe('false invariant: healing Werewolf above 50% reduces damage', () => {
-  it.fails('heal всегда увеличивает боевую эффективность', () => {
+  it.fails('healing always improves combat output', () => {
     // Healing above 50% HP → removes wolf form → weaker attack
-    // Этот assert ЛОЖНЫЙ — и это ПРАВИЛЬНО по дизайну
+    // This assertion is FALSE — and that is CORRECT by design
     expect(wolfDamage(heroAfter, 8)).toBeGreaterThanOrEqual(wolfDamage(heroBefore, 8))
   })
 })
 ```
 
-**Правило:** тест проходит только когда assertion ЛОЖНЫЙ. Если кто-то "починит" healing — тест упадёт.
+**Rule:** the test passes only while the assertion is FALSE. If someone "fixes" healing, it fails.
 
 ---
 
 ## 6. Mutation killing test
 
-Написан явно чтобы убить конкретный выживший мутант. Комментарий документирует мутанта:
+Written explicitly to kill one surviving mutant. The comment records which one:
 
 ```ts
 describe('hasStatus — negative cases (kill hasStatus always-true mutant)', () => {
-  it('возвращает false для другого статуса', () => {
+  it('returns false for a different status', () => {
     const state = makeState({ heroStatuses: [{ name: 'bleed', stacks: 3 }] })
     expect(hasStatus(state.hero, 'stun')).toBe(false)   // ← kills always-true mutant
   })
 })
 ```
 
-**Правило:** если мутант выжил — написать тест который проверяет именно то условие которое мутация меняет.
+**Rule:** when a mutant survives, write a test that checks the exact condition the mutation alters.
 
 ---
 
 ## 7. Replay / determinism test
 
-Доказывает что система детерминирована: одинаковый seed = одинаковый исход:
+Proves the system is deterministic: the same seed gives the same outcome:
 
 ```ts
-it('два прогона одного seed дают идентичные post-state хэши', () => {
+it('two runs of the same seed produce identical post-state hashes', () => {
   const log1 = playRandom(42, 'paladin', 'goblin')
   const log2 = playRandom(42, 'paladin', 'goblin')
   expect(log1.events.every((e, i) =>
@@ -137,14 +137,14 @@ it('два прогона одного seed дают идентичные post-s
 })
 ```
 
-**Сильнее:** `forAll(seeds) → replayGame(log).success === true`  
-Любая случайная игра воспроизводится byte-perfect.
+**Stronger:** `forAll(seeds) → replayGame(log).success === true`  
+Any random game replays byte-perfect.
 
 ---
 
-## 8. BDD / Cucumber (правила как спецификация)
+## 8. BDD / Cucumber (rules as specification)
 
-Для документирования бизнес-правил на человеческом языке:
+For documenting business rules in human language:
 
 ```gherkin
 Scenario: Stun expires after the hero skips one turn
@@ -154,30 +154,30 @@ Scenario: Stun expires after the hero skips one turn
   Then the hero is no longer stunned
 ```
 
-**Два режима step definitions:**
+**Two modes of step definitions:**
 - Full game flow (stun, bleed) → `createGame()` + `game.endTurn()`
 - HP-precise scenarios (isInRage, checkWerewolfTransform) → engine functions directly
 
-**Когда использовать:** для правил которые нужно объяснить non-technical stakeholders или курсовым студентам.
+**When to use:** for rules that have to be explained to non-technical stakeholders.
 
 ---
 
 ## 9. Trace-driven test discovery
 
-Запустить `npm run trace 500` → посмотреть реальные паттерны → написать тест под паттерн:
+Run `npm run trace 500`, look at the patterns that actually occur, then write a test for one:
 
 ```
 Top status combos: bleed (359), bleed+defend (352), stun (205)
-→ Написать: forAll(states with bleed+defend, defend not consumed by bleed tick)
+→ Write: forAll(states with bleed+defend, defend not consumed by bleed tick)
 ```
 
-**Когда использовать:** когда нужно найти что тестировать следующим, не зная что важно.
+**When to use:** when you need to find what to test next without knowing what matters.
 
 ---
 
 ## 10. Scenario test
 
-Проверяет не функцию, а последовательность действий. Ловит ошибки взаимодействия механик, которые unit-тест не видит.
+Checks a sequence of actions rather than a function. Catches interaction bugs between mechanics that a unit test cannot see.
 
 ```ts
 it('Guardian: shield → stun → heavy strike sequence', () => {
@@ -195,17 +195,17 @@ it('Guardian: shield → stun → heavy strike sequence', () => {
 })
 ```
 
-**Ключевое отличие от unit теста:** проверяется ПОРЯДОК шагов и их взаимодействие, не одна функция.
+**The difference from a unit test:** it checks the ORDER of the steps and how they interact, not one function.
 
-**Decision tables → scenario tests:** каждый cross-row тест из DECISION-TABLES.md — это сценарный тест.
+**Decision tables → scenario tests:** every cross-row test from DECISION-TABLES.md is a scenario test.
 
-**Когда использовать:** для scripted sequences (enemy AI, workflow, pricing pipeline).
+**When to use:** for scripted sequences (enemy AI, workflow, pricing pipeline).
 
 ---
 
 ## 11. Decision table test
 
-Каждая строка decision table = один тест. Взаимодействие строк = отдельный integration тест:
+Each decision table row is one test. Interaction between rows is a separate integration test:
 
 ```ts
 // Row 1: Guardian shields
@@ -218,35 +218,35 @@ it('Stunned hero takes full 10 damage (no defend possible)', () => { ... })
 it('Guardian turn 4 repeats turn 1 intent (cycle)', () => { ... })
 ```
 
-**Когда использовать:** для scripted/deterministic behavior (enemy AI, pricing rules, workflow steps).
+**When to use:** for scripted, deterministic behaviour (enemy AI, pricing rules, workflow steps).
 
 ---
 
-## Иерархия паттернов
+## Hierarchy of patterns
 
 ```
 AAA
 │
-├─ Unit tests (один вызов, одна проверка)
-│   ├─ makeState()      — чистые входные данные
+├─ Unit tests (one call, one check)
+│   ├─ makeState()      — clean inputs
 │   ├─ one test = one behavior
-│   └─ boundary tests   — на каждую границу
+│   └─ boundary tests   — one per boundary
 │
-├─ Scenario tests (последовательность действий)
+├─ Scenario tests (a sequence of actions)
 │   ├─ Guardian cycle (shield → stun → heavy strike)
 │   ├─ Vampire bleed + lifesteal
 │   └─ BDD scenarios (Cucumber)
 │
-├─ Property tests (для ЛЮБЫХ входных данных)
+├─ Property tests (for ANY input)
 │   ├─ hp >= 0 / hp <= maxHp
 │   ├─ bleed <= 10
 │   ├─ replay determinism forAll(seeds)
 │   └─ false invariants (it.fails())
 │
 └─ Meta-tests
-    ├─ Mutation killing — targeted тесты убивают выживших
-    ├─ Mutation testing (Stryker) — измеряет качество suite
+    ├─ Mutation killing — targeted tests kill the survivors
+    ├─ Mutation testing (Stryker) — measures the quality of the suite
     └─ Chaos + Monte Carlo — statistical confidence
 ```
 
-**Правило распределения:** unit ловит локальные ошибки, scenario — ошибки взаимодействия, property — нарушения фундаментальных законов, meta — дыры в самом тест-сьюте.
+**How the layers divide:** unit catches local errors, scenario catches interaction errors, property catches violations of fundamental laws, meta catches holes in the suite itself.

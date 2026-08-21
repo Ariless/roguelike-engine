@@ -42,7 +42,7 @@ open debugger/index.html    # Forensic timeline viewer
 Then look at this test in `tests/heroes/paladin.test.ts`:
 
 ```ts
-it('все 3 карты паладина присутствуют', () => {
+it('all 3 paladin cards are present', () => {
   expect(PALADIN_CARDS).toHaveLength(3)
 })
 ```

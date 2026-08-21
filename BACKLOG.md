@@ -4,172 +4,174 @@ Full design spec: `DESIGN.md` · Full invariant contract: `INVARIANTS.md`
 
 ---
 
-## Статус проекта (2026-08-20)
+## Project status (2026-08-21)
 
-**437 тестов** (400 vitest + 25 Playwright + 12 BDD) · **86.1% mutation score** · **16 задокументированных багов**
+**532 checks** (495 vitest + 25 Playwright + 12 BDD) · **86.1% mutation score** · **18 documented defects**
 
-Открыты: BUG-14 (механика некроманта не реализована в движке, живёт только в UI) и BUG-16 (UI-тест на скелета не проверяет скелета). Оба требуют переноса raise/empower в движок — отдельная задача, не правка.
+Open: BUG-18 — two of the four fault-injection flags inject nothing. `ignoreStun` guards a
+condition that cannot arise (no hero card stuns an enemy), and `allowDeadToAct` is declared
+but never read. Both pinned by tests that fail the moment either starts working.
 
-Portfolio-ready: README ✅ · CLAUDE.md ✅ · BUGS.md ✅ · DECISIONS.md (21 решение) ✅ · INVARIANTS.md ✅
+Closed this week: BUG-14 (necromancer mechanics reached the engine), BUG-16 (UI assertion
+that could not fail), BUG-17 (aggregation died at a million runs).
+
+Portfolio-ready: README ✅ · CLAUDE.md ✅ · BUGS.md ✅ · DECISIONS.md ✅ · INVARIANTS.md ✅
 
 ---
 
-## Построено ✅
+## Built ✅
 
 ### Engine
-| Файл | Что внутри |
-|------|-----------|
+| File | What is inside |
+|------|---------------|
 | `src/engine/types.ts` | GameState, Hero, Enemy, Status, Intent, EntityState, HeroClass |
 | `src/engine/statuses.ts` | addStatus, tickStatuses, hasStatus, canAct |
 | `src/engine/resolution.ts` | applyDamage, applyHeal |
 | `src/engine/turnPipeline.ts` | runTurn, step1–step9, TurnHandlers |
 | `src/engine/actionResolution.ts` | resolveAction, arp1–arp5, ActionHandlers |
 | `src/engine/invariants.ts` | assertValidGameState, InvariantRegistry, TimelineCorruptedError |
-| `src/engine/heroes/paladin.ts` | 3 карты + charge mechanics |
-| `src/engine/heroes/bloodmage.ts` | 3 карты: bleed conditional, self-damage |
-| `src/engine/heroes/berserker.ts` | 3 карты: rage mode (≤25% HP → ×1.5) |
-| `src/engine/heroes/werewolf.ts` | 6 карт: human↔wolf transform, wolf passive scaling |
+| `src/engine/heroes/paladin.ts` | 3 cards + charge mechanics |
+| `src/engine/heroes/bloodmage.ts` | 3 cards: conditional bleed, self-damage |
+| `src/engine/heroes/berserker.ts` | 3 cards: rage mode (≤25% HP → ×1.5) |
+| `src/engine/heroes/werewolf.ts` | 6 cards: human↔wolf transform, wolf passive scaling |
+| `src/stats/distributions.ts` | lnGamma, gammaQ, erfc, chi-square and normal p-values |
 
 ### Runtime + Telemetry
-| Файл | Что внутри |
-|------|-----------|
+| File | What is inside |
+|------|---------------|
 | `src/runtime/rng.ts` | mulberry32 seeded RNG |
 | `src/runtime/faults.ts` | FaultConfig: bleedOffByOne, ignoreStun, ignoreDeathDoor, allowDeadToAct |
-| `src/runtime/executor.ts` | createGame(config) → GameHandle; records ReplayLog with snapshots |
+| `src/runtime/executor.ts` | createGame(config) → GameHandle; conditional intents; escort encounters; records ReplayLog with snapshots |
 | `src/telemetry/types.ts` | ReplayEvent, TurnSnapshot, ReplayLog |
 | `src/telemetry/replayer.ts` | replayGame(log) → byte-perfect verification |
 | `src/telemetry/artifacts.ts` | saveFailingRun(log) → /artifacts/ |
 
 ### Tests
-| Файл | Тестов |
-|------|--------|
-| Engine unit tests (8 файлов) | 172 |
-| Hero tests (4 файла) | 96 |
-| runtime/executor.test.ts | 21 |
+| Area | Tests |
+|------|-------|
+| Engine unit tests | 172 |
+| Hero tests (4 files) | 96 |
+| runtime/executor.test.ts | 35 |
+| runtime/faults.test.ts | 22 |
 | runtime/executor-property.test.ts | 7 |
 | replay/replay.test.ts | 13 |
 | property.test.ts (fast-check, 4× it.fails()) | 27 |
-| **Vitest итого** | **310** |
-| tests/ui/debugger.test.ts (Playwright) | 13 |
-| tests/bdd/features/combat.feature (Cucumber) | 11 сценариев |
-| **Всего** | **334** |
+| rng-statistical.test.ts (NIST/Diehard as p-values) | 22 |
+| stats/distributions.test.ts | 25 |
+| economy.test.ts | 20 |
+| necromancer.test.ts | 12 |
+| decision-tables.test.ts | 17 |
+| **Vitest total** | **495** |
+| Playwright (debugger, game, visual regression) | 25 |
+| Cucumber scenarios | 12 |
+| **Total** | **532** |
 
 ### Game UI + Debugger + Scripts
-| Файл | Что внутри |
-|------|-----------|
-| `game/index.html` | 4 героя, multi-enemy, seed-based encounters, all mechanics |
+| File | What is inside |
+|------|---------------|
+| `game/index.html` | 4 heroes, multi-enemy, seed-based encounters, all mechanics |
 | `debugger/index.html` | Forensic timeline viewer: segments, hashes, stability % |
-| `scripts/simulate.ts` | Monte Carlo: коридоры, интервалы Уилсона, матрица 16 пар, вердикт |
-| `scripts/stability.ts` | Разброс между батчами на разнесённых базовых seed + сходимость |
-| `scripts/lib/` | `harness.ts` (автоплеер, `configFor`, `runBatch`), `stats.ts`, `corridors.ts` |
+| `scripts/simulate.ts` | Monte Carlo: corridors, Wilson intervals, 16-pair matrix, return metrics, verdict |
+| `scripts/stability.ts` | Cross-batch spread on far-apart base seeds + convergence |
+| `scripts/cert-evidence.ts` | Evidence pack: build hashes, p-values, coverage, open defects + JSON snapshot |
+| `scripts/delta.ts` | Diff of two snapshots; win rates by interval overlap, p-values exactly |
+| `scripts/lib/` | `harness.ts` (auto-player, `configFor`, `runBatch`), `stats.ts`, `corridors.ts`, `economy.ts` |
 | `scripts/chaos-agent.ts` | Adversarial agent: 50/200 interesting timelines; ANTHROPIC_API_KEY → Claude |
-| `scripts/trace-analysis.ts` | 500 трасс → status combos + suggested invariants |
-| `scripts/ci-report.ts` | CI Stability Report HTML в Archivist стиле |
-| `scripts/generate-replay.ts` | Generates replay.json for debugger |
+| `scripts/trace-analysis.ts` | 500 traces → status combos + suggested invariants |
+| `scripts/ci-report.ts` | CI Stability Report HTML in Archivist style |
+| `scripts/generate-replay.ts` | Generates replay.json for the debugger |
 
-### Документация
-| Файл | Что внутри |
-|------|-----------|
-| `README.md` | Portfolio-ready: 20 секций; ROI, shrinking example, enterprise mapping |
-| `BUGS.md` | 12 багов с root cause, fix, testing value |
-| `DECISIONS.md` | 21 архитектурное решение |
-| `INVARIANTS.md` | Полный контракт инвариантов + trace-derived |
-| `docs/TEST-PYRAMID.md` | Rule engine пирамида vs web пирамида |
-| `docs/DECISION-TABLES.md` | Enemy AI как decision tables |
-| `CLAUDE.md` | Agent conventions: всё актуально |
+### Documentation
+| File | What is inside |
+|------|---------------|
+| `README.md` | Portfolio-ready: ROI, shrinking example, NIST mapping, scale, delta, enterprise mapping |
+| `BUGS.md` | 18 defects with root cause, fix and testing value |
+| `DECISIONS.md` | Architectural decisions |
+| `INVARIANTS.md` | Full invariant contract + trace-derived |
+| `docs/TEST-PYRAMID.md` | Rule engine pyramid vs web pyramid |
+| `docs/DECISION-TABLES.md` | Enemy AI as decision tables |
+| `docs/TESTING_PATTERNS.md` | The patterns actually used, with the rule behind each |
+| `CLAUDE.md` | Agent conventions |
 
-### Курс
-- `tests/bdd/` — BDD на rule engine без UI (11 сценариев)
-- `docs/DECISION-TABLES.md` — классическая техника на нетривиальном примере
-- `course/course3_assignments.md` — 6 заданий включая A-33C (trace-driven discovery)
-- `INVARIANTS.md` — Invariant Contract таблица
+### Artefacts
+| File | What is inside |
+|------|---------------|
+| `artifacts/CERT-EVIDENCE.md` | Evidence pack for the current build |
+| `artifacts/cert-evidence.json` | The same run, machine-readable |
+| `artifacts/SIMULATION-1M.txt` | Million-seed run: 0 corrupted, 0 hash divergences |
+| `artifacts/REGRESSION-BUG14.txt` | Before/after the necromancer mechanics landed |
+| `artifacts/DELTA-BUG14.txt` | The same change through `npm run delta` |
+| `artifacts/baseline-pre-bug14.json` | Snapshot to diff future builds against |
 
 ---
 
-## Не построено / В работе
+## Not built / in progress
 
-### Boss — финальный capstone (приоритет когда будет время)
+### Boss — the final capstone
 
-> "The Archivist should be the final consumer of the mutation system, not the thing that forces you to invent it." — внешнее review проекта
+> "The Archivist should be the final consumer of the mutation system, not the thing that
+> forces you to invent it." — external review of the project
 
 Mutation system ✅ · Replay ✅ · InvariantRegistry ✅ · Fault injection ✅
-Все компоненты готовы. Boss — их финальный потребитель.
+Every component is ready. The boss is their final consumer.
 
-- [x] **Boss — The Archivist** — `src/engine/boss/archivist.ts` + 15 тестов + game UI (seed 6/13)
-  - Phase 1: Memory Suppression — убирает incomingHealing hooks на 2 хода
-  - Phase 2: Timeline Inversion — reverses resolution order на 1 ход
-  - Phase 3: State Reset — сбрасывает все статусы; charge stacks НЕ сбрасываются (тест)
-  - Phase 4: Invariant Breach — пытается поставить `dead.canAct = true`; `assertValidGameState()` ДОЛЖЕН поймать → TIMELINE CORRUPTED
+- [x] **Boss — The Archivist** — `src/engine/boss/archivist.ts` + 15 tests + game UI (seed 6/13)
+  - Phase 1: Memory Suppression — removes incomingHealing hooks for 2 turns
+  - Phase 2: Timeline Inversion — reverses resolution order for 1 turn
+  - Phase 3: State Reset — clears all statuses; charge stacks are NOT cleared (test)
+  - Phase 4: Invariant Breach — attempts `dead.canAct = true`; `assertValidGameState()` MUST catch it → TIMELINE CORRUPTED
   - `CorruptionEvent` schema: type / scope / appliedAt / constraintViolation: boolean
-  - Property тест Phase 4: `expect(() => { applyBreach(); engine.run() }).toThrow('TIMELINE CORRUPTED')`
-  - **Интервью-фраза:** "Boss and test suite are the same adversary."
+  - Phase 4 property test: `expect(() => { applyBreach(); engine.run() }).toThrow('TIMELINE CORRUPTED')`
 
-### Engine (низкий приоритет)
-- [ ] **Enemies TS-код** — Goblin, Guardian, Vampire, Necromancer в TypeScript. Сейчас только game UI (JS).
-- [ ] **EventSpec** — preconditions + postconditions per event; как курсовое задание, не обязательно реализовывать.
+### Engine (low priority)
+- [ ] **EventSpec** — preconditions + postconditions per event.
+- [ ] **Balance gate** — the corridors cannot block merges while the werewolf sits at 97.8%.
+      That is a design question, not a missing mechanic: the class needs re-tuning, or the
+      corridor needs a rationale for being wider.
 
-### Курс (платные модули)
-- [x] **Table-driven tests** — `tests/heroes/paladin.test.ts`: 8-row table для Righteous Strike × charges × vulnerable; каждая строка = одно правило + cross-row
-- [x] **Model-based testing** — `tests/model-based.test.ts`: reference model (~30 строк) vs real engine; forAll(inputs) → оба дают одинаковый результат; 7 тестов на applyDamage/applyHeal/bleedTick
-- [x] **Buggy branch** — `docs/BUGGY-BRANCH.md`; 5 багов расписаны с file/change/symptom/technique/rubric; instructor guide отдельно от student instructions
+### Additional techniques
+- [x] **Table-driven tests** — `tests/heroes/paladin.test.ts`: 8-row table for Righteous Strike × charges × vulnerable
+- [x] **Model-based testing** — `tests/model-based.test.ts`: reference model vs real engine
+- [x] **Pairwise testing** — `tests/pairwise.test.ts`; 4×4×3=48 → 16 (67% reduction)
+- [x] **Visual regression testing** — `tests/ui/visual-regression.test.ts`; baselines for macOS and Linux
+- [x] **Meta-testing oracle** — `scripts/meta-oracle.ts`; false positive/negative measurement
+- [x] **RNG statistical battery** — NIST SP 800-22 §2.1/2.2/2.3/2.4/2.13, Diehard serial and permutation, §4.2.2 second-order check
+- [x] **Return metrics** — RTP, hit frequency, max win, volatility, derived from the replay log
+- [x] **Evidence pack and delta** — `npm run cert-evidence`, `npm run delta`
 
-### Дополнительные техники (добавлено 2026-05-31)
-- [x] **Pairwise testing** — `tests/pairwise.test.ts`; 4×4×3=48 → 16 (67% reduction); собственный allpairs алгоритм; 3 параметра: hero × encounter × fault
-- [x] **Visual regression testing** — `tests/ui/visual-regression.test.ts`; 4 baseline screenshots; `npx playwright test tests/ui/visual-regression.test.ts --update-snapshots` для обновления
-- [x] **Meta-testing oracle** — `scripts/meta-oracle.ts`; 8 test cases (4 correct + 4 incorrect); false positive/negative measurement; `npm run meta-oracle`
+### AI integration
+- [x] **LLM as oracle** — `scripts/llm-oracle.ts`; 7 rules; structured verdict; `npm run oracle [seed]`
+- [x] **Semantic mutation testing** — `scripts/semantic-mutations.ts`
+- [x] **Natural language spec → property test** — `scripts/spec-to-test.ts`
+- [x] **Claude-guided chaos agent** — `ANTHROPIC_API_KEY=sk-… npm run chaos 100`
+- [x] **AI-generated CI summary** — `scripts/ci-summary.ts`; Archivist voice
 
-### AI интеграция (горячие темы 2026, уникально для курса)
+### Missing content (art and cards)
+- [x] **Skeleton art** — `enemy-skeleton.jpg` in assets
+- [x] **Second goblin variant** — `enemy-goblin2.jpg`; goblin×2 encounter uses a portrait override
+- [ ] **Berserker action card art** — Savage Lunge / Primal Fury / Primal Dodge still use werewolf-era art
 
-- [x] **LLM as oracle** 🔥 — `scripts/llm-oracle.ts`; 7 правил; structured verdict; `npm run oracle [seed]`. Dry-run: `npm run oracle 42 -- --dry-run` или `AI_MOCK_RESPONSE=true` (паттерн из проекта 1). Нашёл CC-14: verdict vs explanation inconsistency.
-
-- [x] **Semantic mutation testing (AI-powered)** 🔥 — `scripts/semantic-mutations.ts`; `npm run semantic-mutations <file> [fn]`; dry-run: `AI_MOCK_RESPONSE=true`
-- [x] **Natural language spec → property test** 🔥 — `scripts/spec-to-test.ts`; `npm run spec-to-test "rule text"`; dry-run: `AI_MOCK_RESPONSE=true`
-
-- [x] **Claude-guided chaos agent** — реализован в chaos-agent.ts; `ANTHROPIC_API_KEY=sk-... npm run chaos 100`
-- [x] **AI-generated CI summary** — `scripts/ci-summary.ts`; `npm run ci-summary`; Archivist voice; dry-run: `AI_MOCK_RESPONSE=true`
-
-### Missing content (арты и карты)
-- [x] **Skeleton арт** — `enemy-skeleton.jpg` добавлен в assets (дисциплинированный скелет с щитом, чёрный фон)
-- [x] **Goblin второй вариант** — `enemy-goblin2.jpg` добавлен; goblin×2 encounter: e0=enemy-goblin.jpg, e1=enemy-goblin2.jpg через portrait override в ENCOUNTER_DEFS
-- [ ] **Berserker action card арты** — Savage Lunge / Primal Fury / Primal Dodge используют старые werewolf-era арты. Промты по STYLE LOCK с "Berserker, The Threshold archetype"
-
-### Missing engine features
-- [x] **Corpse system (game UI)** — `raisedOnce` флаг; raise dead работает в game/index.html; Skeleton спавнится, empowerment применяется; 5 Playwright тестов в tests/ui/game.test.ts
-- [ ] **Corpse system (TypeScript executor)** — executor остаётся no-op; нужно для property tests на raise
-- [x] **Vampire lifesteal в TypeScript executor** — реализовано; `lifesteal?: boolean` в Intent type; lifesteal = min(actual_dmg, missing_hp); 3 теста
-- [ ] **Multi-enemy executor** — executor создаёт 1 врага; encounter configs с 2 врагами работают только в game UI
-
-### Документация для курса
-- [x] **Getting Started для студентов** — `docs/GETTING-STARTED.md`: setup, первый запуск, recommended order заданий, key files таблица
-- [x] **Buggy branch guide** — `docs/BUGGY-BRANCH.md`: 5 намеренных багов с rubric; instructor/student разделены
-- [x] **Курс 3 Part A — 10 модулей** — `course/course3_plan.md` обновлён: A-1 Foundations → A-10 Boss capstone; ~6-7 часов видеоконтента; все артефакты готовы
-- [x] **Задания для AI scripts** — A-34C/A-35C/A-36C/A-37C в `course/course3_assignments.md`
-
-### Осталось записать видео
-- [ ] A-1: Rule engine foundations (~30 мин)
-- [ ] A-2: Unit testing (~45 мин)
-- [ ] A-3: Invariant Contract (~30 мин)
-- [ ] A-4: Property-based testing (~60 мин)
-- [ ] A-5: Mutation testing (~45 мин)
-- [ ] A-6: Determinism & replay (~45 мин)
-- [ ] A-7: Combinatorial testing (~30 мин)
-- [ ] A-8: BDD & visual regression (~30 мин)
-- [ ] A-9: AI-powered testing (~60 мин)
-- [ ] A-10: Capstone boss fight (~30 мин)
+### Engine features
+- [x] **Corpse system (game UI)** — `raisedOnce` flag; raise dead works in game/index.html
+- [x] **Corpse system (TypeScript executor)** — landed with BUG-14: raise, empower, spent-corpse flag, deterministic skeleton ids
+- [x] **Vampire lifesteal in the executor** — `lifesteal?: boolean` in Intent; lifesteal = min(actual_dmg, missing_hp)
+- [x] **Multi-enemy executor** — encounters can hold more than one enemy; the necromancer arrives with an escort
+- [ ] **Conditional intents for the vampire** — turn 2 should amplify against a bleeding hero and turn 3 should branch on Death's Door. Still pinned in KNOWN_GAPS; the mechanism now exists, only the rows are unwritten.
 
 ### Tech debt
-- [ ] **UI layout на MacBook Air** — entity panels при маленьком viewport не вмещаются идеально
-- [ ] **State coverage heatmap** — какие state machine переходы покрыты; CI артефакт
-- [ ] **vitest.config.ts exclude** — было: Playwright тест подбирался vitest; добавлен `tests/ui/**` в exclude
+- [ ] **UI layout on a MacBook Air** — entity panels do not fit perfectly at a small viewport
+- [ ] **State coverage heatmap** — which state machine transitions are covered; a CI artefact
+- [x] **vitest.config.ts exclude** — Playwright tests were being picked up by vitest; `tests/ui/**` excluded
 
 ---
 
-## Решено — не делать
+## Decided against
 
-| Что | Причина |
-|-----|---------|
-| Differential testing (два engine) | 2x maintenance, 10% extra signal |
-| Chaos mode (corrupt save) | fault injection покрывает концепт |
-| Сложный debugger UX (анимации, звук) | не цель проекта |
-| Testing dashboard HTML отдельно | README + ci-report.html даёт 100% эффекта |
-| Enemy selector кнопки в UI | убраны — encounter определяется seed (D-17) |
+| What | Why |
+|------|-----|
+| Differential testing (two engines) | 2× maintenance for 10% extra signal |
+| Chaos mode (corrupt save) | fault injection covers the concept |
+| Elaborate debugger UX (animation, sound) | not the point of the project |
+| A separate testing dashboard page | README + ci-report.html give 100% of the effect |
+| Enemy selector buttons in the UI | removed — the encounter is decided by the seed (D-17) |
+| Making `engine/` fault-aware | would trade a documentation defect for an architectural one (BUG-18) |

@@ -919,9 +919,9 @@ The renderer is `events.map(renderEvent)` — not `gameState → React component
   - [ ] fast-check property tests (= the "chaos monkey") — generates thousands of action sequences, shrinks failing case automatically
   - [ ] `debugger.html` — separate page, reads `replay.json`, shows timeline + HP bars + events + seed; Playwright-tested
 
-**MUST HAVE** (добавлено 2026-05-15):
-- [ ] **Bug cemetery** (`BUGS.md`) — каждый реально найденный баг: seed, root cause, как нашли (invariant / property test / fault toggle), fix. Дёшево писать, убийственно на интервью — показывает testing ROI в живом виде.
-  - [ ] **Invariant Registry System** — единый реестр инвариантов; fast-check, boss, runtime и debugger используют один источник правды:
+**MUST HAVE** (added 2026-05-15):
+- [ ] **Bug cemetery** (`BUGS.md`) — every bug actually found: seed, root cause, how it was found (invariant / property test / fault toggle), fix. Cheap to write and devastating in an interview: it shows testing ROI as it happened.
+  - [ ] **Invariant Registry System** — one registry of invariants; fast-check, the boss, the runtime and the debugger all read the same source of truth:
     ```ts
     interface Invariant {
       id: string
@@ -931,7 +931,7 @@ The renderer is `events.map(renderEvent)` — not `gameState → React component
     }
     const InvariantRegistry: Invariant[] = [] // populated by each engine module
     ```
-    `assertValidGameState()` итерирует реестр. Boss CorruptionEvent проверяется против него же. Replay debugger подсвечивает нарушения по `appliesAt`. Interview line: *"One invariant definition catches bugs in the engine, the boss, and the debugger simultaneously."*
+    `assertValidGameState()` iterates the registry. The boss CorruptionEvent is checked against the same one. The replay debugger highlights violations by `appliesAt`. Interview line: *"One invariant definition catches bugs in the engine, the boss, and the debugger simultaneously."*
 
     **EventSpec upgrade — event-level invariants (decided 2026-05-15):**
     Each event carries its own preconditions + postconditions. Replay debugger, fast-check, mutation tests, and the visualizer all work from one model:
@@ -944,24 +944,24 @@ The renderer is `events.map(renderEvent)` — not `gameState → React component
     }
     ```
     `InvariantRegistry` entries reference `EventSpec` definitions — the registry becomes the single model for correctness across all consumers.
-  - [ ] **Combat Execution Pipeline formalized** — 9-step turn contract живёт в `engine/resolution.ts`; каждый шаг — отдельная функция; все тесты знают в какой шаг что происходит.
+  - [ ] **Combat Execution Pipeline formalized** — the 9-step turn contract lives in `engine/resolution.ts`; each step is its own function; every test knows which step does what.
 
 **NICE TO HAVE** (if time allows):
 - [ ] Mutation testing (Stryker) + "survived mutant → added invariant → killed" PR narrative
   - [ ] Fault injection: expand to more scenarios
-  - [ ] Shrinking visualizer — при падении теста вывод в консоль: `Original: 82 actions → Shrunk: 3 actions` + минимальная последовательность; fast-check уже умеет, нужно красиво отформатировать
-  - [ ] State coverage heatmap — какие переходы state machine покрыты тестами (`✔ alive→death_door`, `✘ dead→alive`); CI артефакт или раздел README
-  - [ ] Monte-Carlo simulation mode — `npm run simulate --runs 100000` → winrate по классам, avg combat length, самый смертоносный враг; дёшево: просто запустить много сидов и собрать статистику
-  - [ ] Metamorphic testing — отношения между входами/выходами вместо абсолютных значений: "doubling bleed duration should never reduce total damage"; "enemy order shuffled but seed fixed → total rewards invariant"; редкая техника, интервьюеры запоминают
-  - [ ] RNG inspector в telemetry — логировать все RNG вызовы в replay: `{ call: "crit_roll", value: 0.92, turn: 4 }`; same seed → identical RNG stream
-  - [ ] diff view в debugger.html — при переключении хода показывать что изменилось: `- hp: 6 / + hp: 4 / + bleed: 2`
-  - [ ] Failure artifacts — при падении теста автосохранять в `/artifacts`: `replay.json` + `state-before.json` + `state-after.json` + `rng-stream.json`
+  - [ ] Shrinking visualizer — on a failing test, print `Original: 82 actions → Shrunk: 3 actions` plus the minimal sequence; fast-check already does the work, it only needs formatting
+  - [ ] State coverage heatmap — which state machine transitions are covered (`✔ alive→death_door`, `✘ dead→alive`); a CI artefact or a README section
+  - [ ] Monte-Carlo simulation mode — `npm run simulate --runs 100000` → win rate per class, average combat length, the deadliest enemy; cheap: run many seeds and collect the statistics
+  - [ ] Metamorphic testing — relations between inputs and outputs instead of absolute values: "doubling bleed duration should never reduce total damage"; "enemy order shuffled but seed fixed → total rewards invariant"; a rare technique, and interviewers remember it
+  - [ ] RNG inspector in telemetry — log every RNG call into the replay: `{ call: "crit_roll", value: 0.92, turn: 4 }`; same seed → identical RNG stream
+  - [ ] diff view in debugger.html — when stepping between turns, show what changed: `- hp: 6 / + hp: 4 / + bleed: 2`
+  - [ ] Failure artifacts — on a failing test, auto-save into `/artifacts`: `replay.json` + `state-before.json` + `state-after.json` + `rng-stream.json`
 
 **SKIP for v1:**
 - Differential testing (two engine implementations) — 2x maintenance, 10% extra signal
   - "AI chaos monkey" as separate module — fast-check already is the chaos monkey
-  - Chaos mode (corrupt save / duplicate event) — fault injection уже покрывает концепт
-  - Testing dashboard HTML page — раздел README со stats даёт 80% эффекта
+  - Chaos mode (corrupt save / duplicate event) — fault injection already covers the concept
+  - Testing dashboard HTML page — a README section with the stats gives 80% of the effect
   - Complex debugger UX (animations, sounds, polished game feel)
   - Testing notebook / research docs — write after implementation
 

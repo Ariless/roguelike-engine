@@ -6,64 +6,64 @@ Interesting choices made during implementation — what was built, why, and what
 
 ## ENGINE
 
-### D-01 — Два pipeline вместо одного
+### D-01 — Two pipelines instead of one
 
-**Проблема:** Один 12-шаговый pipeline не мог однозначно описать порядок операций. Vampire lifesteal одновременно был "step 5 в action sequence" и "step 8 в turn structure" — два правильных описания одного события, но про разные вещи.
+**Problem:** A single 12-step pipeline could not describe the order of operations unambiguously. Vampire lifesteal was simultaneously "step 5 of the action sequence" and "step 8 of the turn structure" — two correct descriptions of one event, about different things.
 
-**Решение:** Явное разделение на два pipeline с иерархией вызовов:
-- **Turn Pipeline (9 шагов)** — структура одного полного хода (когда passives, когда player acts, когда enemies act, когда statuses tick)
-- **Action Resolution Pipeline (5 шагов)** — семантика одного действия (state transitions → status application → positional effects → damage calculation → post-effects)
+**Decision:** An explicit split into two pipelines with a call hierarchy:
+- **Turn Pipeline (9 steps)** — the structure of one full turn (when passives fire, when the player acts, when enemies act, when statuses tick)
+- **Action Resolution Pipeline (5 steps)** — the semantics of one action (state transitions → status application → positional effects → damage calculation → post-effects)
 
-Turn Pipeline steps 4 и 5 вызывают Action Resolution Pipeline для каждого отдельного действия.
+Turn Pipeline steps 4 and 5 invoke the Action Resolution Pipeline for each individual action.
 
-**Почему важно:** Каждое правило теперь однозначно принадлежит ровно одному pipeline и одному шагу. Нет "step N" без указания какого pipeline. Invariant registry может ссылаться на конкретный шаг.
+**Why it matters:** Every rule now belongs to exactly one pipeline and one step. There is no "step N" without naming which pipeline. The invariant registry can point at a specific step.
 
 ---
 
-### D-02 — Statuses как hooks, не как hardcoded комбинации
+### D-02 — Statuses as hooks, not as hardcoded combinations
 
-**Проблема:** Наивный подход: `if (hasBleed && hasVulnerable) { damage *= 1.3 }`. При 4 статусах — 16 комбинаций, при 6 — 64. Тесты не покрывают их все, и любой новый статус ломает существующие комбо.
+**Problem:** The naive approach: `if (hasBleed && hasVulnerable) { damage *= 1.3 }`. Four statuses give 16 combinations, six give 64. Tests cannot cover them all, and every new status breaks the existing combos.
 
-**Решение:** Каждый статус — коллекция hooks на общие event points:
+**Decision:** Each status is a collection of hooks on shared event points:
 ```ts
 Bleed      = { onTurnStart: (e) => e.hp -= stacks }
 Vulnerable = { incomingDamage: (v) => v * 1.5 }
 Stun       = { canAct: () => false }
 Defend     = { incomingDamage: (v) => Math.max(0, v - stacks) }
 ```
-Комбинации возникают автоматически через shared hook points.
+Combinations arise automatically through the shared hook points.
 
-**Почему важно:** Добавление нового статуса = zero changes to existing tests. `applyEvent()` — единственная mutation target для всей modifier системы. Открывает возможность для property-based тестов без O(n²) сценариев.
-
----
-
-### D-03 — Handler injection для unbuilt компонентов
-
-**Проблема:** Berserker, Vampire, RNG-dependent steps не реализованы. Нужно тестировать pipeline steps которые их вызывают.
-
-**Решение:** Optional handler interfaces (`TurnHandlers`, `ActionHandlers`). Каждый step который требует unbuilt компонента принимает optional handler. Если handler не передан — step это pass-through.
-
-**Почему важно:** Позволяет писать тесты на pipeline structure до реализации всех компонентов. 135+ тестов работают без Blood Mage и Berserker. Паттерн встречается в middleware, auth layers, request validation chains.
+**Why it matters:** Adding a status means zero changes to existing tests. `applyEvent()` is the single mutation target for the whole modifier system. It opens the way to property-based tests without O(n²) scenarios.
 
 ---
 
-### D-04 — Contextual invariants, не global
+### D-03 — Handler injection for unbuilt components
 
-**Проблема:** Казалось бы, `hp = 0 → entity должен быть dead`. Но это неверно.
+**Problem:** Berserker, Vampire and the RNG-dependent steps were not implemented, yet the pipeline steps that call them needed testing.
 
-**Решение:** `alive + hp=0` — валидное состояние МЕЖДУ applyDamage и step9 (Death Resolution). Невалидное ПОСЛЕ step9. Инвариант true не "всегда" — только в конкретной точке pipeline.
+**Decision:** Optional handler interfaces (`TurnHandlers`, `ActionHandlers`). Every step that needs an unbuilt component takes an optional handler; with no handler passed, the step is a pass-through.
 
-**InvariantRegistry** хранит каждый инвариант с `appliesAt: PipelineStep`.
-
-**Почему важно:** Без этого разделения runtime assertions будут ложно срабатывать в середине pipeline. Contextual invariants — редкий концепт, но встречается везде: payment processing (partially applied transaction), distributed systems (eventual consistency windows).
+**Why it matters:** The pipeline structure can be tested before every component exists — 135+ tests ran without Blood Mage or Berserker. The pattern shows up in middleware, auth layers and request validation chains.
 
 ---
 
-### D-10 — Blood Mage: "already bleeding" проверяется ДО применения bleed
+### D-04 — Contextual invariants, not global ones
 
-**Проблема:** Карта `Open the Wound` гласит: "Apply 3 bleed. If target already bleeding → also apply vulnerable." Наивная реализация: применить bleed → проверить bleeding → применить vulnerable. Но тогда карта всегда бы видела цель как bleeding (только что применили) и всегда давала бы vulnerable.
+**Problem:** It looks obvious that `hp = 0 → the entity must be dead`. It is not true.
 
-**Решение:** `playOpenTheWound` сохраняет `targetWasBleeding` **до** вызова `resolveAction` с bleed. Vulnerable применяется только если цель кровоточила до начала действия карты.
+**Decision:** `alive + hp=0` is a valid state BETWEEN applyDamage and step9 (Death Resolution), and invalid AFTER step9. The invariant is not true "always" — only at a specific point in the pipeline.
+
+**InvariantRegistry** stores each invariant with `appliesAt: PipelineStep`.
+
+**Why it matters:** Without that distinction runtime assertions fire falsely mid-pipeline. Contextual invariants are a rare concept but appear everywhere: payment processing (a partially applied transaction), distributed systems (eventual consistency windows).
+
+---
+
+### D-10 — Blood Mage: "already bleeding" is checked BEFORE bleed is applied
+
+**Problem:** The card `Open the Wound` reads: "Apply 3 bleed. If target already bleeding → also apply vulnerable." The naive implementation applies bleed, checks for bleeding, then applies vulnerable — at which point the card always sees a bleeding target, because it just applied it, and always grants vulnerable.
+
+**Decision:** `playOpenTheWound` records `targetWasBleeding` **before** calling `resolveAction` with bleed. Vulnerable is applied only if the target was bleeding before the card acted.
 
 ```ts
 const targetWasBleeding = target ? hasStatus(target, 'bleed') : false
@@ -71,42 +71,42 @@ let s = resolveAction(state, { type: 'applyStatus', ..., status: { name: 'bleed'
 if (targetWasBleeding) { s = resolveAction(s, { ..., status: { name: 'vulnerable', stacks: 1 } }) }
 ```
 
-**Почему важно:** Один снимок стейта до действия — паттерн для любой conditional trigger логики. Mutation testing цель: переставить снимок и применение местами → кондишн всегда true.
+**Why it matters:** One snapshot of state taken before the action is the pattern for any conditional trigger. Mutation testing target: swap the snapshot and the application, and the condition becomes permanently true.
 
 ---
 
-### D-11 — Bloodrite: самоурон обходит defend напрямую
+### D-11 — Bloodrite: self-damage bypasses defend directly
 
-**Проблема:** Bloodrite наносит 8 урона врагу и берёт 3 HP самоурона с героя. Если пропустить самоурон через `resolveAction`, defend поглощает часть — герой платит меньше чем должен.
+**Problem:** Bloodrite deals 8 damage to the enemy and costs the hero 3 HP. Routing that cost through `resolveAction` lets defend absorb part of it, so the hero pays less than the ritual demands.
 
-**Решение:** Урон по врагу идёт через `resolveAction` (vulnerable работает, как ожидается). Самоурон — прямая мутация HP без pipeline:
+**Decision:** Damage to the enemy goes through `resolveAction`, where vulnerable works as expected. The self-damage is a direct HP mutation outside the pipeline:
 
 ```ts
 const newHp = Math.max(0, s.hero.hp - 3)
-// death_door / dead state machine применяется вручную
+// the death_door / dead state machine is applied by hand
 ```
 
-**Почему важно:** Bloodrite — ритуал, не атака. Defend — заимствованный момент порядка. Ритуальная цена не снижается защитой. Паттерн встречается везде где "cost" семантически отличается от "damage" — audit penalties, resource depletion, fee-as-side-effect.
+**Why it matters:** Bloodrite is a ritual, not an attack, and a ritual price is not reduced by armour. The pattern appears wherever "cost" is semantically distinct from "damage": audit penalties, resource depletion, fee-as-side-effect.
 
 ---
 
 ## GAME UI
 
-### D-05 — Auto-fire карты, не two-step click
+### D-05 — Cards auto-fire instead of a two-step click
 
-**Проблема:** Изначально: клик на карту → карта выделяется → нужен второй клик на портрет врага. Игрок не понимал почему урон не наносится.
+**Problem:** Originally: click a card, the card highlights, and a second click on the enemy portrait is required. Players did not understand why nothing happened.
 
-**Решение:** Поскольку враг всегда один, карты с `target: 'enemy'` сразу вызывают `playCard()` при клике. Два шага имеют смысл только когда нужно выбирать между несколькими целями.
+**Decision:** With only one enemy, cards with `target: 'enemy'` call `playCard()` on the first click. Two steps only make sense when there is a choice of target.
 
-**Почему важно:** UX rule: не требуй действий без причины. При одной цели выбор цели — лишний шаг.
+**Why it matters:** A UX rule: do not demand an action without a reason. With one target, choosing a target is a wasted step.
 
 ---
 
-### D-06 — Global tooltip div вместо in-card
+### D-06 — A global tooltip div instead of an in-card one
 
-**Проблема:** Tooltip внутри `.hand-card` обрезался — родительский элемент имеет `overflow: hidden` для правильного отображения card art.
+**Problem:** A tooltip inside `.hand-card` was clipped: the parent has `overflow: hidden` so the card art renders correctly.
 
-**Решение:** Один глобальный `#cardTooltip` div с `position: fixed`, позиционируется через JS при mouseenter:
+**Decision:** One global `#cardTooltip` div with `position: fixed`, positioned from JS on mouseenter:
 ```js
 const rect = el.getBoundingClientRect()
 tip.style.left = (rect.left + rect.width/2 - 105) + 'px'
@@ -114,27 +114,27 @@ tip.style.top  = rect.top + 'px'
 tip.style.transform = 'translateY(-100%)'
 ```
 
-**Почему важно:** Классический паттерн для tooltips в card game UI. `overflow: hidden` на карте нужен — нельзя убрать. Глобальный div работает вне любого stacking context.
+**Why it matters:** The classic pattern for tooltips in a card game UI. The card needs its `overflow: hidden` and cannot give it up; a global div lives outside any stacking context.
 
 ---
 
-### D-08 — Два разных Death's Door эффекта
+### D-08 — Two different Death's Door effects
 
-**Проблема:** Один red pulse эффект для всех сущностей не передаёт нарратив. Герой умирает от боли — враг архивируется системой.
+**Problem:** A single red pulse for every entity carries no narrative. The hero dies in pain; the enemy is archived by the system.
 
-**Решение:** Два отдельных visual state:
-- **Hero Death's Door** — красный пульс (`pulse-red`), красный виньет экрана, бейдж "DEATH'S DOOR". Боль, кровь, угроза смерти.
-- **Enemy Death's Door** — золотой scan-line (`scan-line` animation), десатурация, gold glow. Архивариус начинает "оцифровывать" сущность перед сохранением.
+**Decision:** Two separate visual states:
+- **Hero Death's Door** — a red pulse (`pulse-red`), a red screen vignette, a "DEATH'S DOOR" badge. Pain, blood, the threat of death.
+- **Enemy Death's Door** — a golden scan-line, desaturation, a gold glow. The Archivist begins digitising the entity before storing it.
 
-**Почему важно:** Narrative consistency — каждый визуальный элемент отражает мир Архивариуса. Enemy death = архивация, не смерть. Это делает проект узнаваемым на скриншоте.
+**Why it matters:** Narrative consistency — every visual element reflects the Archivist's world. An enemy's death is archival, not death. It also makes the project recognisable in a screenshot.
 
 ---
 
 ### D-09 — Global tooltip div vs CSS :hover
 
-**Проблема:** `.hand-card` имеет `overflow: hidden` для корректного отображения card art. CSS tooltip внутри карты обрезался.
+**Problem:** `.hand-card` carries `overflow: hidden` so the card art renders correctly, which clipped a CSS tooltip placed inside the card.
 
-**Решение:** Один глобальный `#cardTooltip` div с `position: fixed`, позиционируется через `getBoundingClientRect()`:
+**Decision:** One global `#cardTooltip` div with `position: fixed`, positioned via `getBoundingClientRect()`:
 ```js
 const rect = el.getBoundingClientRect()
 tip.style.left = (rect.left + rect.width/2 - 105) + 'px'
@@ -142,35 +142,35 @@ tip.style.top  = rect.top + 'px'
 tip.style.transform = 'translateY(-100%)'
 ```
 
-**Почему важно:** Классический паттерн для tooltips поверх overflow:hidden контейнеров. Встречается в любом card game UI, data table с fixed columns, dropdown меню.
+**Why it matters:** The classic pattern for tooltips over `overflow: hidden` containers. It appears in any card game UI, in data tables with fixed columns, in dropdown menus.
 
 ---
 
-### D-07 — Overlay narrative vs external text для entity panels
+### D-07 — Overlay narrative vs external text on entity panels
 
-**Проблема:** Первая версия: вся информация (имя, HP, статусы, ресурсы) наложена поверх портрета через `position: absolute`. Красиво в теории, но на MacBook Air 13" текст сливался с артом, элементы вылезали за boundaries портрета.
+**Problem:** The first version laid all information — name, HP, statuses, resources — over the portrait with `position: absolute`. Elegant in theory; on a 13" MacBook Air the text merged with the art and elements spilled past the portrait boundary.
 
-**Решение:** Откат к внешнему тексту — отдельный `.entity-info` блок под портретом. Менее "игровой" визуально, но читаемый и предсказуемый.
+**Decision:** Reverted to external text — a separate `.entity-info` block under the portrait. Less game-like, but readable and predictable.
 
-**Почему важно:** Записано в tech debt — правильное решение требует точного расчёта высот под конкретный viewport. Viewport MacBook Air 13" ≈ 856px после browser chrome. Нужно: portrait ≤ 200px + entity-info ≤ 80px + hand ≤ 180px + log ≤ 60px + topbar ≤ 48px = 568px, оставляя ~290px на battle area.
-
----
-
-### D-12 — Hero selector в топбаре, аналогично enemy selector
-
-**Проблема:** Hero захардкожен в `makeGameState`. Нет способа переключиться между классами без правки кода.
-
-**Решение:** `HERO_DEFS` объект с конфигурацией каждого героя (name, portrait, hp, hand). `forcedHero` переменная, `selectHero(key)` функция — симметрично паттерну `selectEnemy`. `makeGameState` делает spread: `{ ...HERO_DEFS[forcedHero], maxHp: ..., state: 'alive', ... }`. Лог-сообщения обновлены до `gs.hero.name` вместо хардкода "Paladin".
-
-**Почему важно:** Единственное место конфигурации героя — `HERO_DEFS`. Добавление Berserker = одна запись в объект. Симметрия hero/enemy selector делает интерфейс предсказуемым — пользователь сразу понимает паттерн.
+**Why it matters:** Recorded as tech debt — the proper fix needs exact height budgeting for a given viewport. A 13" MacBook Air leaves ≈856px after browser chrome; the budget is portrait ≤ 200px + entity-info ≤ 80px + hand ≤ 180px + log ≤ 60px + topbar ≤ 48px = 568px, leaving ~290px for the battle area.
 
 ---
 
-### D-13 — Enemy в death_door умирает до своего хода (death rattle убран)
+### D-12 — A hero selector in the top bar, mirroring the enemy selector
 
-**Проблема:** Враг уходил в death_door (HP = 0) после хода героя. При нажатии End Turn враг успевал выполнить свой intent ДО смерти — мог убить героя, который тоже был на Death's Door. Игроку требовался дополнительный End Turn чтобы враг умер.
+**Problem:** The hero was hardcoded in `makeGameState`, with no way to switch class without editing code.
 
-**Решение:** В начале `endTurn()`, сразу после `deepClone`, добавлена явная death resolution для врага:
+**Decision:** A `HERO_DEFS` object holding each hero's configuration (name, portrait, hp, hand), a `forcedHero` variable and a `selectHero(key)` function, mirroring `selectEnemy`. `makeGameState` spreads `{ ...HERO_DEFS[forcedHero], maxHp: …, state: 'alive', … }`, and log messages use `gs.hero.name` instead of a hardcoded "Paladin".
+
+**Why it matters:** Hero configuration lives in exactly one place. Adding the Berserker is one entry in an object. The symmetry between the hero and enemy selectors makes the interface predictable.
+
+---
+
+### D-13 — An enemy at death_door dies before its turn (no death rattle)
+
+**Problem:** The enemy dropped to death_door (HP = 0) after the hero's turn. On End Turn it still executed its intent BEFORE dying, and could kill a hero who was also at Death's Door. It took an extra End Turn for the enemy to die.
+
+**Decision:** Explicit death resolution for the enemy at the start of `endTurn()`, right after `deepClone`:
 ```js
 if (gs.enemy.state === 'death_door') {
   gs.enemy.state = 'dead'
@@ -178,202 +178,202 @@ if (gs.enemy.state === 'death_door') {
   if (gs.isOver) { render(); return }
 }
 ```
-Enemy в death_door умирает ДО выполнения intent — death rattle отсутствует.
+An enemy at death_door dies BEFORE its intent executes — there is no death rattle.
 
-**Почему важно:** Race condition в state machine: `state !== 'dead'` и `state === 'death_door'` — разные условия, оба давали "может действовать". Нужна единственная точка проверки "живой ли враг", а не множество `!== 'dead'` по коду. Паттерн встречается в workflow engines и payment systems — "pending cancellation" entity не должна обрабатываться как active.
-
----
-
-### D-14 — Берсеркер и Вервольф разделены на два отдельных героя
-
-**Проблема:** Один герой "Berserker" одновременно имел механику rage-scaling И трансформацию в вервольфа — два несовместимых архетипа в одном персонаже. Это путало нарратив и тестовые паттерны.
-
-**Решение:** Разделение на два независимых героя:
-- **Berserker** (`berserker.ts`) — rage mode: HP ≤ 25% → ×1.5 урон на 1 ход, без трансформации. Карты: Savage Lunge, Primal Fury, Primal Dodge.
-- **Werewolf** (`werewolf.ts`) — transformation: HP ≤ 50% → wolf form (3 хода), wolf passive scaling. Карты: 3 human (Lunar Strike, Pack Sense, Stalk) + 3 wolf (Rend, Rampage, Reality Crack).
-
-**Почему важно:** Каждый герой теперь демонстрирует один отчётливый тестовый паттерн. Berserker = binary threshold trigger. Werewolf = nested state machine. Смешение двух паттернов в одном герое снижало учебную ценность.
+**Why it matters:** A state machine race condition: `state !== 'dead'` and `state === 'death_door'` are different conditions and both read as "may act". What is needed is a single place that answers "is this enemy alive", not a scattering of `!== 'dead'` checks. The pattern appears in workflow engines and payment systems, where a "pending cancellation" entity must not be processed as active.
 
 ---
 
-### D-15 — Berserker rage: состояние вычисляется, не хранится
+### D-14 — Berserker and Werewolf split into two separate heroes
 
-**Проблема:** Предыдущий "Berserker" хранил `werewolfTurnsLeft` как счётчик состояния. Для нового rage mode нужно было решить: хранить `rageActive: boolean` или вычислять каждый раз?
+**Problem:** One hero carried both rage scaling AND werewolf transformation — two incompatible archetypes in a single character, which confused both the narrative and the testing patterns.
 
-**Решение:** `isInRage(hero)` — чисто вычисляемая функция из HP ratio. Нет флага в стейте, нет синхронизации, нет возможности рассинхронизации:
+**Decision:** Split into two independent heroes:
+- **Berserker** (`berserker.ts`) — rage mode: HP ≤ 25% → ×1.5 damage for one turn, no transformation. Cards: Savage Lunge, Primal Fury, Primal Dodge.
+- **Werewolf** (`werewolf.ts`) — transformation: HP ≤ 50% → wolf form for 3 turns, with passive scaling. Cards: 3 human (Lunar Strike, Pack Sense, Stalk) + 3 wolf (Rend, Rampage, Reality Crack).
+
+**Why it matters:** Each hero now demonstrates one distinct testing pattern: the Berserker a binary threshold trigger, the Werewolf a nested state machine. Mixing both in one character blurred each of them.
+
+---
+
+### D-15 — Berserker rage: state is computed, not stored
+
+**Problem:** The previous Berserker stored `werewolfTurnsLeft` as a state counter. For the new rage mode the choice was whether to store `rageActive: boolean` or compute it each time.
+
+**Decision:** `isInRage(hero)` is computed purely from the HP ratio. No flag in state, nothing to synchronise, nothing that can drift out of sync:
 ```ts
 export function isInRage(hero: Hero): boolean {
   return hero.state !== 'dead' && hero.hp <= Math.floor(hero.maxHp * 0.25)
 }
 ```
 
-`werewolfTurnsLeft` на Werewolf сохранился — он нужен для 3-ходовой длительности, которую нельзя вычислить из текущего стейта.
+`werewolfTurnsLeft` survives on the Werewolf, because a three-turn duration cannot be derived from the current state.
 
-**Почему важно:** Когда состояние вычисляемо — не храни его. Stored state = потенциальная рассинхронизация. Паттерн встречается везде: `isAdmin` вычисляется из ролей, `isExpired` вычисляется из даты, `isOverBudget` вычисляется из суммы транзакций.
-
----
-
-### D-16 — gs.enemy (singleton) → gs.enemies[] (array) — полная миграция
-
-**Проблема:** `gs.enemy` — единственный объект. Добавление второго врага невозможно без переписывания всех 47 мест в коде. `card.effect(gs)` напрямую читал `gs.enemy`, не принимая цель как параметр.
-
-**Решение:**
-- `gs.enemy` → `gs.enemies[]`; все функции работают через id: `dealDamage(gs, targetId, dmg)`
-- `card.effect(gs)` → `card.effect(gs, targetId)` — цель передаётся явно
-- AoE карты (Rampage, Reality Crack) имеют `target: 'aoe'` и итерируют `gs.enemies` игнорируя targetId
-- `tickStatuses(gs, 'enemy')` → `tickStatuses(gs, enemy.id)` — настоящий id вместо sentinel-строки
-
-**Почему важно:** 47 мест с `gs.enemy` — скрытая связность (implicit coupling). Каждая функция молчаливо предполагала одного врага. В TypeScript rename поймал бы все сразу; в plain JS — только runtime. Явный targetId делает зависимость видимой.
+**Why it matters:** When state can be computed, do not store it — stored state is a chance to drift. The pattern is everywhere: `isAdmin` from roles, `isExpired` from a date, `isOverBudget` from a transaction total.
 
 ---
 
-### D-17 — Encounter генерируется из seed, кнопки выбора врага убраны
+### D-16 — gs.enemy (singleton) → gs.enemies[] (array), a full migration
 
-**Проблема:** Ручной выбор врага через кнопки = детерминизм управляется игроком, не seed. Два игрока с одинаковым seed получали разные encounters. Seed переставал быть единственным источником истины.
+**Problem:** `gs.enemy` was a single object. A second enemy was impossible without rewriting all 47 call sites, and `card.effect(gs)` read `gs.enemy` directly instead of taking a target.
 
-**Решение:** `pickEncounter(seed)` → `Object.keys(ENCOUNTER_DEFS)[seed % keys.length]`. Encounter полностью детерминирован seed. Кнопки врагов убраны из UI. Текущий encounter отображается в топбаре (`GOBLIN + NECROMANCER`).
+**Decision:**
+- `gs.enemy` → `gs.enemies[]`; every function works by id: `dealDamage(gs, targetId, dmg)`
+- `card.effect(gs)` → `card.effect(gs, targetId)` — the target is passed explicitly
+- AoE cards (Rampage, Reality Crack) carry `target: 'aoe'` and iterate `gs.enemies`, ignoring targetId
+- `tickStatuses(gs, 'enemy')` → `tickStatuses(gs, enemy.id)` — a real id instead of a sentinel string
 
-**Почему важно:** Seed = воспроизводимость. Если seed 42 всегда даёт один и тот же encounter — любой failing run можно воспроизвести точно. Это ключевое свойство для replay системы и property testing. Ручной выбор врага ломал это свойство.
-
----
-
-### D-18 — Replay: turn_end как маркер в логе, а не внутренние события
-
-**Проблема:** ReplayLog записывает все внутренние события (enemy_action, status_tick, transform). Replayer не может напрямую воспроизвести их — у executor только два публичных метода: `playCard()` и `endTurn()`. Нужен способ сказать replayer "здесь был вызван endTurn".
-
-**Решение:** Добавлен `'turn_end'` event type. Executor записывает его в конце каждого `endTurn()` (включая ранние выходы при смерти). Replayer итерирует события: `play_card` → `playCard()`, `turn_end` → `endTurn()`. Все остальные события (`enemy_action`, `status_tick` и т.д.) — side effects, они возникают автоматически и используются только для hash-верификации.
-
-**Почему важно:** Явный маркер вместо инференса. Альтернатива — replayer угадывает границы ходов по последовательности событий. Явный `turn_end` делает лог самодокументированным: "здесь произошёл переход хода" видно без разбора контекста.
+**Why it matters:** 47 references to `gs.enemy` were implicit coupling — every function silently assumed a single enemy. In TypeScript a rename would have caught them all at once; in plain JS only at runtime. An explicit targetId makes the dependency visible.
 
 ---
 
-### D-20 — Процедурные звуки через Web Audio API, без файлов
+### D-17 — The encounter comes from the seed; enemy selection buttons removed
 
-**Проблема:** Звуковые ассеты (mp3/wav) требуют хранения, лицензий, и HTTP-запросов. Файл-based sound мешает офлайн-использованию и раздувает репо ненужными бинарниками.
+**Problem:** Picking the enemy by hand put determinism in the player's control rather than the seed's. Two players on the same seed got different encounters, and the seed stopped being the single source of truth.
 
-**Решение:** Модуль `snd` — IIFE с lazy AudioContext, 13 функций, чистый Web Audio API. Каждый звук генерируется из осцилляторов и gain-нодов в реальном времени. Никаких файлов, никаких ассетов.
+**Decision:** `pickEncounter(seed)` → `Object.keys(ENCOUNTER_DEFS)[seed % keys.length]`. The encounter is fully determined by the seed, the enemy buttons are gone, and the current encounter is shown in the top bar (`GOBLIN + NECROMANCER`).
 
-AudioContext создаётся при первом вызове (lazy init), чтобы обойти браузерное ограничение на автоплей без пользовательского жеста. Первый клик карты = первый звук.
+**Why it matters:** The seed is reproducibility. If seed 42 always produces the same encounter, any failing run can be reproduced exactly — the property the replay system and property testing both rest on. Manual enemy selection broke it.
 
-**Какие события озвучены и чем:**
+---
 
-| Событие | Техника | Описание |
+### D-18 — Replay: turn_end as a marker in the log, not internal events
+
+**Problem:** The ReplayLog records every internal event (enemy_action, status_tick, transform), and the replayer cannot reproduce them directly — the executor exposes only `playCard()` and `endTurn()`. Something has to tell the replayer "endTurn was called here".
+
+**Decision:** A `'turn_end'` event type. The executor records it at the end of every `endTurn()`, early returns on death included. The replayer iterates events: `play_card` → `playCard()`, `turn_end` → `endTurn()`. Everything else is a side effect that arises on its own and serves only hash verification.
+
+**Why it matters:** An explicit marker instead of inference. The alternative has the replayer guessing turn boundaries from the event sequence; an explicit `turn_end` makes the log self-documenting.
+
+---
+
+### D-20 — Procedural sound through the Web Audio API, no files
+
+**Problem:** Sound assets need storage, licences and HTTP requests. File-based audio gets in the way of offline use and fills the repository with binaries.
+
+**Decision:** An `snd` module — an IIFE with a lazy AudioContext, 13 functions, plain Web Audio API. Every sound is generated from oscillators and gain nodes at runtime. No files, no assets.
+
+The AudioContext is created on first use, to work around the browser restriction on autoplay without a user gesture. The first card click is the first sound.
+
+**What is sounded, and how:**
+
+| Event | Technique | Description |
 |---|---|---|
-| Карта сыграна | sine 600→300 Hz | Лёгкий свист |
-| Удар по врагу | sawtooth 280→70 Hz | Металлический удар |
-| Смерть врага | sawtooth 220→28 Hz | Тяжёлый падающий тон |
-| Удар по герою | square 130→45 Hz | Тупой удар |
-| Death's Door | sine 65→42 Hz | Зловещий гул |
-| Лечение | sine C→E→G arpegio | Восходящее трезвучие |
-| Блид (враг) | filtered noise, highpass 3.5kHz | Шипение |
-| Стан (враг) | sine 1500→180 Hz | Металлическое зиканье |
-| Трансформация вервольфа | sawtooth rumble + sine howl sweep | Рычание + вой |
-| Берсерк рэйдж (≤25% HP) | sawtooth 80→45 Hz + crunch 400→150 Hz | Низкий рёв + крантч |
-| End Turn | square 700→350 Hz | Клик |
-| Победа | triangle C-E-G-C arpeggio | Фанфара |
-| Поражение | sine A-F-A descending | Нисходящий Am |
+| Card played | sine 600→300 Hz | A light whistle |
+| Hit on an enemy | sawtooth 280→70 Hz | A metallic strike |
+| Enemy death | sawtooth 220→28 Hz | A heavy falling tone |
+| Hit on the hero | square 130→45 Hz | A blunt impact |
+| Death's Door | sine 65→42 Hz | An ominous hum |
+| Healing | sine C→E→G arpeggio | A rising triad |
+| Bleed on an enemy | filtered noise, highpass 3.5kHz | A hiss |
+| Stun on an enemy | sine 1500→180 Hz | A metallic ring |
+| Werewolf transformation | sawtooth rumble + sine howl sweep | A growl and a howl |
+| Berserker rage (≤25% HP) | sawtooth 80→45 Hz + crunch 400→150 Hz | A low roar and a crunch |
+| End Turn | square 700→350 Hz | A click |
+| Victory | triangle C-E-G-C arpeggio | A fanfare |
+| Defeat | sine A-F-A descending | A descending A minor |
 
-**Хуки:** `playCard()` → cardPlay; `dealDamage()` → strike/enemyDead; `executeEnemyIntent()` → heroHit/deathDoor/bleedSfx/stunSfx/rageSfx; `healHero()` → heal; `checkWin()` → victory/defeat; `endTurn()` → endTurnSfx; `checkBerserkerTransformGame()` → transform.
+**Hooks:** `playCard()` → cardPlay; `dealDamage()` → strike/enemyDead; `executeEnemyIntent()` → heroHit/deathDoor/bleedSfx/stunSfx/rageSfx; `healHero()` → heal; `checkWin()` → victory/defeat; `endTurn()` → endTurnSfx; `checkBerserkerTransformGame()` → transform.
 
-Берсерк рэйдж определяется пересечением порога: `prevHpPct > 0.25 && newHpPct <= 0.25`. Срабатывает ровно один раз за бой при первом падении HP ниже 25%.
+Berserker rage is detected as a threshold crossing: `prevHpPct > 0.25 && newHpPct <= 0.25`. It fires exactly once per battle, the first time HP drops below 25%.
 
-**Почему важно:** Ноль зависимостей, ноль файлов, полная воспроизводимость. Паттерн переносится на любой браузерный проект где нужны звуки без ассетов.
-
----
-
-### D-19 — Replay hash-верификация: prostate hash, не full state compare
-
-**Проблема:** Для byte-perfect replay нужно проверить что воспроизведённый run совпадает с оригиналом. Сравнивать полный GameState (JSON equality) — тяжело и brittle к изменениям структуры.
-
-**Решение:** 6-символьный hex hash от `JSON.stringify({hero, enemies})` записывается в каждый event как `preStateHash` и `postStateHash`. Replayer после каждого `playCard` / `endTurn` вычисляет хэш текущего стейта и сравнивает с recorded `postStateHash`. Мismatch = точка расхождения с указанием turn и event type.
-
-**Почему важно:** Хэш компактный, детерминированный, и указывает точно КОГДА разошлись runs. Полный JSON compare требовал бы хранения всех промежуточных стейтов. Паттерн аналогичен event sourcing checkpointing и distributed system state verification.
+**Why it matters:** Zero dependencies, zero files, full reproducibility. The pattern carries to any browser project that needs sound without assets.
 
 ---
 
-### D-20 — BDD на rule engine без UI: Cucumber как executable specification
+### D-19 — Replay hash verification: a per-state hash, not a full state compare
 
-**Проблема:** Нет UI, нет API — как продемонстрировать что правила читаемы и проверяемы на человеческом языке?
+**Problem:** Byte-perfect replay requires checking that the reproduced run matches the original. Comparing the full GameState by JSON equality is heavy and brittle against structural change.
 
-**Решение:** Cucumber с шагами которые вызывают `createGame()` + `game.endTurn()` напрямую. Feature файл — executable specification правил движка. Step definitions используют два режима: executor (для full game flow сценариев) и engine functions напрямую (для HP-точных граничных сценариев).
+**Decision:** A 6-character hex hash of `JSON.stringify({hero, enemies})` is written into every event as `preStateHash` and `postStateHash`. After each `playCard` / `endTurn` the replayer hashes the current state and compares it against the recorded `postStateHash`. A mismatch is the exact divergence point, with its turn and event type.
 
-**Почему важно:** BDD = способ записать бизнес-правило, не инструмент для UI тестирования. "Given the Guardian stuns the hero" — это спецификация правила предметной области. Те же сценарии применимы к pricing engine, insurance rules, loan approval workflow. Убирает ложное предположение "BDD = браузер".
+**Why it matters:** The hash is compact, deterministic, and pinpoints WHEN the runs diverged. A full JSON compare would require storing every intermediate state. The pattern mirrors event sourcing checkpointing and distributed state verification.
 
 ---
 
-### D-21 — window.loadJSON() — testability hook для Playwright без рефакторинга
+### D-20 — BDD on a rule engine with no UI: Cucumber as executable specification
 
-**Проблема:** Playwright не может вызвать file dialog для загрузки replay.json в debugger.html. `window.log = data; initDebugger()` не работает — `log` внутренняя переменная модуля.
+**Problem:** With no UI and no API, how do you show the rules are readable and checkable in human language?
 
-**Решение:** Один метод в debugger.html специально для тестов:
+**Decision:** Cucumber with steps that call `createGame()` and `game.endTurn()` directly. The feature file is an executable specification of the engine's rules. Step definitions run in two modes: through the executor for full game flows, and against engine functions directly for HP-precise boundary scenarios.
+
+**Why it matters:** BDD is a way to write down a business rule, not a UI testing tool. "Given the Guardian stuns the hero" is a domain rule specification. The same scenarios apply to a pricing engine, insurance rules or a loan approval workflow. It removes the false assumption that BDD means a browser.
+
+---
+
+### D-21 — window.loadJSON(): a testability hook for Playwright without refactoring
+
+**Problem:** Playwright cannot drive the file dialog that loads replay.json into debugger.html, and `window.log = data; initDebugger()` does not work because `log` is a module-internal variable.
+
+**Decision:** One method in debugger.html, there for the tests:
 ```js
 window.loadJSON = function(data) { log = data; initDebugger() }
 ```
-Playwright вызывает через `page.evaluate`. Внутренняя архитектура не изменилась.
+Playwright calls it through `page.evaluate`. The internal architecture is unchanged.
 
-**Почему важно:** "Testability hook" — минимальная точка входа для внешнего тестирования. Не рефакторинг архитектуры. Паттерн встречается везде где нет public API: legacy code, game engines, embedded systems.
+**Why it matters:** A testability hook is the minimal entry point for outside testing, not an architectural refactor. The pattern appears wherever there is no public API: legacy code, game engines, embedded systems.
 
 ---
 
 ## RUNTIME
 
-### D-22 — Vampire lifesteal: track before/after в pure functional pipeline
+### D-22 — Vampire lifesteal: tracking before and after in a pure functional pipeline
 
-**Проблема:** Vampire lifesteal = восстановить HP равное фактически нанесённому урону (не больше missing_hp). `intent.value` — запланированный урон, не фактический: defend мог поглотить часть. Engine возвращает только новый state, не дельту "сколько урона нанесено".
+**Problem:** Lifesteal restores HP equal to the damage actually dealt, capped at missing HP. `intent.value` is the planned damage, not the actual one — defend may have absorbed part of it. The engine returns only a new state, never a delta.
 
-**Решение:** Запомнить HP до `applyDamage`, вызвать, сравнить после:
+**Decision:** Record HP before `applyDamage`, call it, compare afterwards:
 ```ts
 const heroBefore = state.hero.hp
 const s = applyDamage(state, heroId, intent.value)
-const actualDmg = heroBefore - s.hero.hp  // реальный урон после defend
+const actualDmg = heroBefore - s.hero.hp  // real damage after defend
 ```
 
-**Почему важно:** Паттерн "track before/after" для side effects в иммутабельных pipeline. Функция не возвращает побочный результат — только финальный state. Единственный способ получить дельту: `snapshot_before - snapshot_after`. Возникает везде где есть middleware/guard который может модифицировать входное значение: payment processing (`balance_before - balance_after` ≠ `planned_amount`), auth layers, rate limiters.
+**Why it matters:** The track-before-and-after pattern for side effects in an immutable pipeline. The function returns no secondary result, only the final state, so the only way to get a delta is `snapshot_before − snapshot_after`. It appears wherever a middleware or guard can modify an input value: payment processing (`balance_before − balance_after` ≠ `planned_amount`), auth layers, rate limiters.
 
 ---
 
 ## TELEMETRY
 
-### D-23 — TurnSnapshot vs hash: верификация и визуализация — разные артефакты
+### D-23 — TurnSnapshot vs hash: verification and visualisation are different artefacts
 
-**Проблема:** Первая версия ReplayLog содержала только pre/post хэши событий. Debugger мог сказать "здесь что-то сломалось" — но не мог показать "HP было 18, статусы bleed+stun". Для integrity bars нужны реальные данные, не хэши.
+**Problem:** The first ReplayLog held only pre/post event hashes. The debugger could say "something broke here" but not "HP was 18, statuses bleed and stun". Integrity bars need real data, not hashes.
 
-**Решение:** Два отдельных артефакта с разными задачами:
-- **Hash** (`preStateHash` / `postStateHash`) — 6-символьный hex. Доказывает что state был конкретным. Используется replayer для byte-perfect верификации.
-- **TurnSnapshot** (полный state сущностей после каждого хода) — используется debugger для визуализации.
+**Decision:** Two separate artefacts with different jobs:
+- **Hash** (`preStateHash` / `postStateHash`) — six hex characters. Proves the state was exactly this one. Used by the replayer for byte-perfect verification.
+- **TurnSnapshot** — the full entity state after each turn, used by the debugger for visualisation.
 
-Атомарность: snapshot и turn_end event записываются из одного и того же `state` объекта — разнести их по времени = read-your-writes inconsistency.
+Atomicity: the snapshot and the turn_end event are written from the same `state` object — separating them in time would be a read-your-writes inconsistency.
 
-**Почему важно:** Hash = verification. Snapshot = visualization. Путать их — либо хранить слишком много (snapshots для replay), либо не иметь возможности показать что произошло (только hashes для debugger). Паттерн аналогичен event sourcing: event log (верификация) + read model (визуализация) — два артефакта, два назначения.
+**Why it matters:** A hash verifies; a snapshot visualises. Confusing them means either storing far too much (snapshots for replay) or being unable to show what happened (hashes only, for the debugger). The pattern mirrors event sourcing: an event log for verification plus a read model for visualisation.
 
 ---
 
 ## BOSS
 
-### D-24 — `constraintViolation: true`: событие которое само объявляет что сломает инвариант
+### D-24 — `constraintViolation: true`: an event that declares it will break an invariant
 
-**Проблема:** Phase 4 Archivist намеренно инжектирует невалидное состояние. Обычный код пытается быть валидным — как явно объявить что код намеренно нарушит контракт и тест должен это поймать?
+**Problem:** The Archivist's Phase 4 deliberately injects an invalid state. Ordinary code tries to stay valid — so how does code declare that it will violate a contract on purpose and that a test must catch it?
 
-**Решение:** `CorruptionEvent` с полем `constraintViolation: true`. Явный контракт: "если `constraintViolation: true` → `assertValidGameState()` ОБЯЗАН бросить исключение":
+**Decision:** A `CorruptionEvent` carrying `constraintViolation: true`. The contract is explicit: if `constraintViolation: true`, then `assertValidGameState()` MUST throw:
 ```ts
 applyCorruptionEvent(state, { type: 'invariant_breach', constraintViolation: true })
-// → assertValidGameState() должен бросить TimelineCorruptedError
+// → assertValidGameState() must throw TimelineCorruptedError
 ```
 
-**Почему важно:** Failure detection становится first-class. Тест не угадывает "должно ли было упасть" — событие само объявляет свой контракт. Паттерн в distributed systems: poison message = сообщение которое намеренно помечено как "должно вызвать ошибку для тестирования dead letter queue."
+**Why it matters:** Failure detection becomes first-class. The test does not guess whether something should have failed — the event states its own contract. The same pattern exists in distributed systems as a poison message: one deliberately marked as "must cause an error", for testing the dead letter queue.
 
 ---
 
-### D-25 — Charge stacks выживают Phase 3 state_reset: design exception как executable specification
+### D-25 — Charge stacks survive Phase 3 state_reset: a design exception as executable specification
 
-**Проблема:** Phase 3 Archivist сбрасывает все статусы. Дизайн-решение из DESIGN.md: charge stacks НЕ сбрасываются — они не статус, а ресурс героя. Без явного теста кто-то при рефакторинге добавит `chargeStacks: undefined` в state_reset и тихо сломает Paladin.
+**Problem:** Phase 3 clears every status. The design decision in DESIGN.md is that charge stacks are NOT cleared — they are a hero resource, not a status. Without an explicit test, a refactor would add `chargeStacks: undefined` to state_reset and quietly break the Paladin.
 
-**Решение:** Решение из документа стало тестом:
+**Decision:** The decision in the document became a test:
 ```ts
 it('charge stacks SURVIVE state reset (not a status)', () => {
   const after = applyCorruptionEvent(s, { type: 'state_reset' })
-  expect(after.hero.chargeStacks).toBe(2)  // выживает Phase 3
+  expect(after.hero.chargeStacks).toBe(2)  // survives Phase 3
 })
 ```
 
-**Почему важно:** Намеренные исключения из правил нарушаются при рефакторинге именно потому что они неочевидны. Комментарий в DESIGN.md не защищает. Тест который упадёт — защищает. `it.fails()` и targeted tests превращают дизайн-решения в executable specifications.
+**Why it matters:** Deliberate exceptions get broken during refactoring precisely because they are not obvious. A comment in DESIGN.md protects nothing; a test that fails does. `it.fails()` and targeted tests turn design decisions into executable specifications.

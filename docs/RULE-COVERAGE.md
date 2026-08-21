@@ -1,9 +1,9 @@
 # Rule Coverage Matrix
 
-Какие правила покрыты каким слоем тестирования.
+Which rules are covered by which testing layer.
 
-> **Как читать:** ✓ = есть тест, — = не покрыто этим слоем, ⚠ = indirect only  
-> Gaps (—) — не всегда проблема. Property ✓ сильнее Replay ✓. BDD = документация.
+> **How to read this:** ✓ = a test exists, — = not covered by this layer, ⚠ = indirect only  
+> A gap (—) is not automatically a problem. A property ✓ is stronger than a replay ✓. BDD is documentation.
 
 ---
 

@@ -27,7 +27,7 @@ git checkout -b buggy-engine
 **File:** `src/engine/heroes/paladin.ts`
 **Change:** Remove the `chargeStacks = 0` reset after double damage fires.
 **Symptom:** Righteous Strike always deals double damage after first charge activation.
-**Found by:** Unit test `при 3 зарядах + vulnerable: заряды → 1`. Or property test `chargeStacks <= 3`.
+**Found by:** Unit test `with 3 charges + vulnerable: charges → 1`. Or property test `chargeStacks <= 3`.
 **Technique:** Specific unit test OR boundary value test.
 
 ### Bug 3 — death_door never clears (BUG-01 class)
@@ -41,7 +41,7 @@ git checkout -b buggy-engine
 **File:** `src/engine/actionResolution.ts`
 **Change:** `Math.floor(amount * 1.5)` → `Math.floor(amount * 1.3)`
 **Symptom:** Vulnerable deals 30% more damage instead of 50%. Subtle — tests using exact values will catch it.
-**Found by:** `arp4_calculate — damage vulnerable умножает урон на 1.5` unit test.
+**Found by:** `arp4_calculate — vulnerable multiplies damage by 1.5` unit test.
 **Technique:** Exact-value assertion on specific damage calculation.
 
 ### Bug 5 — replay non-determinism (advanced)
