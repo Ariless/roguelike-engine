@@ -145,13 +145,13 @@ Paladin heals Berserker → removes their power source.
 > *"Healing someone should always be beneficial"* — **false invariant** in this system.
 
 `assertHealIsAlwaysBeneficial()` → FAILS → documented as intentional exception → bug cemetery entry.
-This is the course's strongest teaching moment: a test that intentionally fails as domain specification.
+This is the project's strongest demonstration: a test that intentionally fails as domain specification.
 
 ### Positioning — what this IS and what it is NOT
 
 | IS | IS NOT |
 |----|--------|
-| How to approach a rule engine when there is no UI to click and no API to call | A game testing course |
+| How to approach a rule engine when there is no UI to click and no API to call | A guide to game testing |
 | Property-based testing, state machine coverage, fault injection — techniques QA takes to any complex system | "How to architect a testable system" (that's the developer's job) |
 | A visual, memorable SUT for patterns that appear in payment engines, pricing rules, insurance systems | A CRUD system with a game skin |
 | Evidence that you can test pure logic, not just endpoints | Game QA / gamedev experience |
@@ -162,8 +162,8 @@ This is the course's strongest teaching moment: a test that intentionally fails 
   - How to detect that a rule is wrong when the system doesn't throw an error
   - How to test state transitions that are invisible to the outside world
 
-**Course intro framing (first 2 minutes):**
-"You're not here to learn game testing. The roguelike is a rule engine — the same class of system as a payment processor, a pricing calculator, or an insurance rules engine. We use it because it's visual and interesting. Every technique you see here transfers directly to your real project."
+**Framing in one paragraph:**
+This is not game testing. The roguelike is a rule engine — the same class of system as a payment processor, a pricing calculator, or an insurance rules engine. It earns its place by being visual and interesting; every technique here transfers directly to a production system.
 
 **Interview framing:** "I built a roguelike engine as a SUT to practice testing a class of systems that QA courses skip: complex rule engines with no API and no UI. The same patterns apply to payment processing, pricing logic, and workflow systems. It let me demonstrate property-based testing, state machine coverage, and fault injection on a system rich enough to generate real bugs."
 

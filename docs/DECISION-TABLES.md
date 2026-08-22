@@ -3,7 +3,7 @@
 Decision tables are a classic testing technique: enumerate all conditions and actions as a matrix.
 Every row = one test case. Every combination = one invariant to verify.
 
-> **Course note:** This technique applies directly to enterprise systems — insurance rule engines,
+> **Where this transfers:** This technique applies directly to enterprise systems — insurance rule engines,
 > pricing algorithms, loan approval workflows. The enemy AI here is structurally identical to
 > a business rules engine with scripted sequences.
 

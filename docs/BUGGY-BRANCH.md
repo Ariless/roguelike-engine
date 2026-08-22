@@ -1,20 +1,21 @@
-# Buggy Branch — Course Exercise
+# Buggy Branch — Fault Injection
 
-This document describes how to create a buggy version of the engine for students.
+A green suite proves nothing on its own: it may be catching real defects, or it may be asserting
+things that cannot fail. This branch answers that question empirically. Five defects go into the
+engine deliberately, each one chosen so that a *different* technique is the one that catches it —
+if a technique in this project were decorative, its defect would survive.
 
-## How to use
+The exercise doubles as practice: apply the defects, then try to find them without the spoiler
+section below.
 
-Students run the test suite against the buggy engine and find the bugs using the techniques learned in the course.
-
-## Setup (instructor)
+## Applying the defects
 
 ```bash
 git checkout -b buggy-engine
-# Apply the bugs below, commit, push to private repo
-# Share only the buggy branch, not BUGS.md
+# Apply the changes below, commit
 ```
 
-## The bugs (DO NOT share with students)
+## The defects (spoilers)
 
 ### Bug 1 — bleed off-by-one (BUG-02 class)
 **File:** `src/engine/statuses.ts`
@@ -51,9 +52,9 @@ git checkout -b buggy-engine
 **Found by:** `executor-property.test.ts` — `forAll(seeds) → replayGame(log).success`.
 **Technique:** Property test + replay determinism.
 
-## Student instructions (share this part)
+## Finding them without the spoilers
 
-The engine has 5 bugs introduced deliberately. Find all 5.
+The engine has 5 defects introduced deliberately. Find all 5.
 
 **Allowed techniques:**
 - Run `npm test` — see what fails
@@ -62,17 +63,17 @@ The engine has 5 bugs introduced deliberately. Find all 5.
 - Write new tests to isolate the bug
 - Use `npm run oracle -- --dry-run` to check rule violations
 
-**Not allowed:**
-- Reading `BUGS.md` (it contains the answers for the real project bugs)
-- Reading this file
+**Off limits while hunting:**
+- `BUGS.md` (it contains the answers for the real project bugs)
+- The spoiler section above
 
 **Deliverable:** For each bug — file, line, root cause, which test found it, which technique.
 
-## Grading rubric
+## What a complete answer looks like
 
-| Points | Criterion |
-|--------|-----------|
-| 1 | Bug found (symptom described) |
-| 2 | Root cause identified (not just symptom) |
-| 3 | Specific test that catches it (written or existing) |
-| 4 | Technique named and explained (why this technique for this bug) |
+Four things per defect, and the last two are where the value is:
+
+- the symptom, described
+- the root cause, not just the symptom
+- a specific test that catches it, written or already in the suite
+- the technique named, with a reason why it fits this class of bug

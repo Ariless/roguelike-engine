@@ -1,4 +1,4 @@
-# Getting Started — QA Portfolio Lab: Course 3
+# Getting Started
 
 This is a rule engine SUT for learning advanced testing techniques.
 No API to call, no UI to click — only complex rules and state transitions.
@@ -46,7 +46,7 @@ Select a hero, press NEW for a random encounter. Try to understand what each car
 - Root cause
 - What test would have caught it earlier
 
-**This is the most important file for the course.** Read all 12 entries.
+**This is the most important file in the repository.** Read all 12 entries.
 
 ### 3. Run the debugger
 
@@ -71,23 +71,23 @@ npm run trace 500          # what status combos appear most in real play
 
 ---
 
-## Course assignments — recommended order
+## Practice tasks — recommended order
 
 ### Level 1 — Understand the system
 
-| Assignment | File | What you learn |
+| Task | File | What you learn |
 |-----------|------|---------------|
-| A-30 | course3_assignments.md | Type as invariant — when is a test a tautology? |
-| A-32 | course3_assignments.md | Contextual invariants — when is hp=0 valid? |
-| A-31 | course3_assignments.md | Pipeline ordering — find the bug fast-check catches |
+| T-01 | `PRACTICE.md` | Type as invariant — when is a test a tautology? |
+| T-02 | `PRACTICE.md` | Contextual invariants — when is `alive + hp=0` valid? |
+| T-04 | `PRACTICE.md` | Pipeline ordering — find the bug fast-check catches |
 
 ### Level 2 — Apply the techniques
 
-| Assignment | What you learn |
-|-----------|---------------|
-| A-76 | Decision tables — completeness check |
-| A-89 | Property tests for free-text fields |
-| A-33C | Trace-driven test discovery |
+| Task | File | What you learn |
+|-----------|------|---------------|
+| T-03 | `PRACTICE.md` | Trace-driven test discovery — what to test from real game data |
+| T-06 | `PRACTICE.md` | Model-based testing — reference model vs real engine |
+| T-08 | `PRACTICE.md` | Metamorphic relations — Berserker damage is monotonic |
 
 ### Level 3 — Meta-testing
 

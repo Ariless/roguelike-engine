@@ -2,7 +2,7 @@
 //
 // Give a rule in English → Claude generates a fast-check property test.
 // Demonstrates: AI accelerates QA, doesn't replace it.
-// Students see: natural language specification → automated test.
+// Shows: natural language specification → automated test.
 //
 // Usage:
 //   ANTHROPIC_API_KEY=sk-... npm run spec-to-test "Bleed deals damage equal to stacks per turn"

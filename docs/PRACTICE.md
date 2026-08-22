@@ -1,9 +1,7 @@
-# TASKS.md — Practice Assignments for roguelike-engine
+# Practice Tasks
 
 > These tasks are designed to build reasoning skills, not just coding skills.
 > Each one comes from a real implementation decision or bug found during development.
-> Solutions are in `SOLUTIONS/` — only open after you've submitted your attempt.
->
 > Do NOT read `BUGS.md` before attempting detective tasks. It contains the answers.
 
 ---
@@ -32,9 +30,7 @@ open debugger/index.html    # Forensic timeline viewer
 
 ---
 
-### T-01 🆓 — Type as invariant: when is a test a tautology?
-
-> **Free task — answers included.** Solution in `SOLUTIONS/A1/T-01.md`.
+### T-01 — Type as invariant: when is a test a tautology?
 
 **File:** `src/engine/types.ts`, `src/engine/heroes/paladin.ts`
 
@@ -120,10 +116,10 @@ it('all 3 paladin cards are present', () => {
 ### T-05 🐛 — Buggy branch: find 5 bugs
 
 > See `docs/BUGGY-BRANCH.md` for setup instructions.
-> **Do NOT read** the instructor section until you've found all 5.
+> **Do NOT read** the spoiler section until you've found all 5.
 
 **Your task:**
-1. Apply the buggy changes described in the student section.
+1. Apply the buggy changes described in `docs/BUGGY-BRANCH.md`.
 2. Use any combination of: `npm test`, `npm run simulate`, `npm run chaos`, writing new tests.
 3. For each bug: file, root cause, technique used to find it.
 
@@ -343,9 +339,7 @@ This tests a structural property (monotonicity) without needing a known expected
 
 ---
 
-### T-15 🆓 — Meta-oracle: test the AI judge
-
-> **Free task — answers included.** Solution in `SOLUTIONS/A9/T-15.md`.
+### T-15 — Meta-oracle: test the AI judge
 
 **Setup:** `AI_MOCK_RESPONSE=true npm run meta-oracle`
 
@@ -384,17 +378,15 @@ This tests a structural property (monotonicity) without needing a known expected
 > Final capstone task. Use EVERYTHING you learned.
 >
 > Allowed: `npm test`, `npm run simulate`, `npm run chaos`, `npm run trace`, writing tests.
-> NOT allowed: reading `docs/BUGGY-BRANCH.md` instructor section.
+> NOT allowed: reading the spoiler section of `docs/BUGGY-BRANCH.md`.
 
-**Setup:** Apply the 5 bugs from the student section of `docs/BUGGY-BRANCH.md`.
+**Setup:** Apply the 5 bugs listed in `docs/BUGGY-BRANCH.md`.
 
 **Your task:**
 Find all 5. For each: file + root cause + technique that found it + test that catches it.
 
-**Grading rubric:**
-- 1pt: Bug found (symptom described)
-- 2pt: Root cause identified
-- 3pt: Specific test written
-- 4pt: Technique named + explained why it fits this bug class
+**What counts as a full answer for one bug:** the symptom described, the root cause identified
+(not just the symptom), a specific test that catches it, and the technique named with a reason
+why it fits this class of bug.
 
-**Deliverable:** `BUGS-FOUND.md` with 5 entries × 4 criteria = 20 points max.
+**Deliverable:** `BUGS-FOUND.md` with 5 entries.
