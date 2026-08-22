@@ -10,6 +10,40 @@ The roguelike is a rule engine — the same class of system as a payment process
 
 ---
 
+| | |
+| --- | --- |
+| **Test suite** | 532 tests across 3 runners — 495 Vitest · 25 Playwright · 12 BDD scenarios |
+| **Beyond the suite** | 16,000 Monte Carlo seeds · 64,000 across 8 stability batches · 200 adversarial chaos runs |
+| **Defects** | 21 written up in `BUGS.md`, each with root cause and the invariant that would have caught it |
+| **Mutation score** | 86.1% across 13 files (engine, runtime, telemetry) |
+| **Stack** | TypeScript · Vitest · fast-check · Playwright · Cucumber · Stryker · tsx |
+
+## Three findings worth the read
+
+**Code can be correct, complete and unreachable.** When Raise Dead and Empower finally landed
+(`BUG-14`), the first 16,000-seed regression run showed no change at all — every figure identical.
+The Necromancer raises the corpses of allies, and the engine had only ever built encounters of one
+enemy: with no ally there is never a corpse, so both conditional branches fell through to their
+fallback forever. Giving him an escort turned the Blood Mage matchup from 94.1% to 72.8% and made
+him the hardest fight one class has. A simulation is what tells you a change did nothing.
+[Full before/after](#regression--what-closing-one-defect-does-to-the-numbers).
+
+**Twenty-two passing tests, and not one of them said "no".** Mutation testing survived a
+`hasStatus` mutant forced always-true across 22 tests, because every assertion in that area was
+positive — nothing checked that a status was *absent*. A second survivor, `&&`→`||` in
+`bloodmage.ts`, exposed that nothing covered "alive with 0 HP is not death_door".
+[Mutation testing](#mutation-testing).
+
+**A seed does not buy you an independent run.** mulberry32 advances its state by adding a fixed
+constant, so a seed picks an entry point into one shared stream rather than a stream of its own.
+Two seeds differing by exactly that constant produce the same sequence, offset by one step —
+verified, the match exact. Harmless for `seed = 0…N`; dangerous the moment seeds come from a clock
+or a hash, because two "independent" runs are then one, and the confidence interval narrows the
+more the streams overlap. Pinned as a deliberately failing test and accounted for when choosing the
+stride between base seeds. [RNG battery](#rng-battery--correspondence-with-published-test-suites).
+
+---
+
 ## Contents
 
 **The findings** — [Regression](#regression--what-closing-one-defect-does-to-the-numbers) ·
@@ -30,12 +64,6 @@ The roguelike is a rule engine — the same class of system as a payment process
 [Test pyramid](#test-pyramid-for-rule-engines) ·
 [What this deliberately does NOT test](#what-this-project-intentionally-does-not-test) ·
 [Enterprise mapping](#enterprise-mapping)
-
-In a hurry? The two most useful sections are
-[Regression](#regression--what-closing-one-defect-does-to-the-numbers), where a simulation
-catches a mechanic that was implemented and unreachable, and
-[Bug Cemetery](#bug-cemetery-bugsmd), where every defect is written up with the invariant
-that would have caught it.
 
 ---
 
@@ -133,6 +161,9 @@ docs/        DECISION-TABLES.md, TEST-PYRAMID.md
 
 ## Test suite (532 tests across 3 runners)
 
+<details>
+<summary><b>Every suite and what it covers</b></summary>
+
 ```
 Vitest (495 tests):
   resolution.test.ts        — applyDamage, applyHeal, death_door state machine
@@ -169,6 +200,8 @@ Playwright (25 tests):
   tests/ui/game.test.ts              — encounter panels, bleed kill regression, targeting
   tests/ui/visual-regression.test.ts — screenshots vs baseline
 ```
+
+</details>
 
 ---
 
