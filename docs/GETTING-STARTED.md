@@ -41,12 +41,12 @@ Select a hero, press NEW for a random encounter. Try to understand what each car
 
 ### 2. Read BUGS.md first
 
-`BUGS.md` contains 12 real bugs found during implementation. Each has:
+`BUGS.md` contains 21 real bugs found during implementation. Each has:
 - What failed
 - Root cause
 - What test would have caught it earlier
 
-**This is the most important file in the repository.** Read all 12 entries.
+**This is the most important file in the repository.** Read all 21 entries.
 
 ### 3. Run the debugger
 
@@ -101,7 +101,7 @@ If a mutant survives → you found a gap → write the killing test → run agai
 
 | File | What it is |
 |------|-----------|
-| `BUGS.md` | 12 real bugs — testing ROI in action |
+| `BUGS.md` | 21 real bugs — testing ROI in action |
 | `INVARIANTS.md` | Correctness contract — find an invariant before writing a test |
 | `docs/RULE-COVERAGE.md` | Which rules are covered by which test layer |
 | `docs/DECISION-TABLES.md` | Enemy AI as decision tables — each row = one test |

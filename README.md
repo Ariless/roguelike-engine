@@ -539,7 +539,7 @@ No browser. No HTTP. Pure rule engine via `createGame()` + `game.endTurn()`.
 
 ## Bug Cemetery (`BUGS.md`)
 
-12 real bugs found during implementation. Selected highlights:
+21 real bugs found during implementation. Selected highlights:
 
 | Bug | Found by | Class |
 |-----|----------|-------|
@@ -632,7 +632,7 @@ Tests:             532  (495 vitest + 25 Playwright + 12 BDD)
                    + 64,000 seeds across 8 batches via stability run
                    + 200 adversarial runs via chaos agent
 
-Real defects:      20  (see BUGS.md — 18 closed, 2 partially open, each with root cause)
+Real defects:      21  (see BUGS.md — 20 closed, 1 partially open, each with root cause)
                    BUG-13…16 came from the simulation and the RNG battery,
                    not from the unit suite: a biased sample, an enemy that was
                    never implemented, a silently truncated seed, and a UI test

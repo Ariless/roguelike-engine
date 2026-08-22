@@ -85,7 +85,7 @@ Portfolio-ready: README ✅ · CLAUDE.md ✅ · BUGS.md ✅ · DECISIONS.md ✅ 
 | File | What is inside |
 |------|---------------|
 | `README.md` | Portfolio-ready: ROI, shrinking example, NIST mapping, scale, delta, enterprise mapping |
-| `BUGS.md` | 18 defects with root cause, fix and testing value |
+| `BUGS.md` | 21 defects with root cause, fix and testing value |
 | `DECISIONS.md` | Architectural decisions |
 | `INVARIANTS.md` | Full invariant contract + trace-derived |
 | `docs/TEST-PYRAMID.md` | Rule engine pyramid vs web pyramid |
