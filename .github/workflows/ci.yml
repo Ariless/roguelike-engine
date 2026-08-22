@@ -34,6 +34,11 @@ jobs:
       - name: Type check
         run: npm run typecheck
 
+      # Counts the repo quotes about itself: BUGS.md is the register, the prose quotes it,
+      # and nothing regenerates the prose. Three different totals had drifted before this ran.
+      - name: Convention check
+        run: npm run check:conventions
+
       - name: Unit, property, statistical, replay
         run: npm test
 

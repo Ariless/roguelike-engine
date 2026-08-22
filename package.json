@@ -46,7 +46,8 @@
     "ci-summary": "tsx scripts/ci-summary.ts",
     "meta-oracle": "tsx scripts/meta-oracle.ts",
     "cert-evidence": "tsx scripts/cert-evidence.ts",
-    "delta": "tsx scripts/delta.ts"
+    "delta": "tsx scripts/delta.ts",
+    "check:conventions": "tsx scripts/check-conventions.ts"
   },
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.100.1",
