@@ -1,0 +1,31 @@
+# Nothing watched dependency versions here, and it showed: the same libraries sat at
+# different majors across the portfolio repositories (@anthropic-ai/sdk at 0.40 in one
+# repo and 0.100 in another, Stryker 8 against 9, fast-check 3 against 4), and npm audit
+# had a standing backlog of transitive advisories in dev dependencies.
+#
+# Grouped on purpose: one PR per ecosystem per week rather than a stream of single-package
+# PRs. Majors stay separate — those are the ones that need a real look.
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    groups:
+      dev-minor-and-patch:
+        dependency-type: "development"
+        update-types: ["minor", "patch"]
+      prod-minor-and-patch:
+        dependency-type: "production"
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    groups:
+      actions:
+        patterns: ["*"]
