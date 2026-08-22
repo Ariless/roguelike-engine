@@ -52,13 +52,20 @@ jobs:
   # a hash divergence: the same seed has to produce a byte-identical log, and a
   # violation of that is a defect, no discussion.
   #
-  # Balance is reported rather than blocking while BUG-14 is open. Three classes
-  # out of four are currently outside their corridor, and half of that skew comes
-  # from two enemies not performing the actions the specification declares. A gate
-  # on balance before those mechanics ship would keep the build permanently red
-  # and teach people to ignore the colour.
+  # Balance is reported rather than blocking. Measured 2026-08-22 at 16,000 seeds:
+  # paladin 58.1% PASS, bloodmage 72.8% PASS, berserker 81.1% INCONCLUSIVE (the
+  # interval crosses the 80% edge), werewolf 97.8% FAIL. Six of sixteen matchups sit
+  # outside 15-95%, the goblin column above all — every class beats it near 100%.
   #
-  # Once the enemy mechanics land in the engine, replace the step with
+  # This used to say the skew came from BUG-14, the enemy mechanics that were missing
+  # from the engine. Those landed, and the necromancer column moved accordingly — he
+  # now takes 85 games in 100 off the bloodmage. What blocks the gate today is the
+  # werewolf, whose interval does not even reach the corridor edge, and a goblin that
+  # gives no class a fight. Gating on balance while that holds would keep the build
+  # permanently red and teach people to ignore the colour.
+  #
+  # Once the werewolf and the goblin are back inside their corridors, replace the step
+  # with
   #     npm run simulate 16000 -- --gate
   # and the corridors will block merges the same way the unit tests do.
   simulation:
