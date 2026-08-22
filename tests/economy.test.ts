@@ -207,7 +207,11 @@ describe('combineEconomies', () => {
     const combined = combineEconomies(many)
     expect(combined.spins).toBe(300_000)
     expect(combined.maxWin).toBe(29)
-  })
+    // 30s, not the 5s default: building 300k economies took ~0.8s under Vitest 2 and
+    // ~9.3s under Vitest 3 (measured 2026-08-22 on the upgrade). The assertion is about
+    // surviving the batch size, not about speed, so the timeout is sized for the slower
+    // runner rather than the test being shrunk to fit it.
+  }, 30_000)
 
   it('economyOf survives a single very long run', () => {
     const payouts = Array.from({ length: 200_000 }, (_, i) => ({

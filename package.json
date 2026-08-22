@@ -1,6 +1,9 @@
 {
   "name": "roguelike-engine",
   "version": "0.1.0",
+  "engines": {
+    "node": ">=22"
+  },
   "description": "A deterministic rule engine used as a system under test: property-based testing, seeded RNG with a NIST/Diehard statistical battery, byte-perfect replay, Monte Carlo simulation with return metrics, and a certification-style evidence pack.",
   "keywords": [
     "testing",
@@ -55,6 +58,9 @@
     "fast-check": "^4.8.0",
     "tsx": "^4.22.3",
     "typescript": "^5.5.0",
-    "vitest": "^2.0.0"
+    "vitest": "^3.2.7"
+  },
+  "overrides": {
+    "qs": "^6.15.3"
   }
 }
