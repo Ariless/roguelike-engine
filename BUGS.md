@@ -693,6 +693,63 @@ thing watching balance drift.
 
 ---
 
+## BUG-22 — every enemy on the field is handed the encounter's intent, and the skeleton obeys it
+
+**Date:** 2026-08-25
+**Found by:** a mutation test written to kill the `SKELETON_INTENT` string literals — the
+assertion that a raised skeleton carries `{ type: 'attack', value: 4 }` failed against
+`{ type: 'empower', value: 3 }`
+
+**Symptom:** A raised skeleton never performs the attack it is spawned with. Probing a
+necromancer encounter at seed 11, one turn after Raise Dead, every enemy holds the same
+intent object:
+
+```
+e0[goblin]={"type":"empower","value":3}
+e1[necromancer]={"type":"empower","value":3}
+skeleton-1[skeleton]={"type":"empower","value":3}
+```
+
+The goblin is a corpse at that point and still gets a row; the skeleton gets the
+necromancer's row rather than its own.
+
+**Root cause:** the "Advance turn" block at the end of `endTurn` rewrites the intent of
+every enemy from the *encounter* type:
+
+```ts
+enemies: state.enemies.map((e, i) => ({
+  ...e,
+  intent: ENEMY_INTENTS[config.enemyType][intentIndex % ENEMY_INTENTS[config.enemyType].length],
+}))
+```
+
+For most enemies this is cosmetic: the acting step re-resolves the intent against the
+actor's own type (`resolveIntent(enemy.enemyType, ...)`), so a stale value is overwritten
+before it is used. The skeleton is the single exception — it is the one enemy that executes
+its **stored** intent, by design: `enemy.enemyType === 'skeleton' ? enemy.intent : resolveIntent(...)`.
+So the one enemy that trusts the field is the one the field lies to.
+
+Both halves of the contradiction are written in the file. Line 45: *"A skeleton never cycles
+a table: it is spawned with its intent already set."* And the acting step warns that resolving
+against the config type *"would have a goblin performing necromancy"* — which is exactly what
+the advance block does, three hundred lines further down.
+
+**Status:** ⚠️ OPEN — not fixed here. The fix changes combat behaviour (a skeleton that
+attacks for 4 is a different encounter from one that empowers), so it belongs with a balance
+re-measurement, not inside a test-coverage change.
+
+**Regression markers:** `tests/runtime/executor-tables.test.ts` — two `it.fails` tests. When
+the overwrite is fixed they start passing, `it.fails` turns red, and that is the signal to
+promote them to plain `it`.
+
+**Why the tests never saw it:** the executor suite drives behaviour and reads HP, statuses
+and log events. Nobody read `intent` back off an enemy after a turn, and the skeleton is the
+only actor whose stored intent matters. `decision-tables.test.ts` does assert the skeleton's
+intent — but it builds the state by hand, so it never runs the advance block that corrupts it.
+Two green layers, one uncovered seam between them: the same shape as BUG-14 + BUG-16.
+
+---
+
 ## MUTATION-02 — Widening the scope: faults.ts turned out to be almost untested (2026-08-20)
 
 **Date:** 2026-08-20  
