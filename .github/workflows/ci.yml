@@ -52,19 +52,24 @@ jobs:
   # a hash divergence: the same seed has to produce a byte-identical log, and a
   # violation of that is a defect, no discussion.
   #
-  # Balance is reported rather than blocking. Measured 2026-08-22 at 16,000 seeds:
-  # paladin 58.1% PASS, bloodmage 72.8% PASS, berserker 81.1% INCONCLUSIVE (the
-  # interval crosses the 80% edge), werewolf 97.8% FAIL. Six of sixteen matchups sit
-  # outside 15-95%, the goblin column above all — every class beats it near 100%.
+  # Balance is reported rather than blocking. Re-measured 2026-08-26 at 16,000 seeds,
+  # after BUG-22: paladin 40.7% FAIL, bloodmage 71.3% PASS, berserker 73.7% PASS,
+  # werewolf 94.8% FAIL. Eight of sixteen matchups sit outside 15-95%, the goblin
+  # column above all — every class beats it near 100%.
   #
-  # This used to say the skew came from BUG-14, the enemy mechanics that were missing
-  # from the engine. Those landed, and the necromancer column moved accordingly — he
-  # now takes 85 games in 100 off the bloodmage. What blocks the gate today is the
-  # werewolf, whose interval does not even reach the corridor edge, and a goblin that
-  # gives no class a fight. Gating on balance while that holds would keep the build
-  # permanently red and teach people to ignore the colour.
+  # These numbers moved because the engine changed, not the design. Until BUG-22 a
+  # raised skeleton never performed the attack it was spawned with: the end-of-turn
+  # block overwrote its intent with the encounter's row, so it spent its turns
+  # empowering instead of hitting for 4. That was an accidental nerf, and the previous
+  # corridors were measured against it — paladin 58.1%, berserker 81.1%, werewolf 97.8%.
   #
-  # Once the werewolf and the goblin are back inside their corridors, replace the step
+  # With the skeleton working, the necromancer is the blocker: the paladin wins 0.0% of
+  # a thousand games against him, the bloodmage 8.8%, the berserker 13.4%. The werewolf,
+  # which used to be the headline problem, has come back to the corridor edge on its own.
+  # Gating on balance while a 0.0% matchup stands would keep the build permanently red
+  # and teach people to ignore the colour.
+  #
+  # Once the necromancer and the goblin are back inside their corridors, replace the step
   # with
   #     npm run simulate 16000 -- --gate
   # and the corridors will block merges the same way the unit tests do.

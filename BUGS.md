@@ -693,7 +693,7 @@ thing watching balance drift.
 
 ---
 
-## BUG-22 — every enemy on the field is handed the encounter's intent, and the skeleton obeys it
+## BUG-22 — every enemy on the field is handed the encounter's intent, and the skeleton obeys it ✅ CLOSED
 
 **Date:** 2026-08-25
 **Found by:** a mutation test written to kill the `SKELETON_INTENT` string literals — the
@@ -734,13 +734,45 @@ a table: it is spawned with its intent already set."* And the acting step warns 
 against the config type *"would have a goblin performing necromancy"* — which is exactly what
 the advance block does, three hundred lines further down.
 
-**Status:** ⚠️ OPEN — not fixed here. The fix changes combat behaviour (a skeleton that
-attacks for 4 is a different encounter from one that empowers), so it belongs with a balance
-re-measurement, not inside a test-coverage change.
+**Fix:** the Advance turn block now previews each enemy from its **own** table, through the
+same `resolveIntent()` the execution path uses, and leaves the skeleton's stored intent alone:
 
-**Regression markers:** `tests/runtime/executor-tables.test.ts` — two `it.fails` tests. When
-the overwrite is fixed they start passing, `it.fails` turns red, and that is the signal to
-promote them to plain `it`.
+```ts
+enemies: state.enemies.map(e =>
+  e.enemyType === 'skeleton'
+    ? e
+    : { ...e, intent: resolveIntent(e.enemyType, intentIndex, state) }
+),
+```
+
+Going through the resolver rather than the raw table also applies BUG-20's rule inside the
+engine: the announced intent and the executed one cannot disagree.
+
+**What it cost in balance — the part that made this worth measuring.** The defect was an
+accidental nerf: instead of hitting for 4 every turn, a raised skeleton spent its turns
+empowering. All four corridors had been measured against that. Re-measured at 16,000 seeds
+after the fix:
+
+| class | before (2026-08-22) | after | verdict |
+|---|---|---|---|
+| paladin | 58.1% PASS | **40.7%** [39.1, 42.4] | FAIL |
+| bloodmage | 72.8% PASS | 71.3% [69.9, 72.7] | PASS |
+| berserker | 81.1% INCONCLUSIVE | 73.7% [72.3, 75.0] | PASS |
+| werewolf | 97.8% FAIL | 94.8% [94.0, 95.4] | FAIL |
+
+Pairs outside the 15–95% corridor went from 6 to 8. The necromancer column moved hardest:
+paladin now wins **0.0%** of a thousand games against him, bloodmage 8.8%, berserker 13.4%.
+The werewolf, previously the headline blocker, has come back to the corridor edge.
+
+Determinism held throughout — `simulate 100` and the executor property tests report no hash
+divergence and no invariant drift.
+
+**Regression markers:** `tests/runtime/executor-tables.test.ts` — the two tests written as
+`it.fails` while the defect stood are now plain `it`.
+
+**Not fixed here:** the necromancer is genuinely overtuned once his skeleton works, and a
+0.0% matchup is a design decision, not a code one. The corridors in `.github/workflows/ci.yml`
+describe the pre-fix measurement and now understate the problem.
 
 **Why the tests never saw it:** the executor suite drives behaviour and reads HP, statuses
 and log events. Nobody read `intent` back off an enemy after a turn, and the skeleton is the

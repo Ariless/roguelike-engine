@@ -567,10 +567,17 @@ export function createGame(config: GameConfig): GameHandle {
         ...state,
         turn: state.turn + 1,
         hero: { ...state.hero, energy: 3 },
-        enemies: state.enemies.map((e, i) => ({
-          ...e,
-          intent: ENEMY_INTENTS[config.enemyType][(intentIndex) % ENEMY_INTENTS[config.enemyType].length],
-        })),
+        // BUG-22: this used to hand every enemy the encounter type's row, so a goblin
+        // escort previewed necromancy and — worse — the skeleton, the one enemy that
+        // executes its stored intent rather than re-resolving its own type (step 5
+        // below), lost the attack it was spawned with. Each enemy now previews its own
+        // table, through the same resolver the execution path uses, so the announced
+        // intent and the executed one cannot disagree (the rule BUG-20 established).
+        enemies: state.enemies.map(e =>
+          e.enemyType === 'skeleton'
+            ? e
+            : { ...e, intent: resolveIntent(e.enemyType, intentIndex, state) }
+        ),
       }
 
       // Step 3: start-of-turn passives

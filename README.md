@@ -14,7 +14,7 @@ The roguelike is a rule engine — the same class of system as a payment process
 | --- | --- |
 | **Test suite** | 532 tests across 3 runners — 495 Vitest · 25 Playwright · 12 BDD scenarios |
 | **Beyond the suite** | 16,000 Monte Carlo seeds · 64,000 across 8 stability batches · 200 adversarial chaos runs |
-| **Defects** | 21 written up in `BUGS.md`, each with root cause and the invariant that would have caught it |
+| **Defects** | 22 written up in `BUGS.md`, each with root cause and the invariant that would have caught it |
 | **Mutation score** | 86.1% across 13 files (engine, runtime, telemetry) |
 | **Stack** | TypeScript · Vitest · fast-check · Playwright · Cucumber · Stryker · tsx |
 
@@ -539,7 +539,7 @@ No browser. No HTTP. Pure rule engine via `createGame()` + `game.endTurn()`.
 
 ## Bug Cemetery (`BUGS.md`)
 
-21 real bugs found during implementation. Selected highlights:
+22 real bugs found during implementation. Selected highlights:
 
 | Bug | Found by | Class |
 |-----|----------|-------|
@@ -632,7 +632,7 @@ Tests:             532  (495 vitest + 25 Playwright + 12 BDD)
                    + 64,000 seeds across 8 batches via stability run
                    + 200 adversarial runs via chaos agent
 
-Real defects:      21  (see BUGS.md — 20 closed, 1 partially open, each with root cause)
+Real defects:      22  (see BUGS.md — 21 closed, 1 partially open, each with root cause)
                    BUG-13…16 came from the simulation and the RNG battery,
                    not from the unit suite: a biased sample, an enemy that was
                    never implemented, a silently truncated seed, and a UI test

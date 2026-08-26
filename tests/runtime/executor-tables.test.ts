@@ -163,21 +163,18 @@ describe('Raise Dead — the skeleton the executor spawns', () => {
     expect(skeleton!.state).toBe('alive')
   })
 
-  // BUG-22 — currently false. The skeleton is spawned with SKELETON_INTENT, and the
-  // "Advance turn" block then overwrites the intent of every enemy on the field with
-  // the encounter type's row. The skeleton is the one enemy that executes its stored
-  // intent rather than resolving its own type (executor.ts:508), so it never performs
-  // the attack it was spawned with. Fix the overwrite and this test starts passing —
-  // it.fails will then fail, which is the signal to promote it to a plain `it`.
-  it.fails('the raised skeleton carries its own attack intent', () => {
+  // Kill: StringLiteral/ObjectLiteral on SKELETON_INTENT. Regression test for BUG-22 —
+  // the "Advance turn" block used to overwrite this with the encounter type's row, and
+  // the skeleton is the one enemy that executes its stored intent (executor.ts step 5).
+  it('the raised skeleton carries its own attack intent', () => {
     const skeleton = raiseSkeleton(11).getState().enemies.find(e => e.enemyType === 'skeleton')
 
     expect(skeleton!.intent).toEqual({ type: 'attack', value: 4 })
   })
 
-  // The same defect from the other side: today the skeleton, the necromancer and the
-  // goblin corpse all hold one identical intent object copied from the encounter row.
-  it.fails('the skeleton does not share the encounter row with the corpse beside it', () => {
+  // BUG-22 from the other side: every enemy on the field used to hold one identical
+  // intent object copied from the encounter row, corpse included.
+  it('the skeleton does not share the encounter row with the corpse beside it', () => {
     const enemies = raiseSkeleton(11).getState().enemies
     const skeleton = enemies.find(e => e.enemyType === 'skeleton')!
     const corpse = enemies.find(e => e.enemyType === 'goblin')!
