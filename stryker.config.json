@@ -2,7 +2,7 @@
   "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
   "testRunner": "vitest",
   "vitest": {
-    "configFile": "vitest.config.ts"
+    "configFile": "vitest.stryker.config.ts"
   },
   "mutate": [
     "src/engine/resolution.ts",
