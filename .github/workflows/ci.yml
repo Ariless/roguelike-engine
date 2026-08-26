@@ -136,14 +136,14 @@ jobs:
 
   # ─── Test quality ───────────────────────────────────────────────────────────
   # Deliberately NOT run on every push. A full Stryker pass over 13 files takes
-  # around 38 minutes; feedback that arrives after the author has moved on is not
+  # around 25 minutes; feedback that arrives after the author has moved on is not
   # feedback, and a job nobody waits for stops being a gate and becomes noise. That
   # is the same argument this workflow already applies to the balance corridors.
   #
   # What it costs to move it off the push path: a score can now drift for up to a
   # day before anyone sees it. That is acceptable because the score moves slowly —
   # it changes when tests are added or weakened, not with every commit — while the
-  # 38-minute wait was paid on every single push.
+  # 25-minute wait was paid on every single push.
   #
   # The threshold lives in stryker.config.json (thresholds.break), not here: it is
   # part of the project contract rather than a build setting. Stryker returns code 1

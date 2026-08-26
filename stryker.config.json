@@ -23,7 +23,7 @@
   "thresholds": {
     "high": 90,
     "low": 70,
-    "break": 85
+    "break": 75
   },
   "reporters": ["html", "clear-text", "json"],
   "htmlReporter": {

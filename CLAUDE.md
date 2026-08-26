@@ -12,7 +12,7 @@ Goal: demonstrate property-based, seeded-RNG, state-machine, fault injection, re
 npm test                          # 400 vitest tests — 6 seconds
 npm run test:bdd                  # 12 Cucumber BDD scenarios — 0.1 seconds
 npm run test:ui                   # 25 Playwright tests (debugger + game + visual)
-npm run test:mutation             # Stryker 86.1% across 13 files — 38 minutes
+npm run test:mutation             # Stryker 77.4% across 13 files — 25 minutes
 npm run simulate 16000            # Monte Carlo — corridors, intervals, matchup matrix
 npm run stability 8000 8          # cross-batch spread + convergence
 npm run chaos 200                 # Adversarial agent — find interesting timelines

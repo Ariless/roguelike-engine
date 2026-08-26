@@ -15,7 +15,7 @@ The roguelike is a rule engine — the same class of system as a payment process
 | **Test suite** | 532 tests across 3 runners — 495 Vitest · 25 Playwright · 12 BDD scenarios |
 | **Beyond the suite** | 16,000 Monte Carlo seeds · 64,000 across 8 stability batches · 200 adversarial chaos runs |
 | **Defects** | 22 written up in `BUGS.md`, each with root cause and the invariant that would have caught it |
-| **Mutation score** | 86.1% across 13 files (engine, runtime, telemetry) |
+| **Mutation score** | 77.4% across 13 files (engine, runtime, telemetry) |
 | **Stack** | TypeScript · Vitest · fast-check · Playwright · Cucumber · Stryker · tsx |
 
 ## Three findings worth the read
@@ -87,7 +87,7 @@ stride between base seeds. [RNG battery](#rng-battery--correspondence-with-publi
 | **Replay system** | `replayGame(log).success === true` for any random game | Byte-perfect verification via pre/post state hashes per event |
 | **Metamorphic testing** | `damage(lowHp) ≥ damage(highHp)` — formula without expected value | Relations between inputs, not exact outputs |
 | **`it.fails()` false invariant** | `healWerewolfIsAlwaysBeneficial` — intentionally failing test as domain spec | Documents rule violations; fails if someone "fixes" the wrong thing |
-| **Mutation testing** | Stryker 86.1% across 13 files; `faults.ts` came back at 26% | The scope of a mutation run is itself unaudited — "79%" covered half the system |
+| **Mutation testing** | Stryker 77.4% across 13 files; `faults.ts` came back at 26% | The scope of a mutation run is itself unaudited — "79%" covered half the system, and a Timeout counts as a kill |
 | **Monte Carlo simulation** | `npm run simulate` → winrate per class and per matchup, Wilson intervals, verdict against a target corridor | Statistical stability; caught a whole enemy that never got implemented |
 | **Sampling-bias detection** | Hero and enemy both derived from `seed % 4` → 4 of 16 configurations ever scanned | A biased sample returns a plausible number nobody rechecks |
 | **Metric stability** | `npm run stability` → cross-batch spread + convergence as runs double | An interval narrowing toward a seed-dependent answer looks *more* trustworthy |
@@ -133,7 +133,7 @@ npm run ci-summary                # AI-generated CI narrative
 npm run cert-evidence 50000       # evidence pack + machine-readable snapshot
 npm run delta artifacts/baseline-pre-bug14.json   # diff two snapshots
 npm run ci-report                 # HTML stability report
-npm run test:mutation             # Stryker 86.1% across 13 files — 38 minutes
+npm run test:mutation             # Stryker 77.4% across 13 files — 25 minutes
 ```
 
 Open `game/index.html` in browser — playable combat UI.  
@@ -227,11 +227,11 @@ Both reports are written to the job summary, so a run's statistics are readable 
 artefacts.
 
 The mutation job runs nightly rather than on every push, and that is a trade rather than a
-concession. A full Stryker pass over 13 files takes about 38 minutes. Feedback that arrives after
+concession. A full Stryker pass over 13 files takes about 25 minutes. Feedback that arrives after
 the author has moved on is not feedback, and a job nobody waits for stops being a gate and turns
 into noise — the same reasoning the balance corridors get above. What it costs: a score can drift
 for up to a day before anyone sees it. That is affordable because the score moves slowly, when
-tests are added or weakened rather than with every commit, whereas the 38-minute wait was paid on
+tests are added or weakened rather than with every commit, whereas the 25-minute wait was paid on
 every single push. The score lands in the job summary, so reading it does not require downloading
 the report.
 
@@ -406,7 +406,7 @@ test fires at every defect is not a battery; it is one test written five times.
 ## Mutation testing
 
 ```
-npm run test:mutation        # 13 files, 1489 mutants, 38 minutes
+npm run test:mutation        # 13 files, 1625 mutants, 25 minutes
 
 File                | Score   | Note
 --------------------|---------|--------------------------------------------
