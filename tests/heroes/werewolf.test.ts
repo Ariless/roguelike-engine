@@ -49,6 +49,55 @@ describe('WEREWOLF_CARDS', () => {
   it('each card has 2 axes', () => {
     WEREWOLF_CARDS.forEach(c => expect(c.axes).toHaveLength(2))
   })
+
+  // Kill: StringLiteral "" across every card field. The card table is a contract with the
+  // runtime (`id` is what a hand holds and what playCard dispatches on) and with the UI
+  // (name, rules text, axes). Nothing read those fields back, so blanking any of them left
+  // the suite green — 48 of the 56 survivors in this file were exactly that.
+  //
+  // Asserted as "present and well-formed" rather than by exact text: pinning the prose would
+  // turn every wording change into a failing test while catching no defect the runtime cares
+  // about. A blanked string fails the emptiness check just as surely.
+  it('every card carries a non-empty id, name, rules text and narrative line', () => {
+    WEREWOLF_CARDS.forEach(c => {
+      expect(c.id, `${c.name} id`).toBeTruthy()
+      expect(c.name, `${c.id} name`).toBeTruthy()
+      expect(c.rulesText, `${c.id} rulesText`).toBeTruthy()
+      // narrativeLine is optional in the Card type and unevenly filled in — every werewolf,
+      // bloodmage and berserker card has one, the paladin has one of three. Asserted only
+      // where it exists, so a blanked string still fails without the test doubling as a
+      // demand for missing copy.
+      if ('narrativeLine' in c) expect(c.narrativeLine, `${c.id} narrativeLine`).toBeTruthy()
+    })
+  })
+
+  it('card ids are unique and snake_case', () => {
+    const ids = WEREWOLF_CARDS.map(c => c.id)
+    expect(new Set(ids).size, 'duplicate card id').toBe(ids.length)
+    ids.forEach(id => expect(id, `${id} is not snake_case`).toMatch(/^[a-z]+(_[a-z]+)*$/))
+  })
+
+  it('the two hands hold the ids the executor deals', () => {
+    // These exact ids are what HERO_STATS hands the hero and what the transform swaps to;
+    // a rename here without a matching one there leaves the hero holding cards that dispatch
+    // to nothing.
+    expect(WEREWOLF_HUMAN_CARDS.map(c => c.id)).toEqual(['lunar_strike', 'pack_sense', 'stalk'])
+    expect(WEREWOLF_WOLF_CARDS.map(c => c.id)).toEqual(['rend', 'rampage', 'reality_crack'])
+  })
+
+  it('every axis is one of the four the design defines', () => {
+    const AXES = ['Tempo', 'Pressure', 'Stability', 'Conversion']
+    WEREWOLF_CARDS.forEach(c =>
+      c.axes.forEach(axis => expect(AXES, `${c.id} axis ${axis}`).toContain(axis)),
+    )
+  })
+
+  it('every card costs energy a 3-energy turn can pay', () => {
+    WEREWOLF_CARDS.forEach(c => {
+      expect(c.energyCost, `${c.id} cost`).toBeGreaterThan(0)
+      expect(c.energyCost, `${c.id} cost`).toBeLessThanOrEqual(3)
+    })
+  })
 })
 
 // ─── wolfDamage ───────────────────────────────────────────────────────────────
