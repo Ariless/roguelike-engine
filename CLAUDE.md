@@ -9,7 +9,7 @@ Goal: demonstrate property-based, seeded-RNG, state-machine, fault injection, re
 ## Running tests
 
 ```bash
-npm test                          # 400 vitest tests — 6 seconds
+npm test                          # 512 vitest tests — 2 seconds
 npm run test:bdd                  # 12 Cucumber BDD scenarios — 0.1 seconds
 npm run test:ui                   # 25 Playwright tests (debugger + game + visual)
 npm run test:mutation             # Stryker 77.4% across 13 files — 25 minutes
@@ -197,7 +197,7 @@ If Decision Tables conflict with engine code, treat tables as **intended spec** 
 Before proposing or completing any change:
 
 ```
-1. npm test passes (vitest — all 400 tests)
+1. npm test passes (vitest — all 512 tests)
 2. npx tsc --noEmit passes
 3. No invariant in INVARIANTS.md is violated
 4. Replay determinism preserved — same seed = same hashes

@@ -12,7 +12,7 @@ The roguelike is a rule engine — the same class of system as a payment process
 
 | | |
 | --- | --- |
-| **Test suite** | 532 tests across 3 runners — 495 Vitest · 25 Playwright · 12 BDD scenarios |
+| **Test suite** | 549 tests across 3 runners — 512 Vitest · 25 Playwright · 12 BDD scenarios |
 | **Beyond the suite** | 16,000 Monte Carlo seeds · 64,000 across 8 stability batches · 200 adversarial chaos runs |
 | **Defects** | 22 written up in `BUGS.md`, each with root cause and the invariant that would have caught it |
 | **Mutation score** | 77.4% across 13 files (engine, runtime, telemetry) |
@@ -113,7 +113,7 @@ stride between base seeds. [RNG battery](#rng-battery--correspondence-with-publi
 
 ```bash
 npm install
-npm test                          # 495 tests — 6 seconds
+npm test                          # 512 tests — 2 seconds
 npm run test:bdd                  # 12 BDD scenarios
 npm run test:ui                   # 25 Playwright tests (debugger + game + visual regression)
 npm run simulate 16000            # Monte Carlo + balance corridors — 5 seconds
@@ -159,13 +159,13 @@ docs/        DECISION-TABLES.md, TEST-PYRAMID.md
 
 ---
 
-## Test suite (532 tests across 3 runners)
+## Test suite (549 tests across 3 runners)
 
 <details>
 <summary><b>Every suite and what it covers</b></summary>
 
 ```
-Vitest (495 tests):
+Vitest (512 tests):
   resolution.test.ts        — applyDamage, applyHeal, death_door state machine
   statuses.test.ts          — bleed, stun, defend, vulnerable + mutation killers
   heroes/ (4 files)         — paladin, bloodmage, berserker, werewolf
@@ -211,7 +211,7 @@ Playwright (25 tests):
 
 | Job | Trigger | Runs | Blocks merge on |
 |-----|---------|------|-----------------|
-| `verify` | push, PR | typecheck, 495 vitest tests, 12 BDD scenarios | any failure |
+| `verify` | push, PR | typecheck, 512 vitest tests, 12 BDD scenarios | any failure |
 | `simulation` | push, PR | Monte Carlo 16k + stability 4k×4 | broken determinism only |
 | `ui` | push, PR | 25 Playwright tests on Chromium | any failure |
 | `mutation` | nightly, manual | Stryker across engine, runtime and telemetry | score below the configured threshold |
@@ -248,6 +248,10 @@ the Necromancer's Raise Dead and Empower finally reached the engine (BUG-14).
 | bloodmage | 94.1% | 72.8% | FAIL → **PASS** |
 | berserker | 95.3% | 81.1% | FAIL → INCONCLUSIVE |
 | werewolf | 99.2% | 97.8% | FAIL → FAIL |
+
+Both columns are history: BUG-22 later moved the same numbers again (paladin 40.7%,
+bloodmage 71.3%, berserker 73.7%, werewolf 94.8%), because the skeleton BUG-14 introduced
+was not actually attacking until then. The current figures are in the Monte Carlo section.
 
 The Necromancer column went from `100% / 100% / 100% / 100%` to `58.3% / 14.8% / 42.9% /
 94.2%`. The Blood Mage now loses to him 85 times in 100 — from the most harmless enemy in the
@@ -410,26 +414,34 @@ npm run test:mutation        # 13 files, 1625 mutants, 25 minutes
 
 File                | Score   | Note
 --------------------|---------|--------------------------------------------
-resolution.ts       | 100.00% |
 turnPipeline.ts     | 100.00% |
-actionResolution.ts |  97.56% |
-statuses.ts         |  96.55% | hasStatus always-true, duration filter
-berserker.ts        |  95.89% | rage 25% boundary
 rng.ts              |  95.65% |
-replayer.ts         |  92.00% |
-bloodmage.ts        |  89.87% |
-executor.ts         |  85.07% | largest file in the project
-paladin.ts          |  84.85% | ?? 0 → && 0 boundary
-invariants.ts       |  79.66% |
-werewolf.ts         |  79.53% |
-faults.ts           |  26.00% | ← 37 of 50 mutants survive
-Overall             |  86.10% | thresholds.break = 85 — the run fails below it
+replayer.ts         |  94.00% |
+statuses.ts         |  93.10% | hasStatus always-true, duration filter
+resolution.ts       |  92.39% |
+actionResolution.ts |  89.02% |
+faults.ts           |  86.00% | was 26% — see below
+paladin.ts          |  80.30% | ?? 0 → && 0 boundary
+invariants.ts       |  79.10% |
+berserker.ts        |  69.86% | rage 25% boundary
+executor.ts         |  69.55% | largest file in the project
+werewolf.ts         |  67.25% |
+bloodmage.ts        |  67.09% |
+Overall             |  77.42% | thresholds.break = 75 — the run fails below it
 ```
 
-**`faults.ts` at 26% is the finding, not the 86%.** That module exists to corrupt engine
-behaviour on purpose (`bleedOffByOne` and friends) so the suite can demonstrate it notices planted
-bugs. It is the instrument that audits the tests — and it turned out to be the least tested code in
-the repository. Break it and the injector silently injects nothing: property tests still pass, and
+**Why the overall figure fell from 86.10% while the suite grew.** Stryker counts a Timeout
+as a kill. The 86.10% run recorded 311 of them; this one records 6, because the mutation run
+now uses a Vitest config with a timeout sized for instrumented code. A mutant that merely
+made the engine slow used to be scored as a mutant the tests had caught. The threshold moved
+with the measurement — 85 → 75 — rather than the suite being declared worse. Recorded as
+MUTATION-03 in BUGS.md.
+
+**`faults.ts` coming back at 26% was the finding, not the headline score.** That module exists
+to corrupt engine behaviour on purpose (`bleedOffByOne` and friends) so the suite can demonstrate it
+notices planted bugs. It is the instrument that audits the tests — and it turned out to be the least
+tested code in the repository. It sits at 86% today; what the first widened run bought was not the
+percentage, it was knowing the instrument was unchecked. Break it and the injector silently injects nothing: property tests still pass, and
 "we verified the tests catch a planted bug" quietly becomes an unsupported claim. A broken injector
 is indistinguishable from a working one on healthy code.
 
@@ -450,25 +462,34 @@ to measured results always passes and therefore says nothing.
 npm run simulate 16000
 
   class        winrate            95% CI          verdict   turns (mean ± sd)   p95
-  paladin    ███████░░░  70.5%   [68.9%, 72.0%]   PASS      9.9 ± 9.7          39
-  bloodmage  █████████░  94.1%   [93.3%, 94.8%]   FAIL      3.6 ± 1.4           7
-  berserker  ██████████  95.3%   [94.7%, 96.0%]   FAIL      7.4 ± 5.6          19
-  werewolf   ██████████  99.2%   [98.9%, 99.5%]   FAIL      4.6 ± 2.3           9
+  paladin    ████░░░░░░  40.7%   [39.1%, 42.4%]   FAIL      9.7 ± 9.7          39
+  bloodmage  ███████░░░  71.3%   [69.9%, 72.7%]   PASS      4.0 ± 1.4           7
+  berserker  ███████░░░  73.7%   [72.3%, 75.0%]   PASS      7.7 ± 5.5          19
+  werewolf   █████████░  94.8%   [94.0%, 95.4%]   FAIL      5.1 ± 2.3          10
 
   MATCHUP MATRIX — winrate per pair, ~1,000 runs per cell
   hero \ enemy        goblin     guardian      vampire  necromancer
-  paladin             99.8%!       20.9%        29.6%       100.0%!
-  bloodmage          100.0%!       95.2%        81.1%       100.0%!
-  berserker          100.0%!       88.1%        93.3%       100.0%!
-  werewolf            99.9%!       99.7%!       97.3%!      100.0%!
+  paladin             99.8%!       20.9%        29.6%         0.0%!
+  bloodmage          100.0%!       95.2%        81.1%         8.8%!
+  berserker          100.0%!       88.1%        93.3%        13.4%
+  werewolf            99.9%!       99.7%!       97.3%!       82.2%
 
   Configuration coverage: 16/16 pairs scanned
 ```
 
-Three of four classes are outside the corridor, and the matrix says why: every
-hero beats the Necromancer 100% of the time. That column is BUG-14 — the enemy's
-Raise Dead and Empower exist in `DESIGN.md`, `DECISION-TABLES.md` and the UI, but
-never reached the engine, so it can only apply bleed and cannot win.
+The Necromancer column has now swung the whole way across. It used to read 100% for
+every hero — BUG-14, where Raise Dead and Empower existed in `DESIGN.md`,
+`DECISION-TABLES.md` and the UI but never reached the engine, leaving the enemy able
+to apply bleed and nothing else. Implementing those mechanics moved the column, and
+fixing BUG-22 moved it again: until then a raised skeleton never performed the attack
+it was spawned with, because the end-of-turn block overwrote its intent with the
+encounter's row. With the skeleton finally hitting for 4 a turn, the Paladin wins
+**0.0%** of a thousand games against him.
+
+Both readings were produced by the same corridors on the same seeds. What changed was
+the engine — which is the argument for fixing the corridor before the run rather than
+after: a corridor fitted to results would have quietly followed the defect in both
+directions.
 
 The matrix used to be invisible: `simulate.ts` derived hero *and* enemy from the
 same `seed % 4`, scanning 4 pairs out of 16 (BUG-13). The Necromancer only ever
@@ -478,12 +499,12 @@ met the Werewolf, who wins everything anyway.
 npm run stability 8000 8      # 8 batches × 8,000 runs on far-apart base seeds
 
   class        min      max      spread   sd       CI half-width   verdict
-  paladin      68.8%    70.3%    1.52%    0.51%       1.01%      PASS
-  werewolf     99.1%    99.5%    0.35%    0.12%       0.19%      PASS
+  paladin      39.1%    40.9%    1.73%    0.56%       1.07%      PASS
+  werewolf     94.0%    95.0%    0.90%    0.34%       0.50%      PASS
 
   CONVERGENCE — overall hero winrate vs number of runs
-    1,000     90.2%   [88.21%, 91.96%]   ±1.876%
-   32,000     90.6%   [90.23%, 90.88%]   ±0.327%   Δ -0.021%
+    1,000     70.2%   [67.27%, 73.03%]   ±2.882%
+   32,000     71.3%   [70.83%, 71.84%]   ±0.505%   Δ -0.007%
 
   Cross-batch: stable. Estimates do not depend on the starting seed.
 ```
