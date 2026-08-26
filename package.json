@@ -50,14 +50,14 @@
     "check:conventions": "tsx scripts/check-conventions.ts"
   },
   "devDependencies": {
-    "@anthropic-ai/sdk": "^0.100.1",
+    "@anthropic-ai/sdk": "^0.120.0",
     "@cucumber/cucumber": "^12.9.0",
-    "@playwright/test": "^1.60.0",
+    "@playwright/test": "^1.62.1",
     "@stryker-mutator/core": "^10.0.0",
     "@stryker-mutator/vitest-runner": "^10.0.0",
     "@types/node": "^22.20.1",
-    "fast-check": "^4.8.0",
-    "tsx": "^4.22.3",
+    "fast-check": "^4.9.0",
+    "tsx": "^4.23.12",
     "typescript": "^5.5.0",
     "vitest": "^3.2.7"
   },
