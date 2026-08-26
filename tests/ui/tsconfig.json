@@ -4,7 +4,12 @@
   // types from the engine; this one hands them back to the browser layer only.
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "lib": ["ES2022", "DOM", "DOM.Iterable"]
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    // Named explicitly because this config overrides `lib`. TypeScript 5 still picked up
+    // @types/node here through the automatic @types scan; TypeScript 7 does not, and the
+    // specs fail with TS2591 on the `path` and `fs` imports they have always had. Harmless
+    // under 5.x — it names what was already being included — and required under 7.
+    "types": ["node"]
   },
   "include": ["./**/*.ts"],
   "exclude": []
