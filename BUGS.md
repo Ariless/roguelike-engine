@@ -542,7 +542,7 @@ if anyone reintroduces a spread.
 |---|---|
 | `bleedOffByOne` | works |
 | `ignoreDeathDoor` | read, but bypassed on every turn — **fixed** |
-| `ignoreStun` | read, but the condition it guards is unreachable — open |
+| `ignoreStun` | guarded an unreachable branch — **branch deleted 2026-08-26**, flag kept for the log |
 | `allowDeadToAct` | declared and documented, never read by any code — open |
 
 **Root cause, `ignoreDeathDoor`.** `executor.ts` has four win checks. Three passed the
@@ -559,11 +559,22 @@ flag's own comment says "no kill on second hit", which is more than it can deliv
 architecture. Pinned by a test rather than fixed: making `engine/` fault-aware would
 trade a documentation defect for an architectural one.
 
-**Root cause, `ignoreStun`.** The guard `!isStunned || faults.ignoreStun` is real code on
+**Root cause, `ignoreStun`.** The guard `!isStunned || faults.ignoreStun` was real code on
 a real path, but no hero card applies stun to an enemy — the only source of stun in the
-game is the Guardian, and it stuns the hero. So `isStunned` is never true for an enemy and
-the flag cannot change anything. The mechanic is not missing; the situation it applies to
-cannot arise.
+game is the Guardian, and `executeIntent`'s `stun` case targets `heroId`. So `isStunned` was
+never true for an enemy and the flag could not change anything. The mechanic was not
+missing; the situation it applied to could not arise.
+
+**Resolved 2026-08-26 by deletion.** The guard and the branch that cleared the stun
+afterwards are gone; the enemy action block now runs unconditionally. What made this worth
+doing rather than documenting: those two branches carried 14 mutants that no test could
+ever kill, so they were pushing the mutation score down while proving nothing about the
+suite. Dead code does not just sit there — it taxes every measurement taken over it.
+
+The flag itself stays in `FaultConfig`, in the replay log and in the pairwise matrix, so
+existing logs still describe themselves. It is now declared-and-unread, exactly like
+`allowDeadToAct` below — the difference is that this one is documented as such at the
+declaration, and a test pins that switching it on changes nothing.
 
 **Root cause, `allowDeadToAct`.** No code reads it. It is declared in the interface and
 documented as "dead entities can still execute intents (triggers TIMELINE CORRUPTED)".

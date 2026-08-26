@@ -223,11 +223,11 @@ describe('the remaining fault flags', () => {
   // which is the signal to close it.
 
   it('BUG-18: ignoreStun is unreachable — nothing can stun an enemy', () => {
-    // The flag is read in executor.ts (the `!isStunned || faults.ignoreStun`
-    // guard), but no hero card applies stun to an enemy: the only source of stun
-    // in the game is the Guardian, and it stuns the hero. So the guard it
-    // modifies is never evaluated with isStunned = true, and switching the flag
-    // on changes nothing at all.
+    // No hero card applies stun to an enemy: the only source of stun in the game
+    // is the Guardian, and it stuns the hero. The guard this flag modified was
+    // therefore never evaluated with isStunned = true, and the dead branch was
+    // removed on 2026-08-26. The flag itself survives in FaultConfig and in the
+    // replay log; this test pins that switching it on still changes nothing.
     const clean = runTurns(8)
     const faulted = runTurns(8, { ignoreStun: true })
     expect(faulted.hero.hp).toBe(clean.hero.hp)

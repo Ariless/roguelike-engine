@@ -482,7 +482,7 @@ export function createGame(config: GameConfig): GameHandle {
         }
       }
 
-      // Step 5: enemies act (unless stunned + ignoreStun=false)
+      // Step 5: enemies act
       //
       // Iterates over a snapshot of the ids taken before the loop. Raise Dead
       // appends a skeleton mid-step, and a skeleton must not act on the turn it
@@ -497,41 +497,32 @@ export function createGame(config: GameConfig): GameHandle {
           // skeleton's own attack can end the battle.
           if (!enemy || enemy.state === 'dead' || state.isOver) continue
 
-          const isStunned = enemy.statuses.some(s => s.name === 'stun')
+          // No stun guard here: nothing in the game can stun an enemy. The only
+          // source of stun is the Guardian's intent, and it applies to the hero
+          // (executeIntent's 'stun' case targets heroId). The guard that used to
+          // wrap this block, and the branch that cleared the stun afterwards, were
+          // unreachable on every path — see BUG-18 for the flag they answered to.
+          // Restore both alongside the card or intent that first stuns an enemy.
 
-          if (!isStunned || faults.ignoreStun) {
-            // A skeleton carries its intent; every other enemy cycles its table,
-            // resolved against the board so conditional rows can fire.
-            // Resolved against the acting enemy's own type, not the encounter's
-            // headline type. With an escort on the field those differ, and using
-            // the config type would have a goblin performing necromancy.
-            const intent = enemy.enemyType === 'skeleton'
-              ? enemy.intent
-              : resolveIntent(enemy.enemyType, intentIndex, state)
+          // A skeleton carries its intent; every other enemy cycles its table,
+          // resolved against the board so conditional rows can fire.
+          // Resolved against the acting enemy's own type, not the encounter's
+          // headline type. With an escort on the field those differ, and using
+          // the config type would have a goblin performing necromancy.
+          const intent = enemy.enemyType === 'skeleton'
+            ? enemy.intent
+            : resolveIntent(enemy.enemyType, intentIndex, state)
 
-            const pre = state
-            state = executeIntent(state, intent, actorId)
-            state = checkWin(state, faults)
-            record('enemy_action', pre, state, { targetId: 'hero' })
-            if (state.isOver) {
-              log.outcome = 'hero_loses'
-              record('turn_end', turnEndPre, state)
-              recordSnapshot(state)
-              record('game_over', state, state)
-              return state
-            }
-          }
-
-          // Clear stun after skip
-          if (isStunned && !faults.ignoreStun) {
-            state = {
-              ...state,
-              enemies: state.enemies.map(e =>
-                e.id === actorId
-                  ? { ...e, statuses: e.statuses.filter(s => s.name !== 'stun') }
-                  : e
-              ),
-            }
+          const pre = state
+          state = executeIntent(state, intent, actorId)
+          state = checkWin(state, faults)
+          record('enemy_action', pre, state, { targetId: 'hero' })
+          if (state.isOver) {
+            log.outcome = 'hero_loses'
+            record('turn_end', turnEndPre, state)
+            recordSnapshot(state)
+            record('game_over', state, state)
+            return state
           }
         }
       }

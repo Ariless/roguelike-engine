@@ -7,7 +7,10 @@ import { tickStatuses } from '../engine/statuses'
 
 export interface FaultConfig {
   bleedOffByOne?: boolean   // bleed ticks for (stacks - 1) instead of stacks
-  ignoreStun?: boolean      // stunned enemies act anyway (stun has no effect)
+  // Declared, recorded in the replay log, and read by nothing since 2026-08-26: the
+  // branch it guarded was unreachable (nothing stuns an enemy) and was removed. Kept
+  // so existing replay logs still describe themselves — see BUG-18.
+  ignoreStun?: boolean
   ignoreDeathDoor?: boolean // death_door → entity continues acting as alive (no kill on second hit)
   allowDeadToAct?: boolean  // dead entities can still execute intents (triggers TIMELINE CORRUPTED)
 }
