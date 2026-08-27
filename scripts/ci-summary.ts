@@ -8,6 +8,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { readFileSync, existsSync } from 'fs'
 import { join } from 'path'
+import { ORACLE_MODEL } from './lib/model'
 
 const DRY_RUN = process.argv.includes('--dry-run') || process.env.AI_MOCK_RESPONSE === 'true'
 
@@ -117,7 +118,7 @@ ${data.simulate.stable ? 'No invariant drift detected.' : '⚠ Instability detec
 `.trim()
 
   const response = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
+    model: ORACLE_MODEL,
     max_tokens: 400,
     messages: [{
       role: 'user',

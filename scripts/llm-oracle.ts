@@ -11,6 +11,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createGame } from '../src/runtime/executor'
 import type { TurnSnapshot } from '../src/telemetry/types'
 import type { HeroClass, EnemyType } from '../src/engine/types'
+import { ORACLE_MODEL } from './lib/model'
 
 const DRY_RUN = process.argv.includes('--dry-run') || process.env.AI_MOCK_RESPONSE === 'true'
 
@@ -163,7 +164,7 @@ async function evaluateSnapshot(
   const rulesText = rules.map(r => `${r.id}: ${r.description}`).join('\n')
 
   const response = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
+    model: ORACLE_MODEL,
     max_tokens: 1024,
     messages: [{
       role: 'user',

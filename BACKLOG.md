@@ -4,16 +4,23 @@ Full design spec: `DESIGN.md` · Full invariant contract: `INVARIANTS.md`
 
 ---
 
-## Project status (2026-08-21)
+## Project status (2026-08-27)
 
-**532 checks** (495 vitest + 25 Playwright + 12 BDD) · **86.1% mutation score** · **18 documented defects**
+**595 checks** (558 vitest + 25 Playwright + 12 BDD) · **84.6% mutation score** · **23 documented defects**
 
-Open: BUG-18 — two of the four fault-injection flags inject nothing. `ignoreStun` guards a
-condition that cannot arise (no hero card stuns an enemy), and `allowDeadToAct` is declared
-but never read. Both pinned by tests that fail the moment either starts working.
+Open: BUG-18, partly — `allowDeadToAct` is declared, documented, and read by no code. The other
+half closed 2026-08-26: `ignoreStun` guarded a condition that could not arise (no hero card stuns
+an enemy) and the dead branches were deleted, which also removed 14 unkillable mutants.
 
-Closed this week: BUG-14 (necromancer mechanics reached the engine), BUG-16 (UI assertion
-that could not fail), BUG-17 (aggregation died at a million runs).
+Also open, not code: the necromancer is over-tuned. After BUG-22 the paladin takes 0.0% of a
+thousand games from it and the bloodmage 8.8% — a design problem, and the one most visible to
+anyone who sits down to play. And the mutation spread between runs has never been measured: two
+consecutive runs on identical code would settle whether 75 is a tight threshold or a cautious one.
+
+Closed recently: BUG-22 (every enemy on the field was handed the encounter's intent, and the
+skeleton — the one enemy that executes its stored intent — obeyed it), BUG-14 (necromancer
+mechanics reached the engine), BUG-16 (UI assertion that could not fail), BUG-17 (aggregation
+died at a million runs).
 
 Portfolio-ready: README ✅ · CLAUDE.md ✅ · BUGS.md ✅ · DECISIONS.md ✅ · INVARIANTS.md ✅
 
@@ -85,7 +92,7 @@ Portfolio-ready: README ✅ · CLAUDE.md ✅ · BUGS.md ✅ · DECISIONS.md ✅ 
 | File | What is inside |
 |------|---------------|
 | `README.md` | Portfolio-ready: ROI, shrinking example, NIST mapping, scale, delta, enterprise mapping |
-| `BUGS.md` | 22 defects with root cause, fix and testing value |
+| `BUGS.md` | 23 defects with root cause, fix and testing value |
 | `DECISIONS.md` | Architectural decisions |
 | `INVARIANTS.md` | Full invariant contract + trace-derived |
 | `docs/TEST-PYRAMID.md` | Rule engine pyramid vs web pyramid |

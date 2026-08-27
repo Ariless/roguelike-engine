@@ -13,6 +13,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { readFileSync } from 'fs'
 import { join } from 'path'
+import { ORACLE_MODEL } from './lib/model'
 
 const DRY_RUN = process.argv.includes('--dry-run') || process.env.AI_MOCK_RESPONSE === 'true'
 
@@ -109,7 +110,7 @@ async function generateMutations(code: string, fnName: string): Promise<Semantic
   const client = new Anthropic()
 
   const response = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
+    model: ORACLE_MODEL,
     max_tokens: 2048,
     messages: [{
       role: 'user',

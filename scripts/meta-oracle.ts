@@ -12,6 +12,7 @@
 //   AI_MOCK_RESPONSE=true npm run meta-oracle
 
 import Anthropic from '@anthropic-ai/sdk'
+import { ORACLE_MODEL } from './lib/model'
 
 const DRY_RUN = process.argv.includes('--dry-run') || process.env.AI_MOCK_RESPONSE === 'true'
 
@@ -119,7 +120,7 @@ async function evaluateWithOracle(tc: OracleTestCase): Promise<'correct' | 'viol
   }
 
   const response = await client!.messages.create({
-    model: 'claude-haiku-4-5-20251001',
+    model: ORACLE_MODEL,
     max_tokens: 200,
     messages: [{
       role: 'user',

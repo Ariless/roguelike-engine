@@ -793,6 +793,43 @@ Two green layers, one uncovered seam between them: the same shape as BUG-14 + BU
 
 ---
 
+## BUG-23 — an unknown card id was charged a point of energy for doing nothing ✅ CLOSED
+
+**Date:** 2026-08-26
+**Found by:** a test written to kill the `case` labels in `dispatchCard` — the negative case,
+asserting that an unrecognised id leaves the board alone, failed on the energy counter
+
+**Symptom:** `playCard('no_such_card')` returned a state with `energy: 2` instead of `3`.
+Nothing else changed: no damage, no status, no log entry beyond the card play itself. The
+turn was quietly one action shorter.
+
+**Root cause:** cost lookup fell back to a default:
+
+```ts
+const cost = CARD_COSTS[cardId] ?? 1
+...
+state = { ...state, hero: { ...state.hero, energy: state.hero.energy - cost } }
+```
+
+Energy is deducted before dispatch, and `dispatchCard` ends in a `default` branch that
+returns the state untouched. So an id absent from the table was treated as a real card long
+enough to be charged for, then treated as nothing.
+
+**Fix:** the card table is the authority on what a card is. `CARD_COSTS[cardId]` returning
+`undefined` now ends the call before any deduction.
+
+**Why it went unseen:** every existing test plays cards that exist. The UI only offers cards
+from the hand, so a human cannot reach this path either — it is reachable through the replay
+log and through the executor's public API, which is exactly what a fuzzer or a corrupted log
+would use.
+
+**What makes it worth a register entry rather than a shrug:** this is the shape a mutation in
+`dispatchCard` produces — a blanked `case` label means the card falls through to `default`,
+energy already spent. The defect and the mutant are indistinguishable from outside, so the
+test that kills one documents the other.
+
+---
+
 ## MUTATION-03 — The threshold was inherited from a different unit of measurement (2026-08-26)
 
 **Date:** 2026-08-26

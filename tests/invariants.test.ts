@@ -219,3 +219,116 @@ describe('soft invariants — do not throw, they return violations', () => {
     expect(softViolations).toHaveLength(0)
   })
 })
+
+// ─── The message a violation carries ─────────────────────────────────────────
+// The existing tests assert that a violation throws and that the message names the
+// invariant, the seed and the turn. What none of them read is the detail line each
+// invariant builds — and that is where the survivors were: emptying a message body,
+// or flipping the comparison that finds the offending entity, changed nothing any
+// test looked at. A TIMELINE CORRUPTED report whose detail line is blank tells the
+// person holding the failing seed nothing about what went wrong.
+
+describe('violation messages name the offender and its numbers', () => {
+    function violation(state: GameState): TimelineCorruptedError {
+        try {
+            assertValidGameState(state)
+        } catch (err) {
+            return err as TimelineCorruptedError
+        }
+        throw new Error('expected the state to violate a hard invariant')
+    }
+
+    it('hp-floor names the entity and the negative value', () => {
+        const err = violation(makeState({ enemies: [makeEnemy('e0', { hp: -5 })] }))
+
+        expect(err.invariantId).toBe('hp-floor')
+        expect(err.message).toContain('e0')
+        expect(err.message).toContain('-5')
+    })
+
+    it('hp-ceiling names the entity, its hp and its maxHp', () => {
+        const err = violation(makeState({ enemies: [makeEnemy('e0', { hp: 44, maxHp: 20 })] }))
+
+        expect(err.invariantId).toBe('hp-ceiling')
+        expect(err.message).toContain('e0')
+        expect(err.message).toContain('44')
+        expect(err.message).toContain('20')
+    })
+
+    it('bleed-cap names the entity and the stack count', () => {
+        const err = violation(
+            makeState({ enemies: [makeEnemy('e0', { statuses: [{ name: 'bleed', stacks: 17 }] })] }),
+        )
+
+        expect(err.invariantId).toBe('bleed-cap')
+        expect(err.message).toContain('e0')
+        expect(err.message).toContain('17')
+    })
+
+    it('charge-cap names the hero and the stack count', () => {
+        const err = violation(makeState({ hero: { ...makeState().hero, chargeStacks: 9 } }))
+
+        expect(err.invariantId).toBe('charge-cap')
+        expect(err.message).toContain('9')
+    })
+
+    it('death-door-hp names the entity and the hp it should not have', () => {
+        const err = violation(makeState({ enemies: [makeEnemy('e0', { state: 'death_door', hp: 7 })] }))
+
+        expect(err.invariantId).toBe('death-door-hp')
+        expect(err.message).toContain('e0')
+        expect(err.message).toContain('7')
+    })
+
+    it('alive-hp names the entity sitting at zero', () => {
+        const err = violation(makeState({ enemies: [makeEnemy('e0', { state: 'alive', hp: 0 })] }))
+
+        expect(err.invariantId).toBe('alive-hp')
+        expect(err.message).toContain('e0')
+    })
+
+    it('the soft violation carries its id and detail rather than throwing', () => {
+        const { softViolations } = assertValidGameState(makeState({ turn: 99 }))
+
+        expect(softViolations).toHaveLength(1)
+        expect(softViolations[0]).toContain('combat-terminates')
+        expect(softViolations[0]).toContain('99')
+    })
+})
+
+// ─── every, not some ─────────────────────────────────────────────────────────
+// Kill: MethodExpression every → some across the registry. With a single entity in the
+// state the two are indistinguishable, which is why the existing tests could not tell
+// them apart — they violate the invariant on the only entity present. These states hold
+// one healthy entity alongside the offender, so `some` would report the board as valid.
+
+describe('an invariant holds for every entity, not merely for one', () => {
+    it('hp-floor still fires when only the second enemy is negative', () => {
+        const state = makeState({ enemies: [makeEnemy('e0'), makeEnemy('e1', { hp: -1 })] })
+
+        expect(() => assertValidGameState(state)).toThrow(TimelineCorruptedError)
+    })
+
+    it('hp-ceiling still fires when only one enemy is over its maximum', () => {
+        const state = makeState({ enemies: [makeEnemy('e0'), makeEnemy('e1', { hp: 99, maxHp: 20 })] })
+
+        expect(() => assertValidGameState(state)).toThrow(TimelineCorruptedError)
+    })
+
+    it('bleed-cap still fires when the healthy enemy is listed first', () => {
+        const state = makeState({
+            enemies: [
+                makeEnemy('e0', { statuses: [{ name: 'bleed', stacks: 3 }] }),
+                makeEnemy('e1', { statuses: [{ name: 'bleed', stacks: 11 }] }),
+            ],
+        })
+
+        expect(() => assertValidGameState(state)).toThrow(TimelineCorruptedError)
+    })
+
+    it('alive-hp still fires when the hero is healthy and an enemy is not', () => {
+        const state = makeState({ enemies: [makeEnemy('e0'), makeEnemy('e1', { state: 'alive', hp: 0 })] })
+
+        expect(() => assertValidGameState(state)).toThrow(TimelineCorruptedError)
+    })
+})

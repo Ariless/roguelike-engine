@@ -13,6 +13,7 @@ import { saveFailingRun } from '../src/telemetry/artifacts'
 import { HERO_CARDS, SELF_ONLY, configFor } from './lib/harness'
 import type { HeroClass, EnemyType } from '../src/engine/types'
 import type { ReplayLog } from '../src/telemetry/types'
+import { ORACLE_MODEL } from './lib/model'
 
 const RUNS = parseInt(process.argv[2] ?? '500')
 const USE_CLAUDE = !!process.env.ANTHROPIC_API_KEY
@@ -107,7 +108,7 @@ async function claudeGuidedPlay(
 
     // Ask Claude which card to play to stress-test the engine
     const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: ORACLE_MODEL,
       max_tokens: 200,
       messages: [{
         role: 'user',

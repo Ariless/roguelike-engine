@@ -434,7 +434,12 @@ export function createGame(config: GameConfig): GameHandle {
       if (state.isOver) return state
       if (!canAct(state.hero)) return state
 
-      const cost = CARD_COSTS[cardId] ?? 1
+      // BUG-23: an id with no entry in CARD_COSTS used to fall back to 1, get its energy
+      // deducted, and then land in dispatchCard's default branch — spending a point on
+      // nothing. The card table is the authority on what a card is; an id that is not in it
+      // is not a card, and the turn is left untouched.
+      const cost = CARD_COSTS[cardId]
+      if (cost === undefined) return state
       if (state.hero.energy < cost) return state
 
       const pre = state

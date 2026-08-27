@@ -58,6 +58,7 @@ function mockGenerate(ruleText: string): string {
 import { describe, it, expect } from 'vitest'
 import * as fc from 'fast-check'
 import { addStatus, tickStatuses } from '../src/engine/statuses'
+import { ORACLE_MODEL } from './lib/model'
 
 describe('property: ${ruleText}', () => {
   it('[DRY RUN] invariant holds for any valid input', () => {
@@ -82,7 +83,7 @@ async function generateTest(ruleText: string): Promise<string> {
   const client = new Anthropic()
 
   const response = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
+    model: ORACLE_MODEL,
     max_tokens: 1500,
     messages: [{
       role: 'user',

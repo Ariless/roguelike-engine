@@ -12,10 +12,10 @@ The roguelike is a rule engine — the same class of system as a payment process
 
 | | |
 | --- | --- |
-| **Test suite** | 549 tests across 3 runners — 512 Vitest · 25 Playwright · 12 BDD scenarios |
+| **Test suite** | 595 tests across 3 runners — 558 Vitest · 25 Playwright · 12 BDD scenarios |
 | **Beyond the suite** | 16,000 Monte Carlo seeds · 64,000 across 8 stability batches · 200 adversarial chaos runs |
-| **Defects** | 22 written up in `BUGS.md`, each with root cause and the invariant that would have caught it |
-| **Mutation score** | 77.4% across 13 files (engine, runtime, telemetry) |
+| **Defects** | 23 written up in `BUGS.md`, each with root cause and the invariant that would have caught it |
+| **Mutation score** | 84.6% across 13 files (engine, runtime, telemetry) — `thresholds.break = 75` |
 | **Stack** | TypeScript · Vitest · fast-check · Playwright · Cucumber · Stryker · tsx |
 
 ## Three findings worth the read
@@ -410,32 +410,38 @@ test fires at every defect is not a battery; it is one test written five times.
 ## Mutation testing
 
 ```
-npm run test:mutation        # 13 files, 1625 mutants, 25 minutes
+npm run test:mutation        # 13 files, 1639 mutants, ~25 minutes
 
 File                | Score   | Note
 --------------------|---------|--------------------------------------------
 turnPipeline.ts     | 100.00% |
 rng.ts              |  95.65% |
-replayer.ts         |  94.00% |
+paladin.ts          |  95.45% |
+berserker.ts        |  94.52% | rage 25% boundary
+invariants.ts       |  94.38% |
+replayer.ts         |  94.12% |
 statuses.ts         |  93.10% | hasStatus always-true, duration filter
 resolution.ts       |  92.39% |
-actionResolution.ts |  89.02% |
+actionResolution.ts |  90.24% |
+bloodmage.ts        |  89.87% |
+werewolf.ts         |  88.30% |
 faults.ts           |  86.00% | was 26% — see below
-paladin.ts          |  80.30% | ?? 0 → && 0 boundary
-invariants.ts       |  79.10% |
-berserker.ts        |  69.86% | rage 25% boundary
-executor.ts         |  69.55% | largest file in the project
-werewolf.ts         |  67.25% |
-bloodmage.ts        |  67.09% |
-Overall             |  77.42% | thresholds.break = 75 — the run fails below it
+executor.ts         |  71.02% | largest file in the project; 152 of the 229 survivors live here
+Overall             |  84.62% | thresholds.break = 75 — the run fails below it
 ```
 
-**Why the overall figure fell from 86.10% while the suite grew.** Stryker counts a Timeout
-as a kill. The 86.10% run recorded 311 of them; this one records 6, because the mutation run
-now uses a Vitest config with a timeout sized for instrumented code. A mutant that merely
-made the engine slow used to be scored as a mutant the tests had caught. The threshold moved
-with the measurement — 85 → 75 — rather than the suite being declared worse. Recorded as
-MUTATION-03 in BUGS.md.
+**Why the figure moved twice.** Stryker counts a Timeout as a kill. An earlier run scored 86.10%
+with **311** of them; once the mutation run got a Vitest config with a timeout sized for instrumented
+code, timeouts dropped to single digits and the same suite measured **77.42%** — a quarter of the old
+score had been "the mutant made the engine slow", not "a test caught the change". The threshold moved
+with the measurement (85 → 75) rather than the suite being declared worse. Recorded as MUTATION-03 in
+BUGS.md.
+
+The current **84.62%** is the suite catching up on the honest measurement: the card tables are now
+read back, so blanking a field is no longer free. What is left is concentrated — `executor.ts` holds
+152 of the 229 survivors. The break threshold stays at 75 on purpose: a gate exists to catch a
+regression, not to certify a peak, and the spread between runs on near-identical code has not been
+measured yet.
 
 **`faults.ts` coming back at 26% was the finding, not the headline score.** That module exists
 to corrupt engine behaviour on purpose (`bleedOffByOne` and friends) so the suite can demonstrate it
@@ -560,7 +566,7 @@ No browser. No HTTP. Pure rule engine via `createGame()` + `game.endTurn()`.
 
 ## Bug Cemetery (`BUGS.md`)
 
-22 real bugs found during implementation. Selected highlights:
+23 real bugs found during implementation. Selected highlights:
 
 | Bug | Found by | Class |
 |-----|----------|-------|
@@ -653,13 +659,13 @@ Tests:             532  (495 vitest + 25 Playwright + 12 BDD)
                    + 64,000 seeds across 8 batches via stability run
                    + 200 adversarial runs via chaos agent
 
-Real defects:      22  (see BUGS.md — 21 closed, 1 partially open, each with root cause)
+Real defects:      23  (see BUGS.md — 22 closed, 1 partially open, each with root cause)
                    BUG-13…16 came from the simulation and the RNG battery,
                    not from the unit suite: a biased sample, an enemy that was
                    never implemented, a silently truncated seed, and a UI test
                    whose assert did not check what its name promised.
 
-Mutation score:    86.1%  (13 files: engine, runtime, telemetry)
+Mutation score:    84.6%  (13 files: engine, runtime, telemetry)
 
 Bugs found by property tests specifically:
   BUG-06  fast-check found off-by-one in test generator  (test was wrong, not code)
