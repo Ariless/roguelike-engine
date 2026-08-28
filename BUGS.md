@@ -835,6 +835,7 @@ test that kills one documents the other.
 **Date:** 2026-08-26
 **Tool:** Stryker v9.6, 13 files, a 25-minute run
 **Result:** **77.42%** — 1,258 killed of 1,625, 345 survived, 22 with no coverage
+**Since re-measured:** 84.62% on 2026-08-28 — the threshold decision below stands, the numbers moved
 
 `thresholds.break` moves 85 → 75. Not because the suite got worse: because 85 was set
 against a measurement that counted something else.
@@ -853,20 +854,50 @@ Three things moved the score between then and now, in decreasing order of size:
 | The engine grew: 1,489 → 1,625 mutants | new code carried its own survivors |
 | BUG-18 dead branches deleted | −14 unkillable mutants, ~+0.2pp |
 
-**Why 75 rather than the 77.42 just measured.** A gate is there to catch a regression, not
+**Why 75 rather than the 77.42 just measured** — the decision as taken on 2026-08-26. A gate is there to catch a regression, not
 to certify a peak. 75 sits below the current figure with room for the drift the number shows
 between runs (77.09 / 77.21 / 77.42 across three measurements of nearly identical code), so
 a red build means the suite genuinely weakened rather than that the run was unlucky.
 
-**What it would take to reach 85 honestly:** 124 more kills. They are not spread evenly —
-`executor.ts` holds 158 survivors, `werewolf.ts` 56, `invariants.ts` 37, `bloodmage.ts` 25,
-`berserker.ts` 22. The hero files are the densest per line and the most mechanical to write,
-since each survivor is a rule in a card that no test reads back.
+**Re-measured 2026-08-28 — 84.62%.** The 77.42% above is the run the threshold was set
+against and stays here as the record of it. Two changes landed later the same day, and the
+next run measured **84.62%** — 1,387 killed of 1,639 valid, 229 survived, 23 without
+coverage (`reports/mutation/mutation.json`, StrykerJS 10.0.0).
 
-**The honest caveat:** this run is a single measurement. The repeat that would have bounded
-the drift was cut short twice, so the ±spread above comes from runs that also differed in
-other ways. Before treating 75 as tight rather than approximate, two consecutive runs on
-identical code would settle it.
+| | run behind the threshold | current run |
+|---|---:|---:|
+| Score | 77.42% | **84.62%** |
+| Killed (Timeout counted) | 1,258 | 1,387 |
+| Survived | 345 | 229 |
+| No coverage | 22 | 23 |
+| Valid mutants | 1,625 | 1,639 |
+| Stryker | 9.6 | 10.0.0 |
+
+**What moved it — and what cannot be attributed.** The four hero suites started reading the
+card tables back (`42a3fbb`), so blanking a field in a card stopped being free, and that is
+where most of the survivors went. But the same gap also moved the run to Stryker 10
+(`0d20ffc`), which finds 1,639 mutants where 9.6 found 1,625 — and `invariants.ts` dropped
+37 → 10 survivors without gaining a single test. No run separates the two causes.
+
+| file | survivors then | now |
+|---|---:|---:|
+| `executor.ts` | 158 | 152 |
+| `werewolf.ts` | 56 | 20 |
+| `invariants.ts` | 37 | 10 |
+| `bloodmage.ts` | 25 | 7 |
+| `berserker.ts` | 22 | 4 |
+
+**What it would take to reach 85 honestly:** **7 more kills**, not the 124 this entry
+recorded first. The work is no longer spread across the hero files: `executor.ts` holds 152
+of the 229 survivors and is the only file in scope still under 85 (71.02%); everything else
+sits between 86% and 100%.
+
+**Why 75 stays.** A gate catches a regression, it does not certify a peak, and the spread
+between runs is still unmeasured — the figures quoted above come from runs whose code also
+differed. One source of drift is gone: fast-check drew a fresh seed per run until `76687b9`
+pinned it, which alone swung `executor.ts` between 68.49% and 74.79% across three runs on
+code that had only gained tests. Two consecutive runs on identical code would settle whether
+75 is tight or merely cautious. Still not done.
 
 ---
 

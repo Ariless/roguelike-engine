@@ -4,7 +4,7 @@ Full design spec: `DESIGN.md` · Full invariant contract: `INVARIANTS.md`
 
 ---
 
-## Project status (2026-08-27)
+## Project status (2026-08-28)
 
 **595 checks** (558 vitest + 25 Playwright + 12 BDD) · **84.6% mutation score** · **23 documented defects**
 
@@ -16,6 +16,14 @@ Also open, not code: the necromancer is over-tuned. After BUG-22 the paladin tak
 thousand games from it and the bloodmage 8.8% — a design problem, and the one most visible to
 anyone who sits down to play. And the mutation spread between runs has never been measured: two
 consecutive runs on identical code would settle whether 75 is a tight threshold or a cautious one.
+The one source of drift that *was* identified is gone — fast-check drew a fresh seed per run until
+`76687b9` pinned it — but nothing has bounded what is left.
+
+Mutation work that remains, if the score is to reach 85: **7 kills**, not the 124 this backlog
+carried while the score read 77.42%. It is no longer spread across the hero files — the card tables
+are read back now, and `werewolf.ts` fell from 56 survivors to 20. `executor.ts` holds **152 of the
+229**, is the only file in scope still under 85 (71.02%), and is where any further work goes.
+See MUTATION-03 in BUGS.md for the two runs side by side.
 
 Closed recently: BUG-22 (every enemy on the field was handed the encounter's intent, and the
 skeleton — the one enemy that executes its stored intent — obeyed it), BUG-14 (necromancer
@@ -57,8 +65,10 @@ Portfolio-ready: README ✅ · CLAUDE.md ✅ · BUGS.md ✅ · DECISIONS.md ✅ 
 | Area | Tests |
 |------|-------|
 | Engine unit tests | 172 |
-| Hero tests (4 files) | 96 |
+| Hero tests (4 files) | 151 |
 | runtime/executor.test.ts | 35 |
+| runtime/executor-dispatch.test.ts | 18 |
+| runtime/executor-tables.test.ts | 17 |
 | runtime/faults.test.ts | 22 |
 | runtime/executor-property.test.ts | 7 |
 | replay/replay.test.ts | 13 |
@@ -68,10 +78,10 @@ Portfolio-ready: README ✅ · CLAUDE.md ✅ · BUGS.md ✅ · DECISIONS.md ✅ 
 | economy.test.ts | 20 |
 | necromancer.test.ts | 12 |
 | decision-tables.test.ts | 17 |
-| **Vitest total** | **495** |
+| **Vitest total** | **558** |
 | Playwright (debugger, game, visual regression) | 25 |
 | Cucumber scenarios | 12 |
-| **Total** | **532** |
+| **Total** | **595** |
 
 ### Game UI + Debugger + Scripts
 | File | What is inside |

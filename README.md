@@ -54,7 +54,7 @@ stride between base seeds. [RNG battery](#rng-battery--correspondence-with-publi
 
 **The machinery** — [Quick start](#quick-start) ·
 [Architecture](#architecture) ·
-[Test suite](#test-suite-532-tests-across-3-runners) ·
+[Test suite](#test-suite) ·
 [CI](#ci) ·
 [RNG battery](#rng-battery--correspondence-with-published-test-suites) ·
 [Mutation testing](#mutation-testing) ·
@@ -87,7 +87,7 @@ stride between base seeds. [RNG battery](#rng-battery--correspondence-with-publi
 | **Replay system** | `replayGame(log).success === true` for any random game | Byte-perfect verification via pre/post state hashes per event |
 | **Metamorphic testing** | `damage(lowHp) ≥ damage(highHp)` — formula without expected value | Relations between inputs, not exact outputs |
 | **`it.fails()` false invariant** | `healWerewolfIsAlwaysBeneficial` — intentionally failing test as domain spec | Documents rule violations; fails if someone "fixes" the wrong thing |
-| **Mutation testing** | Stryker 77.4% across 13 files; `faults.ts` came back at 26% | The scope of a mutation run is itself unaudited — "79%" covered half the system, and a Timeout counts as a kill |
+| **Mutation testing** | Stryker 84.6% across 13 files; the floor moved to `executor.ts` at 71% once `faults.ts` was covered | The scope of a mutation run is itself unaudited — "79%" covered half the system, and a Timeout counts as a kill |
 | **Monte Carlo simulation** | `npm run simulate` → winrate per class and per matchup, Wilson intervals, verdict against a target corridor | Statistical stability; caught a whole enemy that never got implemented |
 | **Sampling-bias detection** | Hero and enemy both derived from `seed % 4` → 4 of 16 configurations ever scanned | A biased sample returns a plausible number nobody rechecks |
 | **Metric stability** | `npm run stability` → cross-batch spread + convergence as runs double | An interval narrowing toward a seed-dependent answer looks *more* trustworthy |
@@ -133,7 +133,7 @@ npm run ci-summary                # AI-generated CI narrative
 npm run cert-evidence 50000       # evidence pack + machine-readable snapshot
 npm run delta artifacts/baseline-pre-bug14.json   # diff two snapshots
 npm run ci-report                 # HTML stability report
-npm run test:mutation             # Stryker 77.4% across 13 files — 25 minutes
+npm run test:mutation             # Stryker 84.6% across 13 files — 25 minutes
 ```
 
 Open `game/index.html` in browser — playable combat UI.  
@@ -159,7 +159,7 @@ docs/        DECISION-TABLES.md, TEST-PYRAMID.md
 
 ---
 
-## Test suite (549 tests across 3 runners)
+## Test suite
 
 <details>
 <summary><b>Every suite and what it covers</b></summary>
@@ -654,7 +654,7 @@ The bug was in the **implementation**, not the test. fast-check found it, not co
 ```
 Implementation:    ~2,500 LOC
 
-Tests:             532  (495 vitest + 25 Playwright + 12 BDD)
+Tests:             595  (558 vitest + 25 Playwright + 12 BDD)
                    + 16,000 seeds via Monte Carlo, all 16 configurations
                    + 64,000 seeds across 8 batches via stability run
                    + 200 adversarial runs via chaos agent
