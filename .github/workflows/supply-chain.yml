@@ -1,0 +1,93 @@
+# Supply chain — what this repository is built out of, and whether any of it is known-vulnerable.
+#
+# Two jobs, deliberately separate:
+#
+#   sbom   — a CycloneDX inventory of every installed package, kept as a 90-day artifact. Produced
+#            by `npm sbom`, which reads the lockfile, so it describes what CI actually installed
+#            rather than what package.json asks for.
+#   audit  — `npm audit` against the GitHub Advisory database. Fails the build on high or critical.
+#
+# Weekly as well as on push: a dependency does not have to change for it to become vulnerable. The
+# advisory arrives on its own schedule, and a repository that only scans on push learns about it
+# whenever someone happens to commit next.
+#
+# The engine ships almost no runtime dependencies; the inventory that matters here is the test
+# toolchain, which is what actually executes and what a consumer of the evidence pack inherits.
+name: Supply chain
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"   # Mondays 06:00 UTC
+  workflow_dispatch:
+
+jobs:
+  sbom:
+    name: SBOM (CycloneDX)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - run: npm ci
+
+      - name: Generate SBOM
+        run: npm sbom --sbom-format cyclonedx > sbom.cyclonedx.json
+
+      # An SBOM job that uploads an empty inventory is worse than no job: it reads as evidence.
+      # The floor is deliberately low — it catches "the command produced nothing", not drift.
+      - name: Fail unless the SBOM describes a real dependency tree
+        run: |
+          COUNT=$(node -e "console.log((require('./sbom.cyclonedx.json').components || []).length)")
+          echo "components: $COUNT"
+          if [ "$COUNT" -lt 50 ]; then
+            echo "::error::SBOM lists $COUNT components — the generator produced nothing usable."
+            exit 1
+          fi
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ github.sha }}
+          path: sbom.cyclonedx.json
+          retention-days: 90
+
+  audit:
+    name: Known vulnerabilities
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - run: npm ci
+
+      # `npm audit fix --force` is not the remedy and is never run here: on this tree it "fixes"
+      # advisories by walking major versions backwards. Where a transitive package is the problem,
+      # the fix is an `overrides` entry pinning it forward, which is what package.json carries.
+      - name: npm audit (high and above)
+        run: npm audit --audit-level=high
+
+      # Moderate findings do not gate, but they should be visible rather than silent.
+      - name: Moderate and below, for the record
+        if: always()
+        run: npm audit --audit-level=moderate || true
