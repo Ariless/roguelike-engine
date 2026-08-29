@@ -10,6 +10,8 @@ The roguelike is a rule engine — the same class of system as a payment process
 
 ---
 
+*One of five repositories on [what a green test run does not tell you](#part-of-a-series).*
+
 | | |
 | --- | --- |
 | **Test suite** | 595 tests across 3 runners — 558 Vitest · 25 Playwright · 12 BDD scenarios |
@@ -765,3 +767,15 @@ Game mechanics that *are* tests. Not game mechanics *with* tests alongside.
 ## Stack
 
 TypeScript (strict) · Vitest · fast-check · Stryker · Cucumber · Playwright · Plain HTML/CSS
+
+---
+
+## Part of a series
+
+Five repositories around one question: **what a green test run does not tell you.**
+
+- [clinic-booking-api-tests](https://github.com/Ariless/clinic-booking-api-tests) — coverage you can audit: a requirements matrix, a defect register, and counts verified by CI so the README cannot drift from the code
+- [clinic-mobile-tests](https://github.com/Ariless/clinic-mobile-tests) — the layer an API or a browser test cannot reach: permissions, Doze, offline transitions, deep links
+- [temporal-failure-lab](https://github.com/Ariless/temporal-failure-lab) — the system is working and the tests still lie: time, ordering and eventual consistency
+- **roguelike-engine** — a deterministic rule engine as SUT: replayable runs, invariants and 16,000-seed regressions, where a change that did nothing looks exactly like a change that worked *(you are here)*
+- [silent-tests-lab](https://github.com/Ariless/silent-tests-lab) — tests that pass without asserting, text wrong for half the roster, and content nobody ever reaches
