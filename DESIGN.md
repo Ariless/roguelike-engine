@@ -165,7 +165,7 @@ This is the project's strongest demonstration: a test that intentionally fails a
 **Framing in one paragraph:**
 This is not game testing. The roguelike is a rule engine — the same class of system as a payment processor, a pricing calculator, or an insurance rules engine. It earns its place by being visual and interesting; every technique here transfers directly to a production system.
 
-**Interview framing:** "I built a roguelike engine as a SUT to practice testing a class of systems that QA courses skip: complex rule engines with no API and no UI. The same patterns apply to payment processing, pricing logic, and workflow systems. It let me demonstrate property-based testing, state machine coverage, and fault injection on a system rich enough to generate real bugs."
+**Interview framing:** "The engine is a system under test, stood up with Claude Code so that I could work on a class of systems QA courses skip: complex rule engines with no API and no UI. The same patterns apply to payment processing, pricing logic, and workflow systems, and the testing is the part that is mine — property-based testing, state machine coverage and fault injection on a system rich enough to generate real bugs."
 
 ### Why this domain
 - Position-based combat + card system + status effects = complex rule system with combinatorial state — same structure as a pricing engine or insurance calculator

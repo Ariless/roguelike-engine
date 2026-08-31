@@ -737,7 +737,7 @@ The focus is **deterministic rule verification**. If the rule engine produces co
 
 ## Interview framing
 
-> *"I built a roguelike engine as a SUT to practice testing a class of systems that QA courses skip: complex rule engines with no API and no UI. Every technique — property testing, mutation testing, BDD, Monte Carlo, adversarial chaos agent — transfers directly to payment processing, pricing logic, and workflow systems."*
+> *"The engine is a system under test, stood up with Claude Code so that I could work on a class of systems QA courses skip: complex rule engines with no API and no UI. The test suite is the part that is mine, and every technique in it — property testing, mutation testing, BDD, Monte Carlo, an adversarial chaos agent — transfers directly to payment processing, pricing logic, and workflow systems."*
 
 **The strongest claim:** `forAll(seeds) → replayGame(log).success` — any random game sequence replays byte-perfect. Three systems (executor + replay + fast-check) form a closed verification loop.
 
